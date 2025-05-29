@@ -25,7 +25,7 @@ const App: React.FC = () => {
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-dark-bg p-2 sm:p-4">
-      <div className="w-full max-w-screen-sm h-screen max-h-[850px] bg-black rounded-[36px] shadow-2xl shadow-neon-blue/30 overflow-hidden border-2 border-neon-blue/30 flex flex-col relative holographic-overlay">
+      <div className="w-full max-w-[420px] h-[850px] bg-black rounded-[36px] shadow-2xl shadow-neon-blue/30 overflow-hidden border-2 border-neon-blue/30 flex flex-col relative holographic-overlay">
         <main className="flex-grow overflow-y-auto">
           <Routes>
             <Route path={APP_ROUTES.LOGIN} element={<LoginScreen />} />

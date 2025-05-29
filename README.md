@@ -1,83 +1,65 @@
 # MatchIt - Style & Emotion Connect
 
-MatchIt é um aplicativo de conexões que vai além do superficial, combinando pessoas com base em seus estilos pessoais, hobbies e preferências emocionais.
+Aplicação de match de estilos usando Docker e PostgreSQL
 
-## 🚀 Tecnologias
+## Pré-requisitos
+- Docker e Docker Compose instalados
+- Node.js 18+ (para desenvolvimento local)
 
-- React 19 + TypeScript
-- Vite (build tool)
-- React Router DOM (roteamento)
-- Recharts (gráficos)
-- Design System com tema neon futurista
-
-## 📦 Como Executar
+## Configuração
 
 1. Clone o repositório
-2. Instale as dependências:
-   ```bash
-   npm install
-   ```
-3. Inicie o servidor de desenvolvimento:
-   ```bash
-   npm run dev
-   ```
-4. Acesse `http://localhost:5173` no navegador
+2. Crie um arquivo `.env` baseado no `.env.example`
+3. Configure as variáveis de ambiente conforme necessário
 
-## ‍♂️ Features Principais
+## Rodando com Docker
 
-### 👤 Autenticação
-- Login protegido
-- Rotas privadas
-
-### 📊 Perfil de Estilo
-- Radar visual mostrando preferências em categorias:
-  - Sneakers
-  - Roupas
-  - Cores
-  - Hobbies
-  - Emoções
-
-### 💞 Match Area
-- Sistema de compatibilidade baseado em estilo
-- Pontuação de match (0-100%)
-- Perfis de potenciais matches
-
-### 💬 Chat Integrado
-- Conversas com matches
-- Histórico de mensagens
-
-### 🛍️ Vendor Area
-- Produtos recomendados baseados no estilo
-- Marcas parceiras
-
-## 🏗️ Estrutura de Pastas
-
-```
-MatchIt/
-├── components/          # Componentes reutilizáveis
-│   ├── common/          # Componentes UI básicos
-│   ├── navigation/      # Componentes de navegação
-│   └── profile/         # Componentes específicos de perfil
-├── context/             # Contextos React (Auth)
-├── screens/             # Telas principais
-├── types/               # Tipos TypeScript
-├── constants.ts         # Constantes e mock data
-├── App.tsx              # Componente principal
-└── vite.config.ts       # Configuração do Vite
+```bash
+docker-compose up --build
 ```
 
-## 🎨 Design
+Isso irá:
+- Iniciar o container PostgreSQL
+- Construir e iniciar o backend Node.js
+- Construir e iniciar o frontend React
+- Configurar o Nginx como proxy reverso
 
-- Tema neon futurista
-- Efeitos holográficos
-- Paleta de cores:
-  - Azul neon (#00FFFF)
-  - Verde neon (#00FF00)
-  - Laranja neon (#FF8C00)
+A aplicação estará disponível em:
+- Frontend: http://localhost
+- Backend API: http://localhost/api
+- PostgreSQL: porta 5432
 
-## 📝 Próximos Passos
+## Comandos úteis
 
-- Integração com API real
-- Sistema de preferências mais detalhado
-- Match com base em localização
-- Integração com redes sociais
+**Rodar em desenvolvimento (sem Docker):**
+```bash
+# Backend
+npm run server
+
+# Frontend 
+npm run dev
+```
+
+**Acessar banco de dados:**
+```bash
+docker exec -it matchit-postgres psql -U matchit -d matchit_db
+```
+
+**Reiniciar serviços específicos:**
+```bash
+docker-compose restart backend
+```
+
+## Variáveis de ambiente
+
+Veja o arquivo `.env.example` para todas as variáveis disponíveis.
+
+## Estrutura do projeto
+
+- `backend/`: Servidor Node.js com Express
+- `frontend/`: Aplicação React
+- `docker-compose.yml`: Configuração dos serviços Docker
+- `Dockerfile.backend`: Dockerfile para o backend
+- `Dockerfile.frontend`: Dockerfile para o frontend
+- `nginx.conf`: Configuração do Nginx
+- `scripts/init_db.sql`: Script de inicialização do banco de dados

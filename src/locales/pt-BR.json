@@ -19,7 +19,10 @@
     "accountOptions": "Opções da Conta",
     "settings": "Configurações & Preferências",
     "upgradeVip": "✨ Virar VIP ✨",
-    "myGallery": "Minha Galeria"
+    "myGallery": "Minha Galeria",
+    "styleProfile": "Perfil de Estilo",
+    "recentMatches": "Matches Recentes",
+    "viewAllMatches": "Ver Todos os Matches"
   },
   "styleAdjustment": {
     "title": "Ajuste Seu Estilo",

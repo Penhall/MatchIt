@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: matchit
+      POSTGRES_PASSWORD: matchit123
+      POSTGRES_DB: matchit_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - matchit-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U matchit -d matchit_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: matchit
+      DB_PASSWORD: matchit123
+      DB_NAME: matchit_db
+      JWT_SECRET: matchit_secret_key
+    ports:
+      - "3000:3000"
+    networks:
+      - matchit-network
+    command: >
+      sh -c "while ! nc -z postgres 5432; do sleep 1; done && npm start"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    networks:
+      - matchit-network
+
+volumes:
+  postgres_data:
+
+networks:
+  matchit-network:
+    driver: bridge

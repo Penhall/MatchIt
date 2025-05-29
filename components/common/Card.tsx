@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 interface CardProps {
@@ -7,17 +6,19 @@ interface CardProps {
   glowColor?: 'blue' | 'green' | 'orange' | null;
 }
 
+const GLOW_CLASSES = {
+  blue: 'hover:shadow-neon-blue border-neon-blue/30',
+  green: 'hover:shadow-neon-green border-neon-green/30',
+  orange: 'hover:shadow-neon-orange border-neon-orange/30',
+  none: 'border-gray-700/50'
+};
+
 const Card: React.FC<CardProps> = ({ children, className = '', glowColor = 'blue' }) => {
-  const glowClasses = {
-    blue: 'hover:shadow-glow-blue border-neon-blue/30',
-    green: 'hover:shadow-glow-green border-neon-green/30',
-    orange: 'hover:shadow-glow-orange border-neon-orange/30',
-    null: 'border-gray-700/50'
-  };
+  const baseClasses = 'bg-dark-card p-4 sm:p-6 rounded-xl border transition-all duration-300';
+  const glowClass = glowColor ? GLOW_CLASSES[glowColor] : GLOW_CLASSES.none;
+  
   return (
-    <div
-      className={`bg-dark-card p-4 sm:p-6 rounded-xl border transition-all duration-300 ${glowColor ? glowClasses[glowColor] : glowClasses.null} ${className}`}
-    >
+    <div className={`${baseClasses} ${glowClass} ${className}`}>
       {children}
     </div>
   );

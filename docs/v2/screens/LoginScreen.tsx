@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import Button from '../components/common/Button';
 import FloatingLabelInput from '../components/common/FloatingLabelInput';
 import { APP_ROUTES } from '../constants';
@@ -9,19 +8,26 @@ import { useAuth } from '../context/AuthContext';
 import { GoogleIcon, AppleIcon, SparklesIcon } from '../components/common/Icon';
 
 const LoginScreen: React.FC = () => {
-  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState(''); // Added state for confirm password
   const [isSignUp, setIsSignUp] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Mock login/signup logic
-    console.log(`${isSignUp ? 'Signing up' : 'Logging in'} with:`, email, password);
-    login(email, password); // Set authenticated state
+    if (isSignUp) {
+      // Basic check for password match, can be expanded
+      if (password !== confirmPassword) {
+        alert("Passwords do not match!");
+        return;
+      }
+      console.log('Signing up with:', email, password);
+    } else {
+      console.log('Logging in with:', email, password);
+    }
+    login(); // Set authenticated state
     navigate(APP_ROUTES.PROFILE);
   };
 
@@ -41,20 +47,17 @@ const LoginScreen: React.FC = () => {
       
       <div className="relative z-10 w-full max-w-md space-y-8 animate-fadeIn">
         <div className="text-center">
-          <SparklesIcon 
-            className="w-16 h-16 mx-auto mb-2"
-            style={{ color: '#00f0ff' }}
-          />
+          <SparklesIcon className="w-16 h-16 mx-auto text-neon-blue mb-2" />
           <h1 className="text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-neon-blue to-neon-green">
-            {t('login.title')}
+            MatchIt
           </h1>
-          <p className="mt-2 text-gray-400">{t('login.subtitle')}</p>
+          <p className="mt-2 text-gray-400">Connect through style & emotion.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6 p-6 bg-dark-card/70 backdrop-blur-sm rounded-xl shadow-lg border border-neon-blue/20">
           <FloatingLabelInput
             id="email"
-            label={t('login.email')}
+            label="Email Address"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -62,7 +65,7 @@ const LoginScreen: React.FC = () => {
           />
           <FloatingLabelInput
             id="password"
-            label={t('login.password')}
+            label="Password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -71,15 +74,15 @@ const LoginScreen: React.FC = () => {
           {isSignUp && (
             <FloatingLabelInput
               id="confirm-password"
-              label={t('login.confirmPassword')}
+              label="Confirm Password"
               type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              value={confirmPassword} 
+              onChange={(e) => setConfirmPassword(e.target.value)} 
               required
             />
           )}
           <Button type="submit" variant="primary" size="lg" className="w-full" glowEffect="blue">
-            {isSignUp ? t('login.signUp') : t('login.logIn')}
+            {isSignUp ? 'Sign Up' : 'Log In'}
           </Button>
         </form>
 
@@ -88,7 +91,7 @@ const LoginScreen: React.FC = () => {
             onClick={() => setIsSignUp(!isSignUp)}
             className="text-sm text-neon-blue hover:text-neon-green hover:underline"
           >
-            {isSignUp ? t('login.alreadyHaveAccount') : t('login.noAccount')}
+            {isSignUp ? 'Already have an account? Log In' : "Don't have an account? Sign Up"}
           </button>
         </div>
 
@@ -97,7 +100,7 @@ const LoginScreen: React.FC = () => {
             <div className="w-full border-t border-gray-600/50" />
           </div>
           <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-dark-card text-gray-400 rounded-md">{t('login.continueWith')}</span>
+            <span className="px-2 bg-dark-card text-gray-400 rounded-md">Or continue with</span>
           </div>
         </div>
 
