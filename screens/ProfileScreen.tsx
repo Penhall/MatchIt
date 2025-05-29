@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import Avatar from '../components/common/Avatar';
 import ProgressBar from '../components/common/ProgressBar';
 import Button from '../components/common/Button';
@@ -10,6 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import { APP_ROUTES } from '../constants';
 
 const ProfileScreen: React.FC = () => {
+  const { t } = useTranslation();
   const user = MOCK_USER_PROFILE;
   const navigate = useNavigate();
 
@@ -27,14 +29,16 @@ const ProfileScreen: React.FC = () => {
         </div>
         {user.bio && <p className="mt-4 text-sm text-gray-300">{user.bio}</p>}
         <Button variant="outline" size="sm" className="mt-4 w-full" glowEffect="green" onClick={() => alert('Edit Profile Clicked!')}>
-          Edit Profile & Photos
+          {t('profile.editProfile')}
         </Button>
       </Card>
 
       <Card glowColor="green">
-        <h2 className="text-lg font-semibold ${NEON_COLORS.green} mb-2">Style Profile Progress</h2>
+        <h2 className="text-lg font-semibold ${NEON_COLORS.green} mb-2">{t('profile.styleProgress')}</h2>
         <ProgressBar progress={MOCK_STYLE_PROFILE_COMPLETION} glow />
-        <p className="text-sm text-gray-400 mt-2 text-center">{MOCK_STYLE_PROFILE_COMPLETION}% of your style profile completed.</p>
+        <p className="text-sm text-gray-400 mt-2 text-center">
+          {t('profile.completion', { percent: MOCK_STYLE_PROFILE_COMPLETION })}
+        </p>
         <Button 
           variant="primary" 
           size="md" 
@@ -42,19 +46,19 @@ const ProfileScreen: React.FC = () => {
           onClick={() => navigate(APP_ROUTES.STYLE_ADJUSTMENT)}
           glowEffect="blue"
         >
-          Adjust Your Style
+          {t('profile.adjustStyle')}
         </Button>
       </Card>
 
       <Card glowColor="orange">
-        <h2 className="text-lg font-semibold ${NEON_COLORS.orange} mb-3">Account Options</h2>
+        <h2 className="text-lg font-semibold ${NEON_COLORS.orange} mb-3">{t('profile.accountOptions')}</h2>
         <div className="space-y-3">
           <Button variant="outline" glowEffect="orange" className="w-full flex items-center justify-center" onClick={() => navigate(APP_ROUTES.SETTINGS)}>
-            <CogIcon className="w-5 h-5 mr-2"/> Settings & Preferences
+            <CogIcon className="w-5 h-5 mr-2"/> {t('profile.settings')}
           </Button>
           {!user.isVip && (
             <Button variant="secondary" glowEffect="orange" className="w-full" onClick={() => alert('Upgrade to VIP!')}>
-              ✨ Upgrade to VIP ✨
+              {t('profile.upgradeVip')}
             </Button>
           )}
         </div>
@@ -62,7 +66,7 @@ const ProfileScreen: React.FC = () => {
       
       {/* Mock photo gallery section */}
       <Card>
-        <h2 className="text-lg font-semibold text-neon-blue mb-3">My Gallery</h2>
+        <h2 className="text-lg font-semibold text-neon-blue mb-3">{t('profile.myGallery')}</h2>
         <div className="grid grid-cols-3 gap-2">
           {[1,2,3,4,5,6].map(i => (
             <img 

@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import StyleRadarChart from '../components/profile/StyleRadarChart';
 import Button from '../components/common/Button';
 import { MOCK_RADAR_CHART_DATA, MOCK_POTENTIAL_MATCHES, MOCK_STYLE_ADJUSTMENT_QUESTIONS, NEON_COLORS } from '../constants';
@@ -9,6 +10,7 @@ import ProgressBar from '../components/common/ProgressBar';
 import { ChevronLeftIcon, ChevronRightIcon } from '../components/common/Icon';
 
 const StyleAdjustmentScreen: React.FC = () => {
+  const { t } = useTranslation();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [radarData, setRadarData] = useState(MOCK_RADAR_CHART_DATA);
@@ -58,10 +60,10 @@ const StyleAdjustmentScreen: React.FC = () => {
   return (
     <div className="p-4 sm:p-6 space-y-6 text-gray-200 animate-fadeIn">
       <h1 className="text-3xl font-bold text-center mb-2 bg-clip-text text-transparent bg-gradient-to-r from-neon-blue to-neon-green">
-        Tune Your Style
+        {t('styleAdjustment.title')}
       </h1>
       <p className="text-center text-gray-400 text-sm mb-6">
-        Answer a few questions to help us find your perfect matches.
+        {t('styleAdjustment.subtitle')}
       </p>
 
       {currentQuestion && (
@@ -90,14 +92,14 @@ const StyleAdjustmentScreen: React.FC = () => {
               variant="outline"
               glowEffect="blue"
             >
-              <ChevronLeftIcon className="w-5 h-5 mr-1" /> Prev
+              <ChevronLeftIcon className="w-5 h-5 mr-1" /> {t('styleAdjustment.prevButton')}
             </Button>
             <Button 
               onClick={() => navigateQuestion('next')} 
               disabled={currentQuestionIndex === questions.length - 1}
               variant="primary"
             >
-              Next <ChevronRightIcon className="w-5 h-5 ml-1" />
+              {t('styleAdjustment.nextButton')} <ChevronRightIcon className="w-5 h-5 ml-1" />
             </Button>
           </div>
         </Card>
@@ -105,22 +107,22 @@ const StyleAdjustmentScreen: React.FC = () => {
       
       {!currentQuestion && completedQuestions === totalQuestions && (
         <Card glowColor="green" className="text-center">
-            <h2 className="text-2xl font-bold text-neon-green mb-2">Style Profile Complete!</h2>
-            <p className="text-gray-300">You've answered all questions. Your style is now fully tuned.</p>
+            <h2 className="text-2xl font-bold text-neon-green mb-2">{t('styleAdjustment.completeTitle')}</h2>
+            <p className="text-gray-300">{t('styleAdjustment.completeMessage')}</p>
         </Card>
       )}
 
 
       <Card glowColor="green">
-        <h2 className="text-lg font-semibold ${NEON_COLORS.green} mb-2">Your Style Distribution</h2>
+        <h2 className="text-lg font-semibold ${NEON_COLORS.green} mb-2">{t('styleAdjustment.styleDistribution')}</h2>
         <StyleRadarChart data={radarData} />
       </Card>
 
       <Card glowColor="orange" className="text-center">
-        <h2 className="text-lg font-semibold ${NEON_COLORS.orange} mb-2">Profile Status</h2>
+        <h2 className="text-lg font-semibold ${NEON_COLORS.orange} mb-2">{t('styleAdjustment.profileStatus')}</h2>
         <ProgressBar progress={completionPercentage} glow />
-        <p className="text-sm text-gray-400 mt-2">You've completed {completionPercentage}% of your style profile.</p>
-        <p className="text-md font-semibold text-neon-blue mt-3">Based on your choices, you could match with <span className="text-neon-green font-bold text-xl">{potentialMatches}</span> people!</p>
+        <p className="text-sm text-gray-400 mt-2">{t('styleAdjustment.completionMessage', {percent: completionPercentage})}</p>
+        <p className="text-md font-semibold text-neon-blue mt-3">{t('styleAdjustment.potentialMatches', {count: potentialMatches})}</p>
       </Card>
     </div>
   );

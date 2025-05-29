@@ -1,0 +1,58 @@
+{
+  "login": {
+    "title": "MatchIt",
+    "subtitle": "Conecte-se através de estilo e emoção",
+    "email": "Endereço de Email",
+    "password": "Senha",
+    "confirmPassword": "Confirmar Senha",
+    "signUp": "Cadastrar",
+    "logIn": "Entrar",
+    "alreadyHaveAccount": "Já tem uma conta? Entrar",
+    "noAccount": "Não tem uma conta? Cadastrar",
+    "continueWith": "Ou continue com"
+  },
+  "profile": {
+    "editProfile": "Editar Perfil & Fotos",
+    "styleProgress": "Progresso do Estilo",
+    "completion": "{{percent}}% do seu perfil de estilo completo.",
+    "adjustStyle": "Ajustar Seu Estilo",
+    "accountOptions": "Opções da Conta",
+    "settings": "Configurações & Preferências",
+    "upgradeVip": "✨ Virar VIP ✨",
+    "myGallery": "Minha Galeria"
+  },
+  "styleAdjustment": {
+    "title": "Ajuste Seu Estilo",
+    "subtitle": "Responda algumas perguntas para encontrarmos seus matches perfeitos.",
+    "prevButton": "Anterior",
+    "nextButton": "Próximo",
+    "completeTitle": "Perfil de Estilo Completo!",
+    "completeMessage": "Você respondeu todas as perguntas. Seu estilo está totalmente ajustado.",
+    "styleDistribution": "Distribuição do Seu Estilo",
+    "profileStatus": "Status do Perfil",
+    "completionMessage": "Você completou {{percent}}% do seu perfil de estilo.",
+    "potentialMatches": "Baseado nas suas escolhas, você poderia ter matches com {{count}} pessoas!"
+  },
+  "settings": {
+    "title": "Configurações & Informações",
+    "appearance": "Aparência",
+    "darkMode": "Modo Escuro",
+    "notifications": "Notificações",
+    "enableNotifications": "Ativar Notificações Push",
+    "notificationsDescription": "Gerencie quais alertas você recebe do MatchIt.",
+    "account": "Conta",
+    "viewProfile": "Ver Meu Perfil",
+    "logout": "Sair",
+    "vipMembership": "Assinatura VIP",
+    "vipBenefits": "Desbloqueie Benefícios VIP",
+    "vipDescription": "Tenha matches ilimitados, filtros avançados e uma experiência sem anúncios.",
+    "monthlyPlan": "Mensal: $9.99",
+    "yearlyPlan": "Anual: $99.99 (Economize 15%)",
+    "subscriptionNote": "Assinaturas renovam automaticamente. Cancele a qualquer momento.",
+    "about": "Sobre o MatchIt",
+    "terms": "Termos de Uso",
+    "privacy": "Política de Privacidade",
+    "support": "Suporte",
+    "version": "Versão do App: {{version}} (Build {{build}})"
+  }
+}

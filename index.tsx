@@ -1,6 +1,7 @@
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import './src/i18n';
 import App from './App';
 import { HashRouter } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
