@@ -16,9 +16,10 @@ services:
       - matchit-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U matchit -d matchit_db"]
-      interval: 5s
+      interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
 
   backend:
     build:
@@ -28,32 +29,81 @@ services:
       postgres:
         condition: service_healthy
     environment:
+      NODE_ENV: production
       DB_HOST: postgres
       DB_PORT: 5432
       DB_USER: matchit
       DB_PASSWORD: matchit123
       DB_NAME: matchit_db
-      JWT_SECRET: matchit_secret_key
+      JWT_SECRET: matchit_secret_key_production_2024
+      PORT: 3000
     ports:
       - "3000:3000"
     networks:
       - matchit-network
-    command: >
-      sh -c "while ! nc -z postgres 5432; do sleep 1; done && npm start"
+    volumes:
+      - ./:/app
+      - /app/node_modules
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   frontend:
     build:
       context: .
       dockerfile: Dockerfile.frontend
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     ports:
       - "80:80"
     networks:
       - matchit-network
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Serviço para desenvolvimento (opcional)
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    depends_on:
+      - postgres
+    environment:
+      NODE_ENV: development
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: matchit
+      DB_PASSWORD: matchit123
+      DB_NAME: matchit_db
+      JWT_SECRET: matchit_secret_key_dev
+      PORT: 3000
+      VITE_API_URL: http://localhost:3000
+    ports:
+      - "5173:5173"  # Vite dev server
+      - "3001:3000"  # Backend dev
+    networks:
+      - matchit-network
+    volumes:
+      - ./:/app
+      - /app/node_modules
+    command: npm run dev
+    profiles:
+      - dev
 
 volumes:
   postgres_data:
+    driver: local
 
 networks:
   matchit-network:
