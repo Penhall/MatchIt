@@ -1,5 +1,5 @@
-
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import { MOCK_PRODUCTS, MOCK_SPONSORED_BANNERS, NEON_COLORS } from '../constants';
@@ -11,6 +11,8 @@ interface ProductCardProps {
 }
 
 const ProductCardComponent: React.FC<ProductCardProps> = ({ product }) => {
+  const { t } = useTranslation();
+
   return (
     <Card className="flex flex-col overflow-hidden transition-all duration-300 hover:shadow-neon-orange group" glowColor="orange">
       <img src={product.imageUrl} alt={product.name} className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300" />
@@ -21,7 +23,7 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({ product }) => {
         </div>
         <p className="text-xl font-bold text-neon-green mb-3">{product.price}</p>
         <Button variant="secondary" size="md" className="mt-auto w-full" onClick={() => alert(`Buy ${product.name}`)}>
-          Buy Now
+          {t('shop.buyNow')}
         </Button>
       </div>
     </Card>
@@ -29,14 +31,16 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({ product }) => {
 };
 
 const VendorScreen: React.FC = () => {
+  const { t } = useTranslation();
+
   return (
     <div className="p-4 sm:p-6 space-y-6 text-gray-200 animate-fadeIn">
       <div className="text-center">
         <ShoppingBagIcon className={`w-12 h-12 mx-auto ${NEON_COLORS.orange} mb-2`} />
         <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-neon-orange to-yellow-400">
-          Curated For You
+          {t('shop.curatedForYou')}
         </h1>
-        <p className="text-gray-400 mt-1">Exclusive drops and recommendations based on your style.</p>
+        <p className="text-gray-400 mt-1">{t('shop.exclusiveDrops')}</p>
       </div>
 
       {/* Sponsored Banners */}
@@ -50,7 +54,7 @@ const VendorScreen: React.FC = () => {
 
       {/* Product Recommendations */}
       <div>
-        <h2 className="text-2xl font-semibold ${NEON_COLORS.green} mb-4">Recommended Products</h2>
+        <h2 className="text-2xl font-semibold ${NEON_COLORS.green} mb-4">{t('shop.recommendedProducts')}</h2>
         {MOCK_PRODUCTS.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             {MOCK_PRODUCTS.map(product => (
@@ -59,19 +63,18 @@ const VendorScreen: React.FC = () => {
           </div>
         ) : (
           <Card className="text-center py-10">
-            <p className="text-gray-400">No product recommendations available yet. Complete your style profile!</p>
+            <p className="text-gray-400">{t('shop.noProducts')}</p>
           </Card>
         )}
       </div>
       
       <Card className="mt-8 text-center" glowColor="blue">
-        <h2 className="text-xl font-semibold text-neon-blue mb-2">Explore More Brands</h2>
-        <p className="text-gray-400 mb-4">Discover our partner stores and exclusive collections.</p>
+        <h2 className="text-xl font-semibold text-neon-blue mb-2">{t('shop.exploreBrands')}</h2>
+        <p className="text-gray-400 mb-4">{t('shop.discoverStores')}</p>
         <Button variant="outline" glowEffect="blue">
-            Visit Marketplace
+          {t('shop.visitMarketplace')}
         </Button>
       </Card>
-
     </div>
   );
 };

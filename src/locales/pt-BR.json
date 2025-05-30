@@ -57,5 +57,27 @@
     "privacy": "Política de Privacidade",
     "support": "Suporte",
     "version": "Versão do App: {{version}} (Build {{build}})"
+  },
+  "matches": {
+    "potentialConnections": "Suas Conexões Potenciais",
+    "discoverProfiles": "Descubra perfis que combinam com seu estilo.",
+    "noMatches": "Nenhum Match Novo Ainda",
+    "refineStyle": "Continue refinando seu estilo ou volte mais tarde!",
+    "connectionEstablished": "Conexão Estabelecida!",
+    "nowConnected": "Você e {displayName} agora estão conectados!",
+    "startConversation": "Comece uma conversa e veja aonde vai dar.",
+    "startChatting": "Iniciar Conversa",
+    "requestConnection": "Solicitar Conexão",
+    "compatibility": "Compatibilidade"
+  },
+  "shop": {
+    "curatedForYou": "Selecionado Para Você",
+    "exclusiveDrops": "Lançamentos exclusivos e recomendações baseadas no seu estilo.",
+    "buyNow": "Comprar Agora",
+    "recommendedProducts": "Produtos Recomendados",
+    "noProducts": "Nenhuma recomendação de produto disponível ainda. Complete seu perfil de estilo!",
+    "exploreBrands": "Explore Mais Marcas",
+    "discoverStores": "Descubra nossas lojas parceiras e coleções exclusivas.",
+    "visitMarketplace": "Visitar Mercado"
   }
 }

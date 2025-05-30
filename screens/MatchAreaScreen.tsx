@@ -1,5 +1,5 @@
-
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import Avatar from '../components/common/Avatar';
 import Button from '../components/common/Button';
 import Card from '../components/common/Card';
@@ -14,39 +14,37 @@ interface MatchCardProps {
 }
 
 const MatchCardComponent: React.FC<MatchCardProps> = ({ match, onRequestConnection }) => {
+  const { t } = useTranslation();
+  
   return (
     <Card className="flex flex-col items-center text-center transition-transform duration-300 hover:scale-105" glowColor="blue">
       <Avatar src={match.user.avatarUrl} alt={match.user.displayName} size="lg" isVip={match.user.isVip}/>
       <h3 className="text-xl font-semibold mt-3 text-neon-blue">{match.user.displayName}</h3>
       <p className="text-sm text-gray-400">{match.user.city}</p>
       <p className={`text-2xl font-bold mt-2 ${NEON_COLORS.green}`}>{match.compatibilityScore}%</p>
-      <p className="text-xs text-gray-500">Compatibility</p>
+      <p className="text-xs text-gray-500">{t('matches.compatibility')}</p>
       <Button 
         variant="primary" 
         size="md" 
         className="mt-4 w-full"
         onClick={() => onRequestConnection(match.user)}
       >
-        <HeartIcon className="w-5 h-5 mr-2"/> Request Connection
+        <HeartIcon className="w-5 h-5 mr-2"/> {t('matches.requestConnection')}
       </Button>
     </Card>
   );
 };
 
-
 const MatchAreaScreen: React.FC = () => {
+  const { t } = useTranslation();
   const [matches, setMatches] = useState<Match[]>(MOCK_MATCHES);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [connectedUser, setConnectedUser] = useState<User | null>(null);
 
   const handleRequestConnection = (user: User) => {
-    // Simulate connection request & mutual match
     console.log('Connection requested with:', user.displayName);
-    // For demo, assume mutual match immediately
     setConnectedUser(user);
     setIsModalOpen(true);
-    // Potentially remove user from list or mark as connected
-    // setMatches(prevMatches => prevMatches.filter(m => m.user.id !== user.id));
   };
   
   const closeModal = () => {
@@ -58,9 +56,9 @@ const MatchAreaScreen: React.FC = () => {
     <div className="p-4 sm:p-6 space-y-6 text-gray-200 animate-fadeIn">
       <div className="text-center">
         <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-neon-blue to-neon-green">
-          Your Potential Connections
+          {t('matches.potentialConnections')}
         </h1>
-        <p className="text-gray-400 mt-1">Discover profiles that vibe with your style.</p>
+        <p className="text-gray-400 mt-1">{t('matches.discoverProfiles')}</p>
       </div>
 
       {matches.length > 0 ? (
@@ -72,22 +70,22 @@ const MatchAreaScreen: React.FC = () => {
       ) : (
         <Card className="text-center py-10">
           <SparklesIcon className="w-16 h-16 mx-auto text-neon-orange mb-4" />
-          <h2 className="text-xl font-semibold text-neon-orange">No New Matches Yet</h2>
-          <p className="text-gray-400 mt-2">Keep refining your style or check back soon!</p>
-          <Button variant="primary" className="mt-6">Adjust Your Style</Button>
+          <h2 className="text-xl font-semibold text-neon-orange">{t('matches.noMatches')}</h2>
+          <p className="text-gray-400 mt-2">{t('matches.refineStyle')}</p>
+          <Button variant="primary" className="mt-6">{t('styleAdjustment.title')}</Button>
         </Card>
       )}
 
       {connectedUser && (
-        <Modal isOpen={isModalOpen} onClose={closeModal} title="Connection Established!">
+        <Modal isOpen={isModalOpen} onClose={closeModal} title={t('matches.connectionEstablished')}>
           <div className="text-center">
             <Avatar src={connectedUser.avatarUrl} alt={connectedUser.displayName} size="xl" className="mx-auto mb-4" isVip={connectedUser.isVip} />
             <p className="text-xl text-neon-green font-semibold">
-              You and {connectedUser.displayName} are now connected!
+              {t('matches.nowConnected', { displayName: connectedUser.displayName })}
             </p>
-            <p className="text-gray-300 mt-2">Start a conversation and see where it goes.</p>
+            <p className="text-gray-300 mt-2">{t('matches.startConversation')}</p>
             <Button variant="primary" size="lg" className="mt-6 w-full" onClick={() => { closeModal(); alert(`Navigate to chat with ${connectedUser.displayName}`); }}>
-              Start Chatting
+              {t('matches.startChatting')}
             </Button>
           </div>
         </Modal>
