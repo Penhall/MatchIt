@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { IconProps } from '../../types';
 
@@ -128,3 +127,30 @@ export const SunIcon: React.FC<IconProps> = ({ className = "w-6 h-6" }) => (
     <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
   </svg>
 );
+
+export const TrophyIcon: React.FC<IconProps> = ({ className = "w-6 h-6" }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.871m0 0L9 15.75m0 0l.621-1.5M9 15.75l.621 1.5m-2.242 0h4.242" />
+  </svg>
+);
+
+export const BoltIcon: React.FC<IconProps> = ({ className = "w-6 h-6" }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+  </svg>
+);
+
+export const FireIcon: React.FC<IconProps> = ({ className = "w-6 h-6" }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.252 8.252 0 018.638 5.214A8.21 8.21 0 0112 3c1.988 0 3.892.783 5.362 2.214z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 18V15m0 0l-1.5-1.5M12 15l1.5-1.5M12 15l-1.5 1.5M12 15l1.5 1.5" />
+  </svg>
+);
+
+export const XIcon: React.FC<IconProps> = ({ className = "w-6 h-6" }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+  </svg>
+);
+
+

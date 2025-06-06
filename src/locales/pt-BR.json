@@ -34,7 +34,16 @@
     "styleDistribution": "Distribuição do Seu Estilo",
     "profileStatus": "Status do Perfil",
     "completionMessage": "Você completou {{percent}}% do seu perfil de estilo.",
-    "potentialMatches": "Baseado nas suas escolhas, você poderia ter matches com {{count}} pessoas!"
+    "potentialMatches": "Baseado nas suas escolhas, você poderia ter matches com {{count}} pessoas!",
+    "styleProfileComplete": "Perfil de Estilo Completo!",
+    "unlockedStyleDNA": "Você desbloqueou seu DNA de estilo único e descobriu seus matches!",
+    "tapPreferredStyle": "Toque no estilo que prefere",
+    "backButton": "Voltar",
+    "skipButton": "Pular",
+    "yourStyleDistribution": "Distribuição do Seu Estilo",
+    "profileCompletion": "Conclusão do Perfil",
+    "potentialMatchesFound": "matches potenciais encontrados!",
+    "styleTips": "💡 Dicas de Estilo"
   },
   "settings": {
     "title": "Configurações & Informações",
@@ -79,5 +88,23 @@
     "exploreBrands": "Explore Mais Marcas",
     "discoverStores": "Descubra nossas lojas parceiras e coleções exclusivas.",
     "visitMarketplace": "Visitar Mercado"
-  }
+  },
+  "points": "Pontos",
+  "streak": "Sequência",
+  "fast": "Rápido",
+  "speedBonus": "Bônus de Velocidade!",
+  "streakBonus": "Bônus de Sequência!",
+  "pointsEarned": "Pontos!",
+  "totalPoints": "Pontos Totais",
+  "levelReached": "Nível Alcançado",
+  "fastAnswers": "Respostas Rápidas",
+  "newMatches": "Novos Matches",
+  "yourStyleInsights": "Seus Insights de Estilo",
+  "avgResponseTime": "Tempo Médio de Resposta",
+  "consistencyScore": "Pontuação de Consistência",
+  "ofYourStyleProfileCompleted": "do seu perfil de estilo completo",
+  "answerMoreQuickly": "Tente responder mais rapidamente para ganhar bônus de velocidade e melhorar seu fluxo!",
+  "buildStreakMultiplier": "Continue respondendo consecutivamente para construir seu multiplicador de sequência!",
+  "improveConsistencyScores": "Dedique um tempo para pensar em cada escolha para obter melhores pontuações de consistência!",
+  "streakActive": "sequência ativa"
 }
