@@ -12,6 +12,27 @@ app.use(express.json());
 app.use(cors());
 
 // =====================================================
+// MIDDLEWARE DE AUTENTICAÇÃO
+// =====================================================
+
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: 'Token de acesso requerido' });
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET || 'secret', (err, user) => {
+    if (err) {
+      return res.status(403).json({ error: 'Token inválido' });
+    }
+    req.user = user;
+    next();
+  });
+};
+
+// =====================================================
 // CONFIGURAÇÃO DO POSTGRESQL
 // =====================================================
 
@@ -34,27 +55,6 @@ pool.on('error', (err) => {
 
 const recommendationService = setupRecommendationRoutes(app, pool, authenticateToken);
 
-
-// =====================================================
-// MIDDLEWARE DE AUTENTICAÇÃO
-// =====================================================
-
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({ error: 'Token de acesso requerido' });
-  }
-
-  jwt.verify(token, process.env.JWT_SECRET || 'secret', (err, user) => {
-    if (err) {
-      return res.status(403).json({ error: 'Token inválido' });
-    }
-    req.user = user;
-    next();
-  });
-};
 
 // =====================================================
 // ROTAS DE AUTENTICAÇÃO
@@ -769,5 +769,5 @@ process.on('SIGTERM', async () => {
   process.exit(0);
 });
 
+export { pool, authenticateToken };
 export default app;
-    

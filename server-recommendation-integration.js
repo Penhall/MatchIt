@@ -1,7 +1,6 @@
 // server-recommendation-integration.js
 // Integração completa do Sistema de Recomendação com o server.js principal do MatchIt
 
-import { pool } from './server.js'; // Importar pool do server principal
 import {
   validationRules,
   middlewares,
