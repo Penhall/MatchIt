@@ -4,6 +4,7 @@ import { Pool } from 'pg';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import cors from 'cors';
+import { setupRecommendationRoutes } from './server-recommendation-integration.js';
 
 dotenv.config();
 const app = express();
@@ -30,6 +31,9 @@ pool.on('connect', () => {
 pool.on('error', (err) => {
   console.error('❌ Erro na conexão PostgreSQL:', err);
 });
+
+const recommendationService = setupRecommendationRoutes(app, pool, authenticateToken);
+
 
 // =====================================================
 // MIDDLEWARE DE AUTENTICAÇÃO
@@ -744,6 +748,7 @@ app.use((error, req, res, next) => {
     timestamp: new Date().toISOString()
   });
 });
+
 
 // =====================================================
 // INICIALIZAÇÃO DO SERVIDOR
