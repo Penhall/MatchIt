@@ -20,9 +20,9 @@ COPY server.js ./
 COPY scripts/ ./scripts/
 COPY .env* ./
 
-# Criar usuário não-root para segurança
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
+# Criar usuário não-root para segurança (abordagem simplificada)
+RUN groupadd -g 1001 nodejs && \
+    useradd -u 1001 -g nodejs nodejs
 
 # Definir permissões
 RUN chown -R nodejs:nodejs /app
