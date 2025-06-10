@@ -1,310 +1,118 @@
-// server/routes/products.js - Rotas de produtos/marketplace
+// server/routes/products.js - Rotas de produtos (APENAS PRODUCTS)
 import express from 'express';
-import { optionalAuth } from '../middleware/auth.js';
-import { ProductService } from '../services/productService.js';
 
 const router = express.Router();
-const productService = new ProductService();
 
-// GET /api/products - Listar produtos
-router.get('/products', optionalAuth, async (req, res) => {
+// GET / - Listar produtos
+router.get('/', async (req, res) => {
   try {
-    const { category, limit = 20, page = 1 } = req.query;
+    const { category, limit = 20 } = req.query;
     
-    const products = await productService.getProducts({
-      category,
-      limit: Math.min(parseInt(limit), 50),
-      page: parseInt(page),
-      userId: req.user?.userId
-    });
+    // Resposta mockada por enquanto
+    const mockProducts = [
+      {
+        id: 'prod1',
+        name: 'Tênis Cyber Glow',
+        brand_name: 'CyberStyle',
+        brand_logo_url: 'https://picsum.photos/seed/brandA/50/50',
+        image_url: 'https://picsum.photos/seed/sneaker1/200/200',
+        price_display: 'R$ 299,99',
+        category: 'sneakers',
+        description: 'Tênis futurista com LED integrado'
+      },
+      {
+        id: 'prod2', 
+        name: 'Jaqueta Neon Style',
+        brand_name: 'NeonWear',
+        brand_logo_url: 'https://picsum.photos/seed/brandB/50/50',
+        image_url: 'https://picsum.photos/seed/jacket1/200/200',
+        price_display: 'R$ 199,99',
+        category: 'clothing',
+        description: 'Jaqueta com detalhes neon'
+      },
+      {
+        id: 'prod3',
+        name: 'Óculos Holográfico',
+        brand_name: 'HoloVision',
+        brand_logo_url: 'https://picsum.photos/seed/brandC/50/50',
+        image_url: 'https://picsum.photos/seed/glasses1/200/200',
+        price_display: 'R$ 149,99',
+        category: 'accessories',
+        description: 'Óculos com lentes holográficas'
+      }
+    ];
     
-    res.json(products);
+    // Filtrar por categoria se especificada
+    let filteredProducts = mockProducts;
+    if (category) {
+      filteredProducts = mockProducts.filter(p => p.category === category);
+    }
+    
+    // Limitar resultados
+    const limitedProducts = filteredProducts.slice(0, parseInt(limit));
+    
+    res.json(limitedProducts);
   } catch (error) {
     console.error('Erro ao buscar produtos:', error);
     res.status(500).json({ 
-      error: 'Erro interno do servidor',
-      code: 'PRODUCTS_FETCH_ERROR'
+      error: 'Erro interno do servidor' 
     });
   }
 });
 
-// GET /api/products/recommended - Produtos recomendados
-router.get('/products/recommended', optionalAuth, async (req, res) => {
+// GET /recommended - Produtos recomendados
+router.get('/recommended', async (req, res) => {
   try {
-    const products = await productService.getRecommendedProducts(req.user?.userId);
-    res.json(products);
+    const mockRecommendedProducts = [
+      {
+        id: 'prod1',
+        name: 'Tênis Cyber Glow',
+        brandLogoUrl: 'https://picsum.photos/seed/brandA/50/50',
+        imageUrl: 'https://picsum.photos/seed/sneaker1/200/200',
+        price: 'R$ 299,99',
+        category: 'sneakers'
+      },
+      {
+        id: 'prod2',
+        name: 'Jaqueta Neon Style', 
+        brandLogoUrl: 'https://picsum.photos/seed/brandB/50/50',
+        imageUrl: 'https://picsum.photos/seed/jacket1/200/200',
+        price: 'R$ 199,99',
+        category: 'clothing'
+      }
+    ];
+
+    res.json(mockRecommendedProducts);
   } catch (error) {
     console.error('Erro ao buscar produtos recomendados:', error);
     res.status(500).json({ 
-      error: 'Erro ao buscar produtos',
-      code: 'RECOMMENDED_PRODUCTS_ERROR'
+      error: 'Erro ao buscar produtos' 
     });
   }
 });
 
-// GET /api/products/:productId - Obter produto específico
-router.get('/products/:productId', optionalAuth, async (req, res) => {
+// GET /:productId - Obter produto específico
+router.get('/:productId', async (req, res) => {
   try {
     const { productId } = req.params;
     
-    const product = await productService.getProductById(productId, req.user?.userId);
+    // Resposta mockada
+    const mockProduct = {
+      id: productId,
+      name: 'Produto Exemplo',
+      brand_name: 'Brand',
+      image_url: 'https://picsum.photos/200/200',
+      price_display: 'R$ 99,99',
+      description: 'Produto de exemplo'
+    };
     
-    if (!product) {
-      return res.status(404).json({ 
-        error: 'Produto não encontrado',
-        code: 'PRODUCT_NOT_FOUND'
-      });
-    }
-    
-    res.json(product);
+    res.json(mockProduct);
   } catch (error) {
     console.error('Erro ao buscar produto:', error);
     res.status(500).json({ 
-      error: 'Erro interno do servidor',
-      code: 'PRODUCT_FETCH_ERROR'
-    });
-  }
-});
-
-// GET /api/products/categories - Listar categorias disponíveis
-router.get('/products/categories', async (req, res) => {
-  try {
-    const categories = await productService.getCategories();
-    res.json(categories);
-  } catch (error) {
-    console.error('Erro ao buscar categorias:', error);
-    res.status(500).json({ 
-      error: 'Erro interno do servidor',
-      code: 'CATEGORIES_FETCH_ERROR'
+      error: 'Erro interno do servidor' 
     });
   }
 });
 
 export default router;
-
-// =====================================================
-
-// server/routes/subscription.js - Rotas de assinatura VIP
-import express from 'express';
-import { authenticateToken } from '../middleware/auth.js';
-import { validateRequired } from '../middleware/validation.js';
-import { SubscriptionService } from '../services/subscriptionService.js';
-
-const router = express.Router();
-const subscriptionService = new SubscriptionService();
-
-// POST /api/subscription - Criar assinatura VIP
-router.post('/subscription', authenticateToken, validateRequired(['planType']), async (req, res) => {
-  try {
-    const { planType, paymentMethod, stripeSubscriptionId } = req.body;
-    
-    if (!['monthly', 'yearly'].includes(planType)) {
-      return res.status(400).json({ 
-        error: 'Tipo de plano inválido',
-        validPlans: ['monthly', 'yearly'],
-        code: 'INVALID_PLAN_TYPE'
-      });
-    }
-    
-    const result = await subscriptionService.createSubscription({
-      userId: req.user.userId,
-      planType,
-      paymentMethod,
-      stripeSubscriptionId
-    });
-    
-    res.status(201).json(result);
-    
-  } catch (error) {
-    console.error('Erro ao criar assinatura:', error);
-    res.status(500).json({ 
-      error: 'Erro interno do servidor',
-      code: 'SUBSCRIPTION_CREATION_ERROR'
-    });
-  }
-});
-
-// GET /api/subscription - Obter status da assinatura
-router.get('/subscription', authenticateToken, async (req, res) => {
-  try {
-    const subscription = await subscriptionService.getUserSubscription(req.user.userId);
-    
-    res.json({ 
-      hasActiveSubscription: !!subscription,
-      subscription: subscription
-    });
-    
-  } catch (error) {
-    console.error('Erro ao buscar assinatura:', error);
-    res.status(500).json({ 
-      error: 'Erro interno do servidor',
-      code: 'SUBSCRIPTION_FETCH_ERROR'
-    });
-  }
-});
-
-// PUT /api/subscription/cancel - Cancelar assinatura
-router.put('/subscription/cancel', authenticateToken, async (req, res) => {
-  try {
-    const result = await subscriptionService.cancelSubscription(req.user.userId);
-    
-    res.json(result);
-    
-  } catch (error) {
-    console.error('Erro ao cancelar assinatura:', error);
-    
-    if (error.message.includes('não encontrada')) {
-      return res.status(404).json({ 
-        error: 'Assinatura não encontrada',
-        code: 'SUBSCRIPTION_NOT_FOUND'
-      });
-    }
-    
-    res.status(500).json({ 
-      error: 'Erro interno do servidor',
-      code: 'SUBSCRIPTION_CANCEL_ERROR'
-    });
-  }
-});
-
-// GET /api/subscription/plans - Listar planos disponíveis
-router.get('/subscription/plans', async (req, res) => {
-  try {
-    const plans = await subscriptionService.getAvailablePlans();
-    res.json(plans);
-  } catch (error) {
-    console.error('Erro ao buscar planos:', error);
-    res.status(500).json({ 
-      error: 'Erro interno do servidor',
-      code: 'PLANS_FETCH_ERROR'
-    });
-  }
-});
-
-export default router;
-
-// =====================================================
-
-// server/routes/stats.js - Rotas de estatísticas
-import express from 'express';
-import { authenticateToken } from '../middleware/auth.js';
-import { StatsService } from '../services/statsService.js';
-
-const router = express.Router();
-const statsService = new StatsService();
-
-// GET /api/user/stats - Estatísticas do usuário
-router.get('/user/stats', authenticateToken, async (req, res) => {
-  try {
-    const stats = await statsService.getUserStats(req.user.userId);
-    res.json(stats);
-  } catch (error) {
-    console.error('Erro ao buscar estatísticas do usuário:', error);
-    res.status(500).json({ 
-      error: 'Erro interno do servidor',
-      code: 'USER_STATS_ERROR'
-    });
-  }
-});
-
-// GET /api/analytics/styles - Análise de estilos populares
-router.get('/analytics/styles', async (req, res) => {
-  try {
-    const analytics = await statsService.getStyleAnalytics();
-    res.json(analytics);
-  } catch (error) {
-    console.error('Erro ao buscar análise de estilos:', error);
-    res.status(500).json({ 
-      error: 'Erro interno do servidor',
-      code: 'STYLE_ANALYTICS_ERROR'
-    });
-  }
-});
-
-// GET /api/analytics/matches - Estatísticas de matches
-router.get('/analytics/matches', authenticateToken, async (req, res) => {
-  try {
-    const analytics = await statsService.getMatchAnalytics(req.user.userId);
-    res.json(analytics);
-  } catch (error) {
-    console.error('Erro ao buscar análise de matches:', error);
-    res.status(500).json({ 
-      error: 'Erro interno do servidor',
-      code: 'MATCH_ANALYTICS_ERROR'
-    });
-  }
-});
-
-export default router;
-
-// =====================================================
-
-// server/routes/index.js - Router principal que organiza todas as rotas
-import express from 'express';
-import authRoutes from './auth.js';
-import healthRoutes from './health.js';
-import profileRoutes from './profile.js';
-import matchesRoutes from './matches.js';
-import recommendationsRoutes from './recommendations.js';
-import chatRoutes from './chat.js';
-import productsRoutes from './products.js';
-import subscriptionRoutes from './subscription.js';
-import statsRoutes from './stats.js';
-
-const configureRoutes = (app) => {
-  // Middleware para todas as rotas da API
-  app.use('/api', (req, res, next) => {
-    // Headers de segurança
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'DENY');
-    res.setHeader('X-XSS-Protection', '1; mode=block');
-    
-    // Request ID para tracking
-    if (!req.headers['x-request-id']) {
-      req.headers['x-request-id'] = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    }
-    
-    next();
-  });
-
-  // Rotas de saúde e informações (sem prefixo /api para algumas)
-  app.use('/api', healthRoutes);
-
-  // Rotas de autenticação
-  app.use('/api/auth', authRoutes);
-
-  // Rotas de perfil
-  app.use('/api', profileRoutes);
-
-  // Rotas de matching
-  app.use('/api', matchesRoutes);
-
-  // Rotas de recomendação
-  app.use('/api', recommendationsRoutes);
-
-  // Rotas de chat
-  app.use('/api', chatRoutes);
-
-  // Rotas de produtos
-  app.use('/api', productsRoutes);
-
-  // Rotas de assinatura
-  app.use('/api', subscriptionRoutes);
-
-  // Rotas de estatísticas
-  app.use('/api', statsRoutes);
-
-  // Rota raiz
-  app.get('/', (req, res) => {
-    res.json({
-      message: 'MatchIt API - Estrutura Modular',
-      version: '1.0.0',
-      documentation: '/api/info',
-      health: '/api/health'
-    });
-  });
-
-  console.log('✅ Rotas configuradas');
-};
-
-export { configureRoutes };
