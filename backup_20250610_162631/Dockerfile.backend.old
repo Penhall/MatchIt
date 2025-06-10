@@ -1,5 +1,5 @@
 # Dockerfile.backend - Dockerfile para o backend Node.js (Estrutura Modular)
-FROM node:20-bullseye-slim AS base
+FROM node:18-bullseye-slim AS base
 
 # Instalar dependências do sistema
 RUN apt-get update && \
@@ -21,8 +21,8 @@ COPY scripts/ ./scripts/
 COPY .env* ./
 
 # Criar usuário não-root para segurança
-RUN groupadd --gid 1001 nodejs && \
-    useradd --uid 1001 --gid nodejs --shell /bin/bash --create-home nodejs
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
 
 # Definir permissões
 RUN chown -R nodejs:nodejs /app

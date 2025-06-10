@@ -1,70 +1,99 @@
-// server/routes/auth.js - Rotas de autenticação (APENAS AUTH)
+// server/app.js - Entry point principal do MatchIt Backend (Estrutura Modular)
 import express from 'express';
+import { initializeDatabase } from './config/database.js';
+import { config, validateConfig, isDevelopment } from './config/environment.js';
+import configureMiddleware from './middleware/configure.js';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
+import routes from './middleware/index.js';
+import { gracefulShutdown, logger } from './utils/helpers.js';
 
-const router = express.Router();
+// Validar configurações antes de iniciar
+try {
+  validateConfig();
+  // Inicializar logger com configurações
+  const { initLogger } = await import('./utils/helpers.js');
+  initLogger(config);
+} catch (error) {
+  console.error('❌ Erro na configuração:', error.message);
+  process.exit(1);
+}
 
-// POST /api/auth/register - Registro de usuário
-router.post('/register', async (req, res) => {
-  try {
-    const { email, password, name, displayName, city, gender, age } = req.body;
-    
-    if (!email || !password || !name) {
-      return res.status(400).json({ 
-        error: 'Email, senha e nome são obrigatórios',
-        code: 'MISSING_REQUIRED_FIELDS'
-      });
-    }
-    
-    // Por enquanto, resposta mockada até implementar AuthService
-    res.status(201).json({
-      message: 'Usuário registrado com sucesso (mock)',
-      user: {
-        email,
-        name,
-        displayName: displayName || name,
-        city: city || 'Unknown'
-      },
-      token: 'mock_jwt_token'
-    });
-    
-  } catch (error) {
-    console.error('Erro no registro:', error);
-    res.status(500).json({ 
-      error: 'Erro interno do servidor',
-      code: 'REGISTRATION_ERROR'
-    });
-  }
+const app = express();
+
+// =====================================================
+// CONFIGURAÇÃO DE MIDDLEWARE
+// =====================================================
+
+configureMiddleware(app);
+
+// =====================================================
+// CONFIGURAÇÃO DE ROTAS
+// =====================================================
+
+// Rota raiz
+app.get('/', (req, res) => {
+  res.json({
+    message: 'MatchIt API - Estrutura Modular',
+    version: '1.0.0',
+    environment: config.nodeEnv,
+    documentation: '/api/info',
+    health: '/api/health'
+  });
 });
 
-// POST /api/auth/login - Login de usuário
-router.post('/login', async (req, res) => {
+// Rotas da API
+app.use('/api', routes);
+
+// =====================================================
+// MIDDLEWARE DE TRATAMENTO DE ERROS
+// =====================================================
+
+// Handler para rotas não encontradas
+app.use('*', notFoundHandler);
+
+// Handler global de erros
+app.use(errorHandler);
+
+// =====================================================
+// INICIALIZAÇÃO DO SERVIDOR
+// =====================================================
+
+const startServer = async () => {
   try {
-    const { email, password } = req.body;
+    logger.info('🚀 Iniciando MatchIt Backend - Estrutura Modular');
     
-    if (!email || !password) {
-      return res.status(400).json({ 
-        error: 'Email e senha são obrigatórios',
-        code: 'MISSING_CREDENTIALS'
-      });
-    }
+    // Inicializar banco de dados
+    await initializeDatabase();
+    logger.info('✅ Database inicializado');
     
-    // Por enquanto, resposta mockada
-    res.json({
-      message: 'Login realizado com sucesso (mock)',
-      user: {
-        email,
-        name: 'Mock User'
-      },
-      token: 'mock_jwt_token'
+    // Iniciar servidor HTTP
+    const server = app.listen(config.port, '0.0.0.0', () => {
+      logger.info(`🚀 Servidor rodando na porta ${config.port}`);
+      logger.info(`📊 Environment: ${config.nodeEnv}`);
+      logger.info(`💾 Database: ${config.database.host}:${config.database.port}`);
+      logger.info(`🌐 Health check: http://localhost:${config.port}/api/health`);
+      logger.info(`📖 API info: http://localhost:${config.port}/api/info`);
+      
+      if (isDevelopment()) {
+        logger.info('🔧 Modo desenvolvimento ativo');
+      }
     });
+
+    // Configurar timeout do servidor
+    server.timeout = 60000; // 60 segundos
+    
+    // Configurar graceful shutdown
+    gracefulShutdown(server);
+    
+    logger.info('✅ Servidor iniciado com sucesso');
     
   } catch (error) {
-    console.error('Erro no login:', error);
-    res.status(500).json({ 
-      error: 'Erro interno do servidor',
-      code: 'LOGIN_ERROR'
-    });
+    logger.error('❌ Erro ao iniciar servidor:', error);
+    process.exit(1);
   }
-});
+};
 
-export default router;
+// Iniciar o servidor
+startServer();
+
+export default app;

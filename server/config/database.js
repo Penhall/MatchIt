@@ -1,8 +1,5 @@
 // server/config/database.js - Configuração do PostgreSQL
 import { Pool } from 'pg';
-import dotenv from 'dotenv';
-
-dotenv.config();
 
 // Configuração do pool de conexões
 const pool = new Pool({
