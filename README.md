@@ -1,286 +1,412 @@
-# MatchIt - Style & Emotion Connect
+# 🎯 Sistema de Recomendação MatchIt
 
-Um aplicativo inovador de dating que conecta pessoas através de afinidades estéticas, emocionais e comportamentais. Em vez de focar apenas em aparência, o MatchIt cria conexões baseadas em escolhas de estilo, cores, hobbies e sentimentos.
+> **Status**: 🟢 **75% IMPLEMENTADO** - Funcionalmente completo para uso básico
 
-## 🎯 Visão Geral
+Sistema inteligente de recomendações que conecta pessoas baseado em compatibilidade de estilo, personalidade, localização e comportamento.
 
-O MatchIt utiliza um sistema de "Style Adjustment" onde usuários fazem escolhas visuais entre pares de imagens em 5 categorias principais:
-- **Tênis** - Preferências de calçados
-- **Roupas** - Estilos de vestuário
-- **Cores** - Paletas de cores favoritas
-- **Hobbies** - Atividades de lazer
-- **Sentimentos** - Estados emocionais
+## 📋 Índice
 
-O algoritmo inteligente calcula compatibilidades multidimensionais e sugere matches com base nessas afinidades profundas.
+- [Status Atual](#-status-atual)
+- [Arquitetura](#-arquitetura)
+- [Configuração](#%EF%B8%8F-configuração)
+- [Como Usar](#-como-usar)
+- [APIs Disponíveis](#-apis-disponíveis)
+- [Banco de Dados](#-banco-de-dados)
+- [Tipos TypeScript](#-tipos-typescript)
+- [Algoritmos](#-algoritmos)
+- [Próximos Passos](#-próximos-passos)
 
-## 🚀 Funcionalidades Principais
+## 🎯 Status Atual
 
-- **Sistema de Autenticação** com login social (Google/Apple)
-- **Style Adjustment** - Quiz visual interativo para definir perfil
-- **Match Area** - Descoberta de perfis compatíveis com percentual de afinidade
-- **Chat System** - Conversas entre matches confirmados
-- **Vendor Area** - Recomendações de produtos baseadas no perfil
-- **Radar Chart** - Visualização do perfil de estilo do usuário
-- **Sistema VIP** - Funcionalidades premium e sem anúncios
+### ✅ IMPLEMENTADO
+- **Backend Completo**: Serviços, APIs, cache, rate limiting
+- **Database Schema**: 17 tabelas + 7 stored procedures + 3 views
+- **Tipos TypeScript**: Sistema completo de tipagem
+- **3 Algoritmos**: Híbrido, Colaborativo, Baseado em Conteúdo
+- **Aprendizado Automático**: Pesos adaptativos baseados em feedback
+- **Analytics Detalhados**: Métricas de engajamento e performance
 
-## 🛠️ Stack Tecnológica
-
-### Frontend
-- **React 19** com TypeScript
-- **Vite** como bundler
-- **Tailwind CSS** para estilização
-- **React Router** para navegação
-- **Recharts** para gráficos
-- **React i18next** para internacionalização
-
-### Backend
-- **Node.js** com Express
-- **PostgreSQL** como banco de dados
-- **JWT** para autenticação
-- **bcryptjs** para hash de senhas
-
-### DevOps
-- **Docker** e **Docker Compose**
-- **Nginx** como proxy reverso
-- **Vite** para build otimizado
-
-## 📋 Pré-requisitos
-
-- **Docker** e **Docker Compose** instalados
-- **Node.js 18+** (para desenvolvimento local)
-- **Git** para controle de versão
-
-## 🚀 Instalação e Execução
-
-### 1. Clone o repositório
-```bash
-git clone <repository-url>
-cd matchit-app
-```
-
-### 2. Configuração de Ambiente
-Crie um arquivo `.env` na raiz do projeto:
-```bash
-# Configurações do PostgreSQL
-DB_HOST=postgres
-DB_PORT=5432
-DB_USER=matchit
-DB_PASSWORD=matchit123
-DB_NAME=matchit_db
-
-# Configurações de autenticação
-JWT_SECRET=your_jwt_secret_key_here
-JWT_EXPIRES_IN=1h
-
-# Configurações do servidor
-PORT=3000
-NODE_ENV=production
-```
-
-### 3. Executar com Docker (Recomendado)
-```bash
-# Build e execução completa
-docker-compose up --build
-
-# Executar em background
-docker-compose up -d --build
-```
-
-### 4. Desenvolvimento Local (Opcional)
-```bash
-# Instalar dependências
-npm install
-
-# Executar backend
-npm run server
-
-# Executar frontend (em outro terminal)
-npm run dev
-```
-
-## 🌐 Acessos da Aplicação
-
-Após a execução bem-sucedida:
-
-- **Frontend**: http://localhost
-- **Backend API**: http://localhost/api  
-- **PostgreSQL**: localhost:5432
-- **Desenvolvimento Frontend**: http://localhost:5173 (se rodando localmente)
-
-## 📁 Estrutura do Projeto
-
-```
-matchit-app/
-├── screens/                    # Telas principais da aplicação
-│   ├── LoginScreen.tsx
-│   ├── ProfileScreen.tsx
-│   ├── StyleAdjustmentScreen.tsx
-│   ├── MatchAreaScreen.tsx
-│   ├── ChatScreen.tsx
-│   ├── VendorScreen.tsx
-│   └── SettingsScreen.tsx
-├── components/                 # Componentes reutilizáveis
-│   ├── common/                # Componentes básicos
-│   ├── navigation/            # Navegação e menus
-│   └── profile/               # Componentes específicos de perfil
-├── context/                   # Contextos React
-│   └── AuthContext.tsx
-├── src/                       # Assets e configurações
-│   ├── assets/
-│   ├── locales/              # Traduções
-│   └── i18n.ts
-├── docs/                      # Documentação
-├── scripts/                   # Scripts de banco
-│   └── init_db.sql
-├── docker-compose.yml
-├── Dockerfile.backend
-├── Dockerfile.frontend
-├── nginx.conf
-├── server.js                 # Servidor Express
-├── constants.ts              # Constantes e dados mock
-├── types.ts                  # Definições TypeScript
-└── package.json
-```
-
-## 🐳 Comandos Docker Úteis
-
-### Gerenciamento de Containers
-```bash
-# Ver status dos serviços
-docker-compose ps
-
-# Parar todos os serviços
-docker-compose down
-
-# Restart de serviço específico
-docker-compose restart backend
-docker-compose restart frontend
-
-# Ver logs
-docker-compose logs backend
-docker-compose logs frontend
-docker-compose logs postgres
-```
-
-### Banco de Dados
-```bash
-# Acessar PostgreSQL
-docker exec -it matchit-postgres psql -U matchit -d matchit_db
-
-# Backup do banco
-docker exec matchit-postgres pg_dump -U matchit matchit_db > backup.sql
-
-# Restore do banco
-docker exec -i matchit-postgres psql -U matchit -d matchit_db < backup.sql
-```
-
-### Desenvolvimento
-```bash
-# Rebuild apenas um serviço
-docker-compose up --build backend
-
-# Executar comandos dentro do container
-docker exec -it matchit-backend npm install
-docker exec -it matchit-backend npm run migrate
-```
-
-## 🔧 Scripts Disponíveis
-
-```bash
-# Desenvolvimento
-npm run dev          # Inicia Vite dev server
-npm run server       # Inicia backend com nodemon
-
-# Build
-npm run build        # Build de produção com Vite
-npm run preview      # Preview do build
-
-# Backend
-npm start           # Inicia servidor de produção
-npm run server      # Desenvolvimento com nodemon
-```
-
-## 📊 Funcionalidades Implementadas
-
-### ✅ Concluído
-- [x] Sistema de autenticação básico
-- [x] Todas as telas principais (Login, Profile, Style Adjustment, Match Area, Chat, Vendor, Settings)
-- [x] Componentes reutilizáveis (Button, Card, Avatar, Modal, etc.)
-- [x] Sistema de navegação com Bottom Navbar
-- [x] Tema dark com cores neon
-- [x] Gráfico radar para visualização de estilo
-- [x] Sistema de internacionalização (PT-BR)
-- [x] Configuração Docker completa
-
-### 🚧 Em Desenvolvimento
-- [ ] Integração completa com backend
-- [ ] Algoritmo de matching inteligente
-- [ ] Sistema de pagamentos (Stripe/Mercado Pago)
-- [ ] Upload e gestão de imagens
-- [ ] Notificações push
-- [ ] Testes automatizados
-
-### 📝 Próximas Fases
-- [ ] Beta testing com usuários reais
-- [ ] Otimizações de performance
-- [ ] Deploy em produção
-- [ ] Expansão de funcionalidades VIP
-
-## 🎨 Design System
-
-O MatchIt utiliza um design futurístico com:
-- **Cores Neon**: Azul (#00FFFF), Verde (#39FF14), Laranja (#FF8C00)
-- **Tema Dark**: Backgrounds escuros com acentos luminosos
-- **Efeitos Glow**: Sombras e bordas com brilho neon
-- **Animações**: Transições suaves e efeitos hover
-- **Typography**: Gradientes e texto brilhante
-
-## 🌐 Internacionalização
-
-Atualmente suportado:
-- **Português (PT-BR)** - Idioma padrão
-
-Preparado para expansão:
-- Inglês (EN)
-- Espanhol (ES)
-
-## 🔒 Segurança
-
-- Autenticação JWT
-- Hash de senhas com bcrypt
-- Validação de dados no backend
-- Sanitização de inputs
-- HTTPS em produção (configurar certificados)
-
-## 📈 Monitoramento e Logs
-
-```bash
-# Monitorar logs em tempo real
-docker-compose logs -f
-
-# Logs específicos
-docker-compose logs -f backend
-docker-compose logs -f postgres
-```
-
-## 🤝 Contribuição
-
-1. Fork o projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/nova-funcionalidade`)
-3. Commit suas mudanças (`git commit -m 'Adiciona nova funcionalidade'`)
-4. Push para a branch (`git push origin feature/nova-funcionalidade`)
-5. Abra um Pull Request
-
-## 📄 Licença
-
-Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
-
-## 📞 Suporte
-
-Para dúvidas e suporte:
-- **Email**: dev@matchit.app
-- **GitHub Issues**: Use para reportar bugs e solicitar features
+### ⚠️ PENDENTE
+- **Componentes React**: Frontend components
+- **Integração Final**: Conectar com server.js existente
+- **Testes**: Validação completa do sistema
 
 ---
 
-**MatchIt** - Conecte-se por estilo, escolha e sentimento 💫
+## 🏗️ Arquitetura
+
+```
+📁 Sistema de Recomendação
+├── 🧠 Engine Core (RecommendationService)
+├── 📊 Analytics & Learning
+├── 🗄️ Database (PostgreSQL)
+├── 🔌 REST APIs
+├── 🧩 TypeScript Types
+└── ⚡ Cache & Performance
+```
+
+### Fluxo Principal
+1. **Usuário** solicita recomendações
+2. **API** valida e processa request
+3. **Engine** calcula compatibilidades 
+4. **Algoritmo** seleciona melhores matches
+5. **Cache** otimiza performance
+6. **Analytics** registra métricas
+7. **Learning** ajusta pesos automaticamente
+
+---
+
+## ⚙️ Configuração
+
+### 1. Executar Migrations do Banco
+
+```bash
+# Executar migrations em ordem
+psql -U matchit -d matchit_db -f scripts/migration_001_core_tables.sql
+psql -U matchit -d matchit_db -f scripts/migration_002_analytics_tables.sql
+psql -U matchit -d matchit_db -f scripts/migration_003_stored_procedures.sql
+psql -U matchit -d matchit_db -f scripts/migration_004_views_config.sql
+```
+
+### 2. Configurar Variáveis de Ambiente
+
+```bash
+# Configurações do Sistema de Recomendação
+RECOMMENDATION_ALGORITHM=hybrid
+RECOMMENDATION_CACHE_TTL=1800
+MAX_CANDIDATES=200
+
+# Pesos padrão do algoritmo
+DEFAULT_STYLE_WEIGHT=0.25
+DEFAULT_EMOTIONAL_WEIGHT=0.20
+DEFAULT_HOBBY_WEIGHT=0.20
+DEFAULT_LOCATION_WEIGHT=0.15
+DEFAULT_PERSONALITY_WEIGHT=0.20
+
+# Performance e Cache
+ENABLE_CACHE=true
+ENABLE_ANALYTICS=true
+MAX_RECOMMENDATIONS_PER_REQUEST=50
+```
+
+### 3. Integrar com Server.js
+
+```javascript
+// server.js
+import { createRecommendationRoutes } from './routes/recommendation/recommendations.js';
+
+// Adicionar rotas
+app.use('/api/recommendations', createRecommendationRoutes(pool));
+```
+
+---
+
+## 🚀 Como Usar
+
+### Exemplo Básico - Obter Recomendações
+
+```javascript
+// Frontend/React
+const response = await fetch('/api/recommendations?limit=20&algorithm=hybrid', {
+  headers: {
+    'Authorization': `Bearer ${userToken}`,
+    'Content-Type': 'application/json'
+  }
+});
+
+const { data } = await response.json();
+console.log('Recomendações:', data.recommendations);
+```
+
+### Registrar Feedback
+
+```javascript
+// Usuário curtiu um perfil
+await fetch('/api/recommendations/feedback', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${userToken}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    targetUserId: 'user-uuid',
+    action: 'like',
+    context: {
+      viewTime: 5000,
+      scrollDepth: 0.8,
+      photosViewed: 3
+    }
+  })
+});
+```
+
+---
+
+## 🔌 APIs Disponíveis
+
+### GET `/api/recommendations`
+Obter recomendações personalizadas
+
+**Parâmetros:**
+- `limit` (1-50): Número de recomendações
+- `algorithm`: `hybrid` | `collaborative` | `content`
+- `refresh`: `true` para forçar atualização
+- `ageMin`, `ageMax`: Filtro de idade
+- `maxDistance`: Distância máxima em km
+- `verifiedOnly`: Apenas usuários verificados
+
+### POST `/api/recommendations/feedback`
+Registrar feedback do usuário
+
+**Body:**
+```json
+{
+  "targetUserId": "uuid",
+  "action": "like|dislike|super_like|skip|report|block",
+  "context": {
+    "viewTime": 5000,
+    "scrollDepth": 0.8,
+    "photosViewed": 3
+  }
+}
+```
+
+### GET `/api/recommendations/stats`
+Estatísticas do usuário
+
+### PUT `/api/recommendations/preferences`
+Atualizar preferências do algoritmo
+
+### GET `/api/recommendations/health`
+Health check do sistema
+
+---
+
+## 🗄️ Banco de Dados
+
+### Tabelas Principais
+
+#### Core System
+- `user_extended_profiles` - Perfis psicológicos e comportamentais
+- `user_algorithm_weights` - Pesos personalizados por usuário
+- `user_interactions` - Histórico de likes/dislikes
+- `match_scores` - Scores de compatibilidade calculados
+- `recommendation_sessions` - Sessões de recomendação
+
+#### Analytics
+- `analytics_events` - Eventos detalhados para tracking
+- `user_behavior_patterns` - Padrões comportamentais identificados
+- `engagement_metrics` - Métricas de engajamento por período
+- `algorithm_performance` - Performance dos algoritmos
+- `system_statistics` - Estatísticas agregadas
+
+### Stored Procedures Principais
+
+```sql
+-- Calcular compatibilidade geral
+SELECT calculate_overall_compatibility('user1_uuid', 'user2_uuid', 'hybrid');
+
+-- Encontrar matches potenciais
+SELECT * FROM find_potential_matches('user_uuid', 20, 0.3, 50.0);
+
+-- Registrar interação com aprendizado
+SELECT record_interaction_with_learning('user_uuid', 'target_uuid', 'like');
+```
+
+---
+
+## 🧩 Tipos TypeScript
+
+### Estrutura Principal
+
+```typescript
+import {
+  // Tipos base
+  RecommendationAlgorithm,
+  CompatibilityDimensions,
+  RecommendationResult,
+  
+  // Perfil estendido
+  ExtendedUserProfile,
+  PersonalityProfile,
+  EmotionalProfile,
+  
+  // Scoring
+  MatchScore,
+  MatchExplanation,
+  
+  // Interações
+  UserInteraction,
+  InteractionContext,
+  
+  // Analytics
+  EngagementMetrics,
+  BehaviorPattern
+} from './types/recommendation';
+```
+
+### Exemplo de Uso
+
+```typescript
+// Configurar algoritmo
+const weights: CompatibilityDimensions = {
+  style: 0.3,
+  emotional: 0.2,
+  hobby: 0.2,
+  location: 0.15,
+  personality: 0.15,
+  lifestyle: 0.0,
+  values: 0.0,
+  communication: 0.0
+};
+
+// Processar resultado
+const result: RecommendationResult = await getRecommendations(userId, {
+  algorithm: 'hybrid',
+  limit: 20,
+  filters: { verifiedOnly: true }
+});
+```
+
+---
+
+## 🧠 Algoritmos
+
+### 1. Híbrido (Recomendado)
+Combina múltiplas dimensões com pesos personalizados:
+- **Estilo** (25%): Similaridade em escolhas visuais
+- **Emocional** (20%): Compatibilidade emocional
+- **Hobbies** (20%): Interesses comuns
+- **Localização** (15%): Proximidade geográfica
+- **Personalidade** (20%): Match psicológico
+
+### 2. Colaborativo
+Baseado em comportamento de usuários similares:
+- Identifica usuários com padrões semelhantes
+- Recomenda baseado em curtidas de usuários similares
+- Melhora com volume de dados
+
+### 3. Baseado em Conteúdo
+Foca nas características do perfil:
+- Analisa preferências declaradas
+- Ideal para novos usuários
+- Menos dependente de dados históricos
+
+### Sistema de Aprendizado
+- **Feedback Positivo**: Aumenta peso das dimensões que contribuíram
+- **Feedback Negativo**: Diminui levemente os pesos
+- **Adaptação Gradual**: Ajustes pequenos para estabilidade
+- **Confiança Crescente**: Melhora com mais interações
+
+---
+
+## 🎯 Próximos Passos
+
+### Imediato (1-2 horas)
+1. **Conectar rotas** no server.js principal
+2. **Testar endpoints** com dados reais
+3. **Validar integração** com banco existente
+
+### Curto Prazo (1 semana)
+1. **Criar componentes React**:
+   ```bash
+   # Componentes necessários
+   components/recommendation/RecommendationCard.tsx
+   components/recommendation/RecommendationList.tsx
+   hooks/useRecommendations.ts
+   ```
+
+2. **Integrar com telas existentes**:
+   - MatchAreaScreen usar recomendações reais
+   - Adicionar feedback de usuário
+   - Exibir explicações de compatibilidade
+
+### Médio Prazo (1 mês)
+1. **Otimizações de Performance**:
+   - Cache distribuído (Redis)
+   - Otimização de queries
+   - Paralelização de cálculos
+
+2. **Analytics Avançados**:
+   - Dashboard de métricas
+   - Relatórios de performance
+   - A/B testing framework
+
+3. **Features Sociais**:
+   - Matches mútuos aprimorados
+   - Gamificação avançada
+   - Recomendações baseadas em rede social
+
+---
+
+## 📊 Métricas de Performance
+
+### Configuração Padrão
+- **Cache TTL**: 30 minutos
+- **Rate Limit**: 100 requests/hora por usuário
+- **Max Candidates**: 200 perfis analisados
+- **Processing Timeout**: 5 segundos
+- **Min Compatibility**: 30% para recomendação
+
+### Monitoramento
+- Tempo de resposta médio
+- Taxa de acerto do cache
+- Taxa de erro
+- Satisfação do usuário
+- Taxa de conversão (like → match → conversa)
+
+---
+
+## 🔧 Troubleshooting
+
+### Problemas Comuns
+
+#### 1. "Função não encontrada"
+```bash
+# Verificar se migrations foram executadas
+psql -U matchit -d matchit_db -c "\df"
+```
+
+#### 2. "Rate limit exceeded"
+```javascript
+// Aguardar ou aumentar limite no código
+const rateLimitInfo = response.headers['x-ratelimit-remaining'];
+```
+
+#### 3. "Nenhuma recomendação encontrada"
+```sql
+-- Verificar dados básicos
+SELECT COUNT(*) FROM users WHERE is_active = true;
+SELECT COUNT(*) FROM user_extended_profiles;
+```
+
+### Debug Mode
+```bash
+# Ativar logs detalhados
+export RECOMMENDATION_DEBUG=true
+export LOG_LEVEL=debug
+```
+
+---
+
+## 📝 Licença
+
+Este sistema é parte do projeto MatchIt e segue a licença do projeto principal.
+
+---
+
+## 🤝 Contribuição
+
+Para contribuir com o sistema de recomendação:
+
+1. Entender a arquitetura atual
+2. Executar testes locais
+3. Seguir padrões de tipagem TypeScript
+4. Documentar mudanças
+5. Validar performance
+
+---
+
+**🚀 O Sistema de Recomendação MatchIt está pronto para transformar conexões em relacionamentos significativos!**
+
+*Última atualização: 09 de junho de 2025*
