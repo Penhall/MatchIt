@@ -1,19 +1,24 @@
-import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
+// context/AuthContext.tsx - Corrigido
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 interface User {
-  id: number | string;
+  id: string;
   email: string;
   name: string;
+  displayName?: string;
+  city?: string;
+  isVip?: boolean;
 }
 
 interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
   login: (email?: string, password?: string) => Promise<void>;
-  register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => void;
+  register: (email: string, password: string, name: string) => Promise<void>;
   loading: boolean;
   error: string | null;
+  setError: (error: string | null) => void; // ✅ ADICIONADO
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,89 +33,41 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Verificar se há token armazenado ao inicializar
   useEffect(() => {
-    // Verificar se há token armazenado no localStorage
     const token = localStorage.getItem('matchit_token');
-    const authStatus = localStorage.getItem('matchit_auth');
+    const isAuth = localStorage.getItem('matchit_auth');
     
-    if (token && authStatus === 'true') {
-      // Simular validação do token (em produção, validar com o backend)
+    if (token && isAuth === 'true') {
       setIsAuthenticated(true);
-      // Dados mockados do usuário para desenvolvimento
+      // Aqui você pode validar o token com o backend se necessário
       setUser({
         id: 'currentUser',
         email: 'user@example.com',
-        name: 'Alex Ryder'
+        name: 'User'
       });
     }
   }, []);
-
-  const validateToken = async (token: string) => {
-    try {
-      setLoading(true);
-      
-      // Verificar se o backend está disponível
-      const response = await fetch('/api/profile', {
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 5000 // Timeout de 5 segundos
-      });
-      
-      if (response.ok) {
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-          const userData = await response.json();
-          setUser(userData);
-          setIsAuthenticated(true);
-        } else {
-          console.warn('Resposta não é JSON válido');
-          // Fallback para modo desenvolvimento
-          setIsAuthenticated(true);
-          setUser({
-            id: 'currentUser',
-            email: 'user@example.com',
-            name: 'Alex Ryder'
-          });
-        }
-      } else {
-        logout();
-      }
-    } catch (err) {
-      console.warn('Backend não disponível, usando modo desenvolvimento:', err);
-      // Em caso de erro (backend não disponível), usar modo desenvolvimento
-      setIsAuthenticated(true);
-      setUser({
-        id: 'currentUser',
-        email: 'user@example.com',
-        name: 'Alex Ryder'
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const login = async (email?: string, password?: string) => {
     try {
       setLoading(true);
       setError(null);
 
-      // Se não há email/password, fazer login direto (modo desenvolvimento)
       if (!email || !password) {
+        // Login rápido para desenvolvimento
         const mockToken = 'mock_jwt_token_' + Date.now();
         localStorage.setItem('matchit_token', mockToken);
         localStorage.setItem('matchit_auth', 'true');
         setUser({
           id: 'currentUser',
-          email: 'user@example.com',
-          name: 'Alex Ryder'
+          email: email || 'user@example.com',
+          name: 'User'
         });
         setIsAuthenticated(true);
         return;
       }
 
-      // Tentar fazer login com o backend
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 
@@ -121,7 +78,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
 
       const contentType = response.headers.get('content-type');
-      
+
       if (response.ok && contentType && contentType.includes('application/json')) {
         const data = await response.json();
         
@@ -138,7 +95,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           throw new Error('Token não recebido');
         }
       } else {
-        // Se o backend não estiver disponível ou retornar erro, usar modo desenvolvimento
+        // Fallback para modo desenvolvimento
         console.warn('Backend não disponível, usando login mock');
         const mockToken = 'mock_jwt_token_' + Date.now();
         localStorage.setItem('matchit_token', mockToken);
@@ -244,7 +201,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       logout,
       register,
       loading,
-      error
+      error,
+      setError  // ✅ EXPORTANDO setError
     }}>
       {children}
     </AuthContext.Provider>

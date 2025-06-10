@@ -312,6 +312,7 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+export { app, pool, authenticateToken };
 
 // server.js - Parte 2: Continuação do servidor com rotas de perfil, matching e chat
 

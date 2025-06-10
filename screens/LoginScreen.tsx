@@ -1,3 +1,4 @@
+// screens/LoginScreen.tsx - Corrigido (linha problemática removida)
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -167,7 +168,7 @@ const LoginScreen: React.FC = () => {
           <button
             onClick={() => {
               setIsSignUp(!isSignUp);
-              setError(null);
+              // ✅ REMOVIDO: setError(null); - Esta linha causava o erro!
               // Limpar campos ao alternar
               setEmail('');
               setPassword('');
