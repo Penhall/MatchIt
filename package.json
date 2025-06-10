@@ -4,12 +4,14 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "nodemon server/app.js",
     "build": "vite build",
     "preview": "vite preview",
-    "start": "node server.js",
+    "start": "node server/app.js",
     "server": "nodemon server.js",
-    "tailwind": "tailwindcss -i ./src/assets/index.css -o ./dist/assets/index.css --watch"
+    "tailwind": "tailwindcss -i ./src/assets/index.css -o ./dist/assets/index.css --watch",
+    "modular:test": "node server/app.js",
+    "original": "node server.js.pre-modular-backup-*"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
