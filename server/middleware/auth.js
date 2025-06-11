@@ -1,35 +1,25 @@
-// server/middleware/auth.js - Authentication middleware
-import jwt from 'jsonwebtoken';
-import { config } from '../config/environment.js';
+// server/middleware/auth.js
+import jwt from "jsonwebtoken";
+import { config } from "../config/environment.js";
 
 const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
 
   if (!token) {
-    return res.status(401).json({ 
-      error: 'Access token required',
-      code: 'MISSING_TOKEN'
-    });
+    return res.status(401).json({ error: "Access token required" });
   }
 
   jwt.verify(token, config.jwt.secret, (err, user) => {
-    if (err) {
-      const errorCode = err.name === 'TokenExpiredError' ? 'TOKEN_EXPIRED' : 'INVALID_TOKEN';
-      return res.status(403).json({ 
-        error: 'Invalid token',
-        code: errorCode,
-        message: err.message
-      });
-    }
+    if (err) return res.status(403).json({ error: "Invalid token" });
     req.user = user;
     next();
   });
 };
 
 const optionalAuth = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
 
   if (!token) {
     req.user = null;

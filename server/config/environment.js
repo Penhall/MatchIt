@@ -1,14 +1,15 @@
-// server/config/environment.js - Environment configuration
+// server/config/environment.js - Configuração de ambiente
 import dotenv from 'dotenv';
-import { logger } from '../utils/helpers.js';
 
-// Load environment variables
+// Carregar variáveis de ambiente
 dotenv.config();
 
-// Main configuration object
 const config = {
-  nodeEnv: process.env.NODE_ENV || 'development',
+  // Servidor
   port: parseInt(process.env.PORT) || 3000,
+  nodeEnv: process.env.NODE_ENV || 'development',
+  
+  // Database
   database: {
     host: process.env.DB_HOST || 'postgres',
     port: parseInt(process.env.DB_PORT) || 5432,
@@ -16,37 +17,77 @@ const config = {
     password: process.env.DB_PASSWORD || 'matchit123',
     name: process.env.DB_NAME || 'matchit_db'
   },
-  jwtSecret: process.env.JWT_SECRET || 'matchit_secret_key_development',
-  features: {
-    enableRecommendations: process.env.ENABLE_RECOMMENDATIONS === 'true' || false,
-    enableChat: process.env.ENABLE_CHAT === 'true' || true,
-    enableStats: process.env.ENABLE_STATS === 'true' || true
+  
+  // JWT
+  jwt: {
+    secret: process.env.JWT_SECRET || 'matchit_secret_key_development',
+    expiresIn: process.env.JWT_EXPIRES_IN || '24h'
   },
+  
+  // Stripe
+  stripe: {
+    secretKey: process.env.STRIPE_SECRET_KEY,
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET
+  },
+  
+  // Logs
+  logLevel: process.env.LOG_LEVEL || 'info',
+  
+  // Features
+  features: {
+    enableRecommendations: process.env.ENABLE_RECOMMENDATIONS !== 'false',
+    enableVipSubscription: process.env.ENABLE_VIP !== 'false',
+    enableChatMessages: process.env.ENABLE_CHAT !== 'false',
+    enableStats: process.env.ENABLE_STATS !== 'false'
+  },
+  
+  // CORS
   cors: {
     allowedOrigins: process.env.ALLOWED_ORIGINS?.split(',') || [
       'http://localhost:3000',
-      'http://localhost:5173'
+      'http://localhost:5173',
+      'http://localhost:8080'
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
   }
 };
 
-// Validate required configuration
+// Validar configurações essenciais
 const validateConfig = () => {
-  const required = ['DB_HOST', 'DB_USER', 'DB_PASSWORD', 'DB_NAME', 'JWT_SECRET'];
-  const missing = required.filter(key => !process.env[key]);
+  const required = [
+    'database.host',
+    'database.user', 
+    'database.password',
+    'database.name',
+    'jwt.secret'
+  ];
+  
+  const missing = required.filter(key => {
+    const value = key.split('.').reduce((obj, k) => obj?.[k], config);
+    return !value;
+  });
   
   if (missing.length > 0) {
-    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+    throw new Error(`Configurações obrigatórias não encontradas: ${missing.join(', ')}`);
   }
+  
+  console.log('✅ Configurações validadas com sucesso');
 };
 
-// Check if in development mode
+// Função para obter configuração
+const getConfig = () => config;
+
+// Função para verificar se está em produção
+const isProduction = () => config.nodeEnv === 'production';
+
+// Função para verificar se está em desenvolvimento
 const isDevelopment = () => config.nodeEnv === 'development';
 
-// Log configuration on startup
-logger.info('✅ Environment configuration loaded');
-logger.debug('Environment config:', config);
-
-export { config, validateConfig, isDevelopment };
+export { 
+  config, 
+  getConfig, 
+  validateConfig, 
+  isProduction, 
+  isDevelopment 
+};
