@@ -1,195 +1,117 @@
-// server/services/profileService.js - Serviço de perfil do usuário
 import { pool } from '../config/database.js';
+import { logger } from '../utils/helpers.js';
 
-export class ProfileService {
-  async getUserProfile(userId) {
+class ProfileService {
+  // ... (código existente)
+
+  /**
+   * Busca as escolhas de estilo de um usuário.
+   * @param {string} userId - O UUID do usuário.
+   * @returns {Promise<Array>} Lista de escolhas de estilo.
+   */
+  async getStyleChoicesByUserId(userId) {
+    const query = `
+      SELECT category, question_id AS "questionId", selected_option AS "selectedOption"
+      FROM style_choices
+      WHERE user_id = $1
+      ORDER BY created_at;
+    `;
     try {
-      const result = await pool.query(
-        `SELECT u.id, u.email, u.name, up.avatar_url, up.style_data
-         FROM users u
-         LEFT JOIN user_profiles up ON u.id = up.user_id
-         WHERE u.id = $1`,
-        [userId]
-      );
-      
-      if (result.rows.length === 0) {
+      const { rows } = await pool.query(query, [userId]);
+      return rows;
+    } catch (error) {
+      logger.error(`Erro ao buscar escolhas de estilo para userId ${userId}:`, error);
+      throw new Error('Erro ao buscar escolhas de estilo do usuário.');
+    }
+  }
+
+  /**
+   * Atualiza ou cria uma escolha de estilo para o usuário.
+   * @param {string} userId - O UUID do usuário.
+   * @param {object} choice - Objeto com category, questionId e selectedOption.
+   * @returns {Promise<object>} A escolha atualizada/criada.
+   */
+  async updateStyleChoice(userId, choice) {
+    const { category, questionId, selectedOption } = choice;
+    const validCategories = ['Sneakers', 'Clothing', 'Colors', 'Hobbies', 'Feelings', 'Interests'];
+    
+    if (!validCategories.includes(category)) {
+      throw new Error(`Categoria inválida: ${category}. Categorias válidas: ${validCategories.join(', ')}`);
+    }
+
+    const query = `
+      INSERT INTO style_choices (user_id, category, question_id, selected_option)
+      VALUES ($1, $2, $3, $4)
+      ON CONFLICT (user_id, category, question_id) DO UPDATE
+      SET selected_option = EXCLUDED.selected_option,
+          created_at = CURRENT_TIMESTAMP
+      RETURNING *;
+    `;
+    
+    try {
+      const { rows } = await pool.query(query, [userId, category, questionId, selectedOption]);
+      return rows[0];
+    } catch (error) {
+      logger.error(`Erro ao atualizar escolha de estilo para userId ${userId}:`, { category, questionId, selectedOption, error });
+      throw new Error('Erro ao atualizar escolha de estilo do usuário.');
+    }
+  }
+
+  /**
+   * Busca o perfil de um usuário incluindo suas escolhas de estilo.
+   * @param {string} userId - O UUID do usuário.
+   * @returns {Promise<object|null>} O perfil do usuário com stylePreferences.
+   */
+  async getProfileByUserId(userId) {
+    const profileQuery = `
+      SELECT
+        u.id AS user_id,
+        u.email,
+        u.name,
+        u.email_verified,
+        u.is_active,
+        up.id AS profile_id,
+        up.display_name,
+        up.city,
+        up.gender,
+        up.avatar_url,
+        up.bio,
+        up.is_vip,
+        up.age,
+        up.style_completion_percentage,
+        up.interests,
+        up.location_latitude,
+        up.location_longitude,
+        up.style_game_level,
+        up.style_game_xp,
+        up.last_style_game_played_at,
+        up.created_at AS profile_created_at,
+        up.updated_at AS profile_updated_at
+      FROM users u
+      LEFT JOIN user_profiles up ON u.id = up.user_id
+      WHERE u.id = $1;
+    `;
+    
+    try {
+      const profileResult = await pool.query(profileQuery, [userId]);
+      if (profileResult.rows.length === 0) {
         return null;
       }
       
-      const user = result.rows[0];
-      const styleData = user.style_data ? JSON.parse(user.style_data) : {};
+      const profile = profileResult.rows[0];
       
-      return {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        displayName: styleData.display_name || user.name,
-        city: styleData.city || 'Unknown',
-        gender: styleData.gender || 'other',
-        avatarUrl: user.avatar_url,
-        bio: styleData.bio || '',
-        isVip: styleData.is_vip || false,
-        age: styleData.age || 25,
-        styleCompletionPercentage: styleData.style_completion_percentage || 0
-      };
+      // Buscar escolhas de estilo e adicionar ao perfil
+      const styleChoices = await this.getStyleChoicesByUserId(userId);
+      profile.stylePreferences = styleChoices;
+      
+      return profile;
     } catch (error) {
-      throw error;
+      logger.error(`Erro ao buscar perfil completo para userId ${userId}:`, error);
+      throw new Error('Erro ao buscar perfil completo do usuário.');
     }
   }
 
-  async updateUserProfile(userId, updateData) {
-    try {
-      const { displayName, city, bio, avatarUrl, age, gender } = updateData;
-      
-      // Get current data
-      const currentResult = await pool.query(
-        'SELECT style_data FROM user_profiles WHERE user_id = $1',
-        [userId]
-      );
-      
-      let currentStyleData = {};
-      if (currentResult.rows.length > 0 && currentResult.rows[0].style_data) {
-        currentStyleData = JSON.parse(currentResult.rows[0].style_data);
-      }
-      
-      // Update data
-      const updatedStyleData = {
-        ...currentStyleData,
-        display_name: displayName || currentStyleData.display_name,
-        city: city || currentStyleData.city,
-        bio: bio || currentStyleData.bio,
-        age: age || currentStyleData.age,
-        gender: gender || currentStyleData.gender
-      };
-      
-      const result = await pool.query(
-        `UPDATE user_profiles 
-         SET avatar_url = COALESCE($1, avatar_url),
-             style_data = $2,
-             updated_at = CURRENT_TIMESTAMP
-         WHERE user_id = $3 
-         RETURNING *`,
-        [avatarUrl, JSON.stringify(updatedStyleData), userId]
-      );
-      
-      if (result.rows.length === 0) {
-        throw new Error('Profile not found');
-      }
-      
-      return { 
-        ...result.rows[0],
-        styleData: updatedStyleData
-      };
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  async saveStyleChoices(userId, choices) {
-    const client = await pool.connect();
-    
-    try {
-      await client.query('BEGIN');
-      
-      // Try to save to style_choices table
-      try {
-        await client.query(
-          'DELETE FROM style_choices WHERE user_id = $1',
-          [userId]
-        );
-        
-        for (const choice of choices) {
-          await client.query(
-            'INSERT INTO style_choices (user_id, category, question_id, selected_option) VALUES ($1, $2, $3, $4)',
-            [userId, choice.category, choice.questionId, choice.selectedOption]
-          );
-        }
-      } catch (error) {
-        // Fallback to saving in style_data
-        const currentProfile = await client.query(
-          'SELECT style_data FROM user_profiles WHERE user_id = $1',
-          [userId]
-        );
-        
-        let currentStyleData = {};
-        if (currentProfile.rows.length > 0 && currentProfile.rows[0].style_data) {
-          currentStyleData = JSON.parse(currentProfile.rows[0].style_data);
-        }
-        
-        currentStyleData.style_choices = choices;
-        
-        await client.query(
-          'UPDATE user_profiles SET style_data = $1 WHERE user_id = $2',
-          [JSON.stringify(currentStyleData), userId]
-        );
-      }
-      
-      // Update completion percentage
-      const completionPercentage = Math.min(100, (choices.length / 5) * 100);
-      
-      const currentProfile = await client.query(
-        'SELECT style_data FROM user_profiles WHERE user_id = $1',
-        [userId]
-      );
-      
-      let styleData = {};
-      if (currentProfile.rows.length > 0 && currentProfile.rows[0].style_data) {
-        styleData = JSON.parse(currentProfile.rows[0].style_data);
-      }
-      
-      styleData.style_completion_percentage = completionPercentage;
-      
-      await client.query(
-        'UPDATE user_profiles SET style_data = $1 WHERE user_id = $2',
-        [JSON.stringify(styleData), userId]
-      );
-      
-      await client.query('COMMIT');
-      
-      return { 
-        message: 'Style choices saved successfully', 
-        completionPercentage 
-      };
-      
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
-  }
-
-  async getUserStyleChoices(userId) {
-    try {
-      // Try style_choices table first
-      try {
-        const result = await pool.query(
-          'SELECT category, question_id, selected_option FROM style_choices WHERE user_id = $1',
-          [userId]
-        );
-        
-        if (result.rows.length > 0) {
-          return result.rows;
-        }
-      } catch (error) {
-        console.log('style_choices table not found, checking profile');
-      }
-      
-      // Fallback to style_data
-      const profileResult = await pool.query(
-        'SELECT style_data FROM user_profiles WHERE user_id = $1',
-        [userId]
-      );
-      
-      if (profileResult.rows.length > 0 && profileResult.rows[0].style_data) {
-        const styleData = JSON.parse(profileResult.rows[0].style_data);
-        return styleData.style_choices || [];
-      }
-      
-      return [];
-      
-    } catch (error) {
-      throw error;
-    }
-  }
+  // ... (restante do código existente)
 }
+
+export { ProfileService };

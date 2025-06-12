@@ -1,9 +1,8 @@
-
 export interface User {
   id: string;
   displayName: string;
   city: string;
-  gender: 'male' | 'female' | 'other';
+  gender: 'male' | 'female' | 'non-binary' | 'prefer-not-to-say' | 'other'; // Atualizado para incluir mais opções
   avatarUrl: string;
   bio?: string;
   isVip: boolean;

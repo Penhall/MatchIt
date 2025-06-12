@@ -3,7 +3,7 @@ import { pool } from '../config/database.js';
 import { config } from '../config/environment.js';
 
 // Função de graceful shutdown
-export const gracefulShutdown = (server) => {
+const gracefulShutdown = (server) => {
   const shutdown = async (signal) => {
     console.log(`🛑 Recebido ${signal}, iniciando shutdown graceful...`);
     
@@ -44,26 +44,26 @@ export const gracefulShutdown = (server) => {
 };
 
 // Função para gerar ID único
-export const generateId = (prefix = '') => {
+const generateId = (prefix = '') => {
   const timestamp = Date.now();
   const random = Math.random().toString(36).substr(2, 9);
   return `${prefix}${timestamp}_${random}`;
 };
 
 // Função para validar email
-export const isValidEmail = (email) => {
+const isValidEmail = (email) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
 };
 
 // Função para sanitizar string
-export const sanitizeString = (str) => {
+const sanitizeString = (str) => {
   if (!str || typeof str !== 'string') return '';
   return str.trim().replace(/[<>]/g, '');
 };
 
 // Função para formatar preço
-export const formatPrice = (price, currency = 'BRL') => {
+const formatPrice = (price, currency = 'BRL') => {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: currency
@@ -71,7 +71,7 @@ export const formatPrice = (price, currency = 'BRL') => {
 };
 
 // Função para calcular distância entre coordenadas
-export const calculateDistance = (lat1, lon1, lat2, lon2) => {
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
   const R = 6371; // Raio da Terra em km
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
@@ -84,7 +84,7 @@ export const calculateDistance = (lat1, lon1, lat2, lon2) => {
 };
 
 // Função para calcular idade
-export const calculateAge = (birthDate) => {
+const calculateAge = (birthDate) => {
   const today = new Date();
   const birth = new Date(birthDate);
   let age = today.getFullYear() - birth.getFullYear();
@@ -98,7 +98,7 @@ export const calculateAge = (birthDate) => {
 };
 
 // Função para padronizar resposta de API
-export const createApiResponse = (success = true, data = null, error = null, meta = {}) => {
+const createApiResponse = (success = true, data = null, error = null, meta = {}) => {
   const response = {
     success,
     timestamp: new Date().toISOString(),
@@ -115,7 +115,7 @@ export const createApiResponse = (success = true, data = null, error = null, met
 };
 
 // Função para log estruturado
-export const logger = {
+const logger = {
   info: (message, data = {}) => {
     console.log(`[INFO] ${new Date().toISOString()} - ${message}`, data);
   },
@@ -136,7 +136,7 @@ export const logger = {
 };
 
 // Função para retry de operações
-export const retryOperation = async (operation, maxRetries = 3, delay = 1000) => {
+const retryOperation = async (operation, maxRetries = 3, delay = 1000) => {
   for (let i = 0; i < maxRetries; i++) {
     try {
       return await operation();
@@ -149,42 +149,42 @@ export const retryOperation = async (operation, maxRetries = 3, delay = 1000) =>
 };
 
 // Função para paginar resultados
-export const paginate = (page = 1, limit = 20) => {
+const paginate = (page = 1, limit = 20) => {
   const offset = (page - 1) * limit;
   return { limit, offset };
 };
 
 // Função para validar parâmetros de paginação
-export const validatePagination = (page, limit, maxLimit = 100) => {
+const validatePagination = (page, limit, maxLimit = 100) => {
   const validPage = Math.max(1, parseInt(page) || 1);
   const validLimit = Math.min(maxLimit, Math.max(1, parseInt(limit) || 20));
   return { page: validPage, limit: validLimit };
 };
 
 // Função para escapar HTML
-export const escapeHtml = (text) => {
+const escapeHtml = (text) => {
   const map = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
+    '&': '&',
+    '<': '<',
+    '>': '>',
+    '"': '"',
     "'": '&#039;'
   };
   return text.replace(/[&<>"']/g, (m) => map[m]);
 };
 
 // Função para verificar se valor está vazio
-export const isEmpty = (value) => {
+const isEmpty = (value) => {
   return value === null || value === undefined || value === '' || 
          (Array.isArray(value) && value.length === 0) ||
          (typeof value === 'object' && Object.keys(value).length === 0);
 };
 
 // Função para delay
-export const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Função para transformar objeto em query string
-export const objectToQueryString = (obj) => {
+const objectToQueryString = (obj) => {
   return Object.keys(obj)
     .filter(key => !isEmpty(obj[key]))
     .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(obj[key])}`)
@@ -192,7 +192,7 @@ export const objectToQueryString = (obj) => {
 };
 
 // Função para mask de dados sensíveis
-export const maskSensitiveData = (data) => {
+const maskSensitiveData = (data) => {
   const masked = { ...data };
   const sensitiveFields = ['password', 'password_hash', 'token', 'secret'];
   
@@ -206,7 +206,7 @@ export const maskSensitiveData = (data) => {
 };
 
 // Função para gerar hash simples
-export const simpleHash = (str) => {
+const simpleHash = (str) => {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
@@ -217,7 +217,7 @@ export const simpleHash = (str) => {
 };
 
 // Função para randomizar array
-export const shuffleArray = (array) => {
+const shuffleArray = (array) => {
   const shuffled = [...array];
   for (let i = shuffled.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -227,13 +227,38 @@ export const shuffleArray = (array) => {
 };
 
 // Função para inicializar logger com configuração
-export const initLogger = (config) => {
+const initLogger = (config) => {
   console.log('✅ Logger inicializado com configuração:', {
     level: config.nodeEnv === 'development' ? 'debug' : 'info',
     environment: config.nodeEnv
   });
 };
 
+// Exportar individualmente para permitir import { logger }
+export { 
+  gracefulShutdown,
+  generateId,
+  isValidEmail,
+  sanitizeString,
+  formatPrice,
+  calculateDistance,
+  calculateAge,
+  createApiResponse,
+  logger, // Exportação nomeada adicionada
+  retryOperation,
+  paginate,
+  validatePagination,
+  escapeHtml,
+  isEmpty,
+  delay,
+  objectToQueryString,
+  maskSensitiveData,
+  simpleHash,
+  shuffleArray,
+  initLogger
+};
+
+// Manter o export default para compatibilidade, se houver
 export default {
   gracefulShutdown,
   generateId,

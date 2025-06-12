@@ -46,6 +46,13 @@ router.use('/products', productRoutes);
 // Middleware de autenticação para todas as rotas abaixo
 router.use(authenticateToken);
 
+// Rotas administrativas
+router.use('/admin', require('./admin'));
+
+// Rotas de Ajuste de Estilo
+const styleAdjustmentRoutes = require('./styleAdjustment.js');
+router.use('/style-adjustment', styleAdjustmentRoutes);
+
 // Rotas de perfil
 router.use('/profile', profileRoutes);
 

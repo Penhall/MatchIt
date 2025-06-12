@@ -33,15 +33,24 @@ CREATE TABLE users (
 -- =====================================================
 CREATE TABLE user_profiles (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE UNIQUE, -- Adicionado UNIQUE para garantir 1:1
     display_name VARCHAR(100) NOT NULL,
     city VARCHAR(100),
-    gender VARCHAR(20) CHECK (gender IN ('male', 'female', 'other')),
+    gender VARCHAR(30) CHECK (gender IN ('male', 'female', 'non-binary', 'other', 'prefer-not-to-say')), -- Opções atualizadas
     avatar_url TEXT,
     bio TEXT,
     is_vip BOOLEAN DEFAULT false,
     age INTEGER CHECK (age >= 18 AND age <= 100),
-    style_completion_percentage INTEGER DEFAULT 0,
+    style_completion_percentage INTEGER DEFAULT 0 CHECK (style_completion_percentage >= 0 AND style_completion_percentage <= 100),
+
+    -- Novos campos adicionados:
+    interests TEXT[] DEFAULT ARRAY[]::TEXT[],
+    location_latitude DECIMAL(9,6),
+    location_longitude DECIMAL(9,6),
+    style_game_level INTEGER DEFAULT 0,
+    style_game_xp INTEGER DEFAULT 0,
+    last_style_game_played_at TIMESTAMP,
+    
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -52,10 +61,11 @@ CREATE TABLE user_profiles (
 CREATE TABLE style_choices (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    category VARCHAR(50) NOT NULL CHECK (category IN ('Sneakers', 'Clothing', 'Colors', 'Hobbies', 'Feelings')),
-    question_id VARCHAR(100) NOT NULL,
-    selected_option VARCHAR(100) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    category VARCHAR(50) NOT NULL CHECK (category IN ('Sneakers', 'Clothing', 'Colors', 'Hobbies', 'Feelings', 'Interests')), -- Adicionado 'Interests' se for usar esta tabela
+    question_id VARCHAR(100) NOT NULL, -- Pode ser o nome do interesse, por exemplo
+    selected_option VARCHAR(100) NOT NULL, -- Pode ser 'true' ou o valor do interesse
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, category, question_id) -- Para evitar duplicatas por usuário/categoria/pergunta
 );
 
 -- =====================================================
@@ -69,7 +79,8 @@ CREATE TABLE matches (
     status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'rejected', 'blocked')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(user1_id, user2_id)
+    UNIQUE(user1_id, user2_id),
+    CONSTRAINT check_different_users CHECK (user1_id <> user2_id)
 );
 
 -- =====================================================
@@ -128,6 +139,8 @@ CREATE TABLE user_subscriptions (
 CREATE INDEX idx_user_profiles_user_id ON user_profiles(user_id);
 CREATE INDEX idx_user_profiles_city ON user_profiles(city);
 CREATE INDEX idx_user_profiles_is_vip ON user_profiles(is_vip);
+CREATE INDEX idx_user_profiles_gender ON user_profiles(gender);
+CREATE INDEX idx_user_profiles_age ON user_profiles(age);
 
 -- Índices para style_choices
 CREATE INDEX idx_style_choices_user_id ON style_choices(user_id);

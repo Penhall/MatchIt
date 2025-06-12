@@ -1,7 +1,7 @@
 // types/recommendation/extended-user.ts
 // Extensão do perfil do usuário para sistema de recomendação
 
-import { User, StyleCategory } from '../types';
+import { User, StyleCategory } from '@/types.ts'; // Usando alias @/ para a raiz do projeto
 import { 
   GeographicLocation, 
   UserActivity, 
@@ -15,6 +15,9 @@ import {
  * Estende o User básico com dados específicos para o algoritmo
  */
 export interface ExtendedUserProfile extends User {
+  // Informações demográficas adicionais
+  interests: ('dating' | 'friendship' | 'casual' | 'other' | 'coaching')[]; // Novo campo para interesses
+  
   // Localização e geografia
   location: GeographicLocation;
   locationHistory?: LocationHistory[];
@@ -109,7 +112,7 @@ export interface StyleChoice {
  */
 export type StylePersonalityType = 
   | 'minimalist'      // Minimalista - prefere simplicidade
-  | 'maximalist'      // Maximalista - gosta de elementos chamatativos
+  | 'maximalist'      // Maximalist - gosta de elementos chamatativos
   | 'classic'         // Clássico - prefere estilos atemporais
   | 'trendy'          // Trendy - segue tendências atuais
   | 'eclectic'        // Eclético - mistura vários estilos
