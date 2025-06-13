@@ -7,6 +7,7 @@ interface FloatingLabelInputProps {
   type?: string;
   multiline?: boolean;
   className?: string;
+  required?: boolean;
 }
 
 const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({ 
@@ -15,7 +16,8 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
   onChange,
   type = 'text',
   multiline = false,
-  className = ''
+  className = '',
+  required = false
 }) => {
   const baseClasses = 'block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500';
   
@@ -36,6 +38,7 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className={baseClasses}
+          required={required}
         />
       )}
     </div>

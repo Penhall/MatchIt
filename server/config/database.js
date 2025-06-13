@@ -3,8 +3,8 @@ import { Pool } from 'pg';
 
 // Configuração do pool de conexões
 const pool = new Pool({
-  user: process.env.DB_USER || 'matchit',
-  host: process.env.DB_HOST || 'postgres',
+  user: process.env.DB_USER,
+  host: process.env.DB_HOST,
   database: process.env.DB_NAME || 'matchit_db',
   password: process.env.DB_PASSWORD || 'matchit123',
   port: parseInt(process.env.DB_PORT || '5432'),

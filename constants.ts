@@ -4,6 +4,7 @@ import { StyleCategory, StyleAdjustmentQuestion, User, Match, Product, ChatMessa
 export const APP_ROUTES = {
   LOGIN: '/login',
   PROFILE: '/profile',
+  EDIT_PROFILE: '/edit-profile',
   STYLE_ADJUSTMENT: '/style-adjustment',
   MATCH_AREA: '/match-area',
   CHAT: '/chat/:chatId', // Example of dynamic route for specific chat

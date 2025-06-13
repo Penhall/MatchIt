@@ -69,4 +69,6 @@ export interface IconProps {
 export interface GeographicLocation {
   latitude: number;
   longitude: number;
+  city: string;
+  country?: string;
 }

@@ -16,8 +16,33 @@ const StyleAdjustmentScreen: React.FC<StyleAdjustmentScreenProps> = ({ userId })
   };
 
   const handleSubmit = async () => {
-    // Lógica para enviar as preferências de estilo
-    console.log('Selected options:', selectedOptions);
+    try {
+      // Converter selectedOptions para o formato esperado pelo backend
+      const preferences = Object.entries(selectedOptions).map(([key, value]) => {
+        const [category, questionId] = key.split('_');
+        return {
+          category,
+          questionId,
+          selectedOption: value
+        };
+      });
+
+      // Enviar cada preferência para o backend
+      for (const pref of preferences) {
+        await fetch('/api/style-adjustment/style-preferences', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(pref)
+        });
+      }
+      
+      alert('Preferências salvas com sucesso!');
+    } catch (error) {
+      console.error('Erro ao salvar preferências:', error);
+      alert('Erro ao salvar preferências');
+    }
   };
 
   return (

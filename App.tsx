@@ -1,8 +1,9 @@
 
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import LoginScreen from './screens/LoginScreen';
 import ProfileScreen from './screens/ProfileScreen';
+import EditProfileScreen from './screens/EditProfileScreen';
 import StyleAdjustmentScreen from './screens/StyleAdjustmentScreen';
 import MatchAreaScreen from './screens/MatchAreaScreen';
 import ChatScreen from './screens/ChatScreen';
@@ -12,16 +13,24 @@ import BottomNavbar from './components/navigation/BottomNavbar';
 import { useAuth } from './context/AuthContext';
 import { APP_ROUTES } from './constants';
 
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated } = useAuth();
+const ProtectedRoute: React.FC<{ children: React.ReactNode, checkProfile?: boolean }> = ({ children, checkProfile = false }) => {
+  const { isAuthenticated, user } = useAuth();
+  
   if (!isAuthenticated) {
     return <Navigate to={APP_ROUTES.LOGIN} replace />;
   }
+
+  if (checkProfile && (!user?.city || !user?.displayName)) {
+    return <Navigate to={APP_ROUTES.EDIT_PROFILE} replace />;
+  }
+
   return <>{children}</>;
 };
 
 const App: React.FC = () => {
   const { isAuthenticated } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-dark-bg p-2 sm:p-4">
@@ -31,11 +40,15 @@ const App: React.FC = () => {
             <Route path={APP_ROUTES.LOGIN} element={<LoginScreen />} />
             <Route
               path={APP_ROUTES.PROFILE}
-              element={<ProtectedRoute><ProfileScreen /></ProtectedRoute>}
+              element={<ProtectedRoute checkProfile><ProfileScreen /></ProtectedRoute>}
+            />
+            <Route
+              path={APP_ROUTES.EDIT_PROFILE}
+              element={<ProtectedRoute><EditProfileScreen /></ProtectedRoute>}
             />
             <Route
               path={APP_ROUTES.STYLE_ADJUSTMENT}
-              element={<ProtectedRoute><StyleAdjustmentScreen /></ProtectedRoute>}
+              element={<ProtectedRoute><StyleAdjustmentScreen userId="currentUser" /></ProtectedRoute>}
             />
             <Route
               path={APP_ROUTES.MATCH_AREA}
@@ -53,10 +66,15 @@ const App: React.FC = () => {
               path={APP_ROUTES.SETTINGS}
               element={<ProtectedRoute><SettingsScreen /></ProtectedRoute>}
             />
-            <Route path="*" element={<Navigate to={isAuthenticated ? APP_ROUTES.PROFILE : APP_ROUTES.LOGIN} replace />} />
+            <Route path="*" element={<Navigate to={isAuthenticated ? APP_ROUTES.EDIT_PROFILE : APP_ROUTES.LOGIN} replace />} />
           </Routes>
         </main>
-        {isAuthenticated && <BottomNavbar />}
+        {isAuthenticated && (
+          <BottomNavbar 
+            activeTab={location.pathname} 
+            onTabChange={(path) => navigate(path)}
+          />
+        )}
       </div>
     </div>
   );

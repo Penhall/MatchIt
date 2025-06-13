@@ -8,6 +8,7 @@ interface User {
   displayName?: string;
   city?: string;
   isVip?: boolean;
+  bio?: string;
 }
 
 interface AuthContextType {
@@ -16,9 +17,11 @@ interface AuthContextType {
   login: (email?: string, password?: string) => Promise<void>;
   logout: () => void;
   register: (email: string, password: string, name: string) => Promise<void>;
+  updateProfile: (profileData: Partial<User>) => Promise<void>;
   loading: boolean;
   error: string | null;
-  setError: (error: string | null) => void; // ✅ ADICIONADO
+  setError: (error: string | null) => void;
+  setUserState: (user: User | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -48,6 +51,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
     }
   }, []);
+
+  const updateProfile = async (profileData: Partial<User>) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch('/api/profile', {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('matchit_token')}`
+        },
+        body: JSON.stringify(profileData)
+      });
+
+      if (!response.ok) {
+        throw new Error('Falha ao atualizar perfil');
+      }
+
+      const updatedUser = await response.json();
+      setUser(prev => ({ ...prev, ...updatedUser }));
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erro desconhecido';
+      setError(message);
+      throw new Error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const login = async (email?: string, password?: string) => {
     try {
@@ -193,6 +225,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setError(null);
   };
 
+  const setUserState = (user: User | null) => {
+    setUser(user);
+  };
+
   return (
     <AuthContext.Provider value={{
       isAuthenticated,
@@ -200,9 +236,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       login,
       logout,
       register,
+      updateProfile,
       loading,
       error,
-      setError  // ✅ EXPORTANDO setError
+      setError,
+      setUserState
     }}>
       {children}
     </AuthContext.Provider>

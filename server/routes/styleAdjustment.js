@@ -30,4 +30,39 @@ router.get('/questions', authMiddleware, async (req, res) => {
   }
 });
 
+// Rota para buscar preferências de estilo do usuário
+// GET /api/style-adjustment/style-preferences
+router.get('/style-preferences', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id; // Obtido do middleware de autenticação
+    const preferences = await StyleAdjustmentService.getUserStylePreferences(userId);
+    res.json(preferences);
+  } catch (error) {
+    console.error(`Erro na rota GET /style-adjustment/style-preferences: ${error.message}`);
+    res.status(500).json({ error: 'Erro ao buscar preferências de estilo.' });
+  }
+});
+
+// Rota para atualizar preferência de estilo
+// PUT /api/style-adjustment/style-preferences
+router.put('/style-preferences', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const preference = req.body;
+    
+    if (!preference.category || !preference.questionId || !preference.selectedOption) {
+      return res.status(400).json({ error: 'Dados incompletos para atualização.' });
+    }
+
+    const updatedPreference = await StyleAdjustmentService.updateUserStylePreference(
+      userId,
+      preference
+    );
+    res.json(updatedPreference);
+  } catch (error) {
+    console.error(`Erro na rota PUT /style-adjustment/style-preferences: ${error.message}`);
+    res.status(500).json({ error: 'Erro ao atualizar preferência de estilo.' });
+  }
+});
+
 module.exports = router;
