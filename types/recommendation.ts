@@ -1,12 +1,12 @@
 // Tipos básicos para o sistema de recomendação
-type RecommendationAlgorithm = 
+export type RecommendationAlgorithm = 
   | 'hybrid'
   | 'collaborative'
   | 'content'
   | 'social'
   | 'temporal';
 
-type FeedbackAction = 
+export type FeedbackAction = 
   | 'like'
   | 'dislike'
   | 'super_like'
@@ -14,7 +14,7 @@ type FeedbackAction =
   | 'report'
   | 'block';
 
-interface RecommendationFilters {
+export interface RecommendationFilters {
   ageRange?: [number, number];
   maxDistance?: number;
   genders?: string[];
@@ -23,7 +23,7 @@ interface RecommendationFilters {
   interests?: string[];
 }
 
-interface MatchScore {
+export interface MatchScore {
   userId: string;
   targetUserId: string;
   overallScore: number;
@@ -40,7 +40,7 @@ interface MatchScore {
   distribution: ScoreDistribution;
 }
 
-interface ScoreDistribution {
+export interface ScoreDistribution {
   style: number;
   emotional: number;
   hobby: number;
@@ -51,7 +51,7 @@ interface ScoreDistribution {
   communication?: number;
 }
 
-interface UserInteractionAnalytics {
+export interface UserInteractionAnalytics {
   userId: string;
   sessionId: string;
   interactions: InteractionEvent[];
@@ -60,28 +60,17 @@ interface UserInteractionAnalytics {
   sessionEnd: Date;
 }
 
-type BehaviorPatternType = 
+export type BehaviorPatternType = 
   | 'exploratory'
   | 'selective'
   | 'consistent'
   | 'varied'
   | 'focused';
 
-interface InteractionEvent {
+export interface InteractionEvent {
   targetUserId: string;
   action: FeedbackAction;
   timestamp: Date;
   context: any;
   algorithm: RecommendationAlgorithm;
 }
-
-export {
-  RecommendationAlgorithm,
-  FeedbackAction,
-  RecommendationFilters,
-  MatchScore,
-  ScoreDistribution,
-  UserInteractionAnalytics,
-  BehaviorPatternType,
-  InteractionEvent
-};

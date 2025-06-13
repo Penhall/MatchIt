@@ -4,7 +4,6 @@
 import { 
   RecommendationAlgorithm, 
   CompatibilityDimensions, 
-  CompatibilityAnalysis,
   RecommendationContext 
 } from './base';
 

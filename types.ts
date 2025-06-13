@@ -65,3 +65,8 @@ export interface IconProps {
   className?: string;
   style?: React.CSSProperties;
 }
+
+export interface GeographicLocation {
+  latitude: number;
+  longitude: number;
+}

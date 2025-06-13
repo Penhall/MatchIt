@@ -1,24 +1,24 @@
 // routes/recommendations.ts
 // Rotas da API do Sistema de Recomendação MatchIt
 
-import express from 'express';
+import express, { Request, Response, NextFunction, Router } from 'express';
 import { Pool } from 'pg';
-import { RecommendationService } from '../services/RecommendationService';
+import { RecommendationService } from '../../services/recommendation/RecommendationService';
 import { 
   RecommendationValidators,
   RecommendationFormatters,
   recommendationRateLimiter
-} from '../utils/recommendationUtils';
+} from '../../utils/recommendation/recommendationUtils';
 import { 
   RecommendationAlgorithm,
   FeedbackAction,
   RecommendationFilters
-} from '../types/recommendation';
+} from '../../types/recommendation';
 
 /**
  * Cria router com todas as rotas de recomendação
  */
-export function createRecommendationRoutes(pool: Pool): express.Router {
+export function createRecommendationRoutes(pool: Pool): Router {
   const router = express.Router();
   const recommendationService = new RecommendationService(pool);
 
@@ -29,19 +29,18 @@ export function createRecommendationRoutes(pool: Pool): express.Router {
   /**
    * Middleware de rate limiting para recomendações
    */
-  const rateLimitMiddleware = (req: any, res: express.Response, next: express.NextFunction) => {
-    const userId = req.user?.userId || req.ip;
+  const rateLimitMiddleware = (req: Request, res: Response, next: NextFunction) => {
+    const userId = (req as any).user?.userId || req.ip;
     const identifier = `recommendations:${userId}`;
 
     if (!recommendationRateLimiter.isAllowed(identifier)) {
-      const rateLimitInfo = recommendationRateLimiter.getRateLimitInfo(identifier);
-      
-      return res.status(429).json(
+      res.status(429).json(
         RecommendationFormatters.formatErrorResponse(
           new Error('Rate limit exceeded. Too many recommendation requests.'),
-          req.headers['x-request-id']
+          req.headers['x-request-id'] as string
         )
       );
+      return;
     }
 
     next();
@@ -50,14 +49,15 @@ export function createRecommendationRoutes(pool: Pool): express.Router {
   /**
    * Middleware de validação de autenticação
    */
-  const requireAuth = (req: any, res: express.Response, next: express.NextFunction) => {
-    if (!req.user?.userId) {
-      return res.status(401).json(
+  const requireAuth = (req: Request, res: Response, next: NextFunction) => {
+    if (!(req as any).user?.userId) {
+      res.status(401).json(
         RecommendationFormatters.formatErrorResponse(
           new Error('Authentication required'),
-          req.headers['x-request-id']
+          req.headers['x-request-id'] as string
         )
       );
+      return;
     }
     next();
   };
@@ -66,10 +66,10 @@ export function createRecommendationRoutes(pool: Pool): express.Router {
   // GET /api/recommendations
   // Obter recomendações para o usuário
   // =====================================================
-  router.get('/', requireAuth, rateLimitMiddleware, async (req: any, res: express.Response) => {
+  router.get('/', requireAuth, rateLimitMiddleware, async (req: Request, res: Response) => {
     try {
-      const userId = req.user.userId;
-      const requestId = req.headers['x-request-id'] || `req_${Date.now()}`;
+      const userId = (req as any).user.userId;
+      const requestId = req.headers['x-request-id'] as string || `req_${Date.now()}`;
       
       // Parse de parâmetros
       const algorithm = req.query.algorithm as RecommendationAlgorithm || 'hybrid';
@@ -78,12 +78,13 @@ export function createRecommendationRoutes(pool: Pool): express.Router {
 
       // Validar algoritmo
       if (!RecommendationValidators.isValidAlgorithm(algorithm)) {
-        return res.status(400).json(
+        res.status(400).json(
           RecommendationFormatters.formatErrorResponse(
             new Error('Invalid algorithm. Must be one of: hybrid, collaborative, content, social, temporal'),
             requestId
           )
         );
+        return;
       }
 
       // Parse de filtros
@@ -115,12 +116,13 @@ export function createRecommendationRoutes(pool: Pool): express.Router {
       // Validar filtros
       const filterErrors = RecommendationValidators.validateRecommendationFilters(filters);
       if (filterErrors.length > 0) {
-        return res.status(400).json(
+        res.status(400).json(
           RecommendationFormatters.formatErrorResponse(
             new Error(`Invalid filters: ${filterErrors.join(', ')}`),
             requestId
           )
         );
+        return;
       }
 
       // Obter recomendações
@@ -133,7 +135,7 @@ export function createRecommendationRoutes(pool: Pool): express.Router {
       });
 
       // Formatar resposta
-      const formattedMatches = result.matches.map(match => 
+      const formattedMatches = result.matches.map((match: any) => 
         RecommendationFormatters.formatMatchScoreForAPI(match)
       );
 
@@ -160,7 +162,7 @@ export function createRecommendationRoutes(pool: Pool): express.Router {
       res.status(500).json(
         RecommendationFormatters.formatErrorResponse(
           error instanceof Error ? error : new Error('Unknown error'),
-          req.headers['x-request-id']
+          req.headers['x-request-id'] as string
         )
       );
     }
@@ -170,47 +172,51 @@ export function createRecommendationRoutes(pool: Pool): express.Router {
   // POST /api/recommendations/feedback
   // Registrar feedback do usuário
   // =====================================================
-  router.post('/feedback', requireAuth, rateLimitMiddleware, async (req: any, res: express.Response) => {
+  router.post('/feedback', requireAuth, rateLimitMiddleware, async (req: Request, res: Response) => {
     try {
-      const userId = req.user.userId;
-      const requestId = req.headers['x-request-id'] || `req_${Date.now()}`;
+      const userId = (req as any).user.userId;
+      const requestId = req.headers['x-request-id'] as string || `req_${Date.now()}`;
       const { targetUserId, action, context } = req.body;
 
       // Validações
       if (!targetUserId) {
-        return res.status(400).json(
+        res.status(400).json(
           RecommendationFormatters.formatErrorResponse(
             new Error('targetUserId is required'),
             requestId
           )
         );
+        return;
       }
 
       if (!action) {
-        return res.status(400).json(
+        res.status(400).json(
           RecommendationFormatters.formatErrorResponse(
             new Error('action is required'),
             requestId
           )
         );
+        return;
       }
 
       if (!RecommendationValidators.isValidUUID(targetUserId)) {
-        return res.status(400).json(
+        res.status(400).json(
           RecommendationFormatters.formatErrorResponse(
             new Error('Invalid targetUserId format'),
             requestId
           )
         );
+        return;
       }
 
       if (!RecommendationValidators.isValidFeedbackAction(action)) {
-        return res.status(400).json(
+        res.status(400).json(
           RecommendationFormatters.formatErrorResponse(
             new Error('Invalid action. Must be one of: like, dislike, super_like, skip, report, block'),
             requestId
           )
         );
+        return;
       }
 
       // Registrar feedback
@@ -242,7 +248,7 @@ export function createRecommendationRoutes(pool: Pool): express.Router {
       res.status(500).json(
         RecommendationFormatters.formatErrorResponse(
           error instanceof Error ? error : new Error('Unknown error'),
-          req.headers['x-request-id']
+          req.headers['x-request-id'] as string
         )
       );
     }
@@ -252,10 +258,10 @@ export function createRecommendationRoutes(pool: Pool): express.Router {
   // GET /api/recommendations/stats
   // Obter estatísticas do usuário
   // =====================================================
-  router.get('/stats', requireAuth, async (req: any, res: express.Response) => {
+  router.get('/stats', requireAuth, async (req: Request, res: Response) => {
     try {
-      const userId = req.user.userId;
-      const requestId = req.headers['x-request-id'] || `req_${Date.now()}`;
+      const userId = (req as any).user.userId;
+      const requestId = req.headers['x-request-id'] as string || `req_${Date.now()}`;
 
       const stats = await recommendationService.getUserStats(userId);
 
@@ -274,7 +280,7 @@ export function createRecommendationRoutes(pool: Pool): express.Router {
       res.status(500).json(
         RecommendationFormatters.formatErrorResponse(
           error instanceof Error ? error : new Error('Unknown error'),
-          req.headers['x-request-id']
+          req.headers['x-request-id'] as string
         )
       );
     }
@@ -284,12 +290,11 @@ export function createRecommendationRoutes(pool: Pool): express.Router {
   // GET /api/recommendations/health
   // Health check para o sistema de recomendação
   // =====================================================
-  router.get('/health', async (req: express.Request, res: express.Response) => {
+  router.get('/health', async (req: Request, res: Response) => {
     try {
-      const requestId = req.headers['x-request-id'] || `req_${Date.now()}`;
+      const requestId = req.headers['x-request-id'] as string || `req_${Date.now()}`;
       
       // Testar conexão com banco
-      const pool = (req as any).app.locals.pool;
       const result = await pool.query('SELECT NOW() as timestamp');
       
       const response = RecommendationFormatters.formatSuccessResponse(
@@ -316,7 +321,7 @@ export function createRecommendationRoutes(pool: Pool): express.Router {
       res.status(500).json(
         RecommendationFormatters.formatErrorResponse(
           error instanceof Error ? error : new Error('Unknown error'),
-          req.headers['x-request-id']
+          req.headers['x-request-id'] as string
         )
       );
     }
@@ -326,30 +331,32 @@ export function createRecommendationRoutes(pool: Pool): express.Router {
   // PUT /api/recommendations/preferences
   // Atualizar preferências de algoritmo do usuário
   // =====================================================
-  router.put('/preferences', requireAuth, async (req: any, res: express.Response) => {
+  router.put('/preferences', requireAuth, async (req: Request, res: Response) => {
     try {
-      const userId = req.user.userId;
-      const requestId = req.headers['x-request-id'] || `req_${Date.now()}`;
+      const userId = (req as any).user.userId;
+      const requestId = req.headers['x-request-id'] as string || `req_${Date.now()}`;
       const { weights, algorithm } = req.body;
 
       // Validar pesos se fornecidos
       if (weights && !RecommendationValidators.validateCompatibilityDimensions(weights)) {
-        return res.status(400).json(
+        res.status(400).json(
           RecommendationFormatters.formatErrorResponse(
             new Error('Invalid weights format. All dimensions must be numbers between 0 and 1.'),
             requestId
           )
         );
+        return;
       }
 
       // Validar algoritmo se fornecido
       if (algorithm && !RecommendationValidators.isValidAlgorithm(algorithm)) {
-        return res.status(400).json(
+        res.status(400).json(
           RecommendationFormatters.formatErrorResponse(
             new Error('Invalid algorithm specified'),
             requestId
           )
         );
+        return;
       }
 
       // Atualizar preferências no banco
@@ -402,7 +409,7 @@ export function createRecommendationRoutes(pool: Pool): express.Router {
       res.status(500).json(
         RecommendationFormatters.formatErrorResponse(
           error instanceof Error ? error : new Error('Unknown error'),
-          req.headers['x-request-id']
+          req.headers['x-request-id'] as string
         )
       );
     }

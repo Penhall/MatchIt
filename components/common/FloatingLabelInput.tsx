@@ -1,55 +1,43 @@
-
-import React, { useState, ChangeEvent, FocusEvent } from 'react';
+import React from 'react';
 
 interface FloatingLabelInputProps {
-  id: string;
   label: string;
-  type?: string;
   value: string;
-  onChange: (e: ChangeEvent<HTMLInputElement>) => void;
+  onChange: (value: string) => void;
+  type?: string;
+  multiline?: boolean;
   className?: string;
-  labelClassName?: string;
-  inputClassName?: string;
-  required?: boolean;
 }
 
-const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
-  id,
-  label,
-  type = 'text',
-  value,
+const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({ 
+  label, 
+  value, 
   onChange,
-  className = '',
-  labelClassName = '',
-  inputClassName = '',
-  required = false,
+  type = 'text',
+  multiline = false,
+  className = ''
 }) => {
-  const [isFocused, setIsFocused] = useState(false);
-  const hasValue = value && value.length > 0;
-
-  const handleFocus = (e: FocusEvent<HTMLInputElement>) => setIsFocused(true);
-  const handleBlur = (e: FocusEvent<HTMLInputElement>) => setIsFocused(false);
-
+  const baseClasses = 'block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500';
+  
   return (
     <div className={`relative ${className}`}>
-      <label
-        htmlFor={id}
-        className={`absolute left-3 transition-all duration-200 ease-in-out pointer-events-none
-          ${isFocused || hasValue ? 'top-1 text-xs text-neon-blue' : 'top-1/2 -translate-y-1/2 text-gray-400'}
-          ${labelClassName}`}
-      >
+      <label className="absolute -top-2 left-2 bg-white px-1 text-xs text-gray-500">
         {label}
       </label>
-      <input
-        id={id}
-        type={type}
-        value={value}
-        onChange={onChange}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        required={required}
-        className={`w-full px-3 pt-5 pb-2 bg-dark-input text-gray-200 border border-gray-700 rounded-lg focus:border-neon-blue focus:ring-1 focus:ring-neon-blue outline-none transition-colors duration-200 ${inputClassName}`}
-      />
+      {multiline ? (
+        <textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={`${baseClasses} min-h-[100px]`}
+        />
+      ) : (
+        <input
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={baseClasses}
+        />
+      )}
     </div>
   );
 };

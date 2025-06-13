@@ -96,7 +96,7 @@ export interface UserBehaviorAnalysis {
   behaviorStability: number;         // Estabilidade do comportamento (0-1)
   
   // Padrões identificados
-  identifiedPatterns: BehaviorPattern[];
+  identifiedPatterns: BehaviorPatternType[]; // CORREÇÃO: Alterado para BehaviorPatternType
   behaviorEvolution: BehaviorEvolution[];
   
   // Características principais

@@ -1,42 +1,77 @@
-import axiosLib from 'axios'; // Renomeado para axiosLib para clareza
-import type { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios'; // Importando apenas tipos
-import { useAuth } from '../context/AuthContext';
+import { useState } from 'react';
 
-// Determina qual objeto axios usar (padrão ou exportação direta)
-const axios = axiosLib.default || axiosLib;
+const useApi = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
-const useApi = (): AxiosInstance => {
-  const { isAuthenticated } = useAuth();
-  const token = isAuthenticated ? localStorage.getItem('matchit_token') : null;
+  const request = async (url: string, options: RequestInit = {}) => {
+    setLoading(true);
+    setError(null);
 
-  const instance: AxiosInstance = axios.create({
-    baseURL: process.env.REACT_APP_API_URL || '/api',
-    headers: {
-      'Content-Type': 'application/json'
-    }
-  });
-
-  instance.interceptors.request.use((config: AxiosRequestConfig) => {
-    if (token) {
-      config.headers = config.headers || {};
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  });
-
-  instance.interceptors.response.use(
-    (response: AxiosResponse) => response,
-    (error: AxiosError) => {
-      if (error.response?.status === 401) {
-        localStorage.removeItem('matchit_token');
-        localStorage.removeItem('matchit_auth');
-        window.location.reload();
+    try {
+      // Request Interceptor
+      const token = localStorage.getItem('token');
+      const headers = new Headers(options.headers || {});
+      
+      if (token) {
+        headers.set('Authorization', `Bearer ${token}`);
       }
-      return Promise.reject(error);
-    }
-  );
+      
+      // Configuração padrão com timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+      
+      const response = await fetch(url, {
+        ...options,
+        headers,
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      // Response Interceptor
+      if (!response.ok) {
+        if (response.status === 401) {
+          // Lógica de logout
+          localStorage.removeItem('token');
+          window.location.reload();
+        }
+        
+        const errorData = await response.json().catch(() => ({
+          message: `Request failed with status ${response.status}`
+        }));
+        
+        throw new Error(errorData.message || 'Request failed');
+      }
 
-  return instance;
+      return response.json();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setError(new Error(message));
+      throw new Error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Métodos utilitários para GET e POST
+  const get = (url: string, options: RequestInit = {}) => {
+    return request(url, { ...options, method: 'GET' });
+  };
+
+  const post = (url: string, body: any, options: RequestInit = {}) => {
+    return request(url, {
+      ...options,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+      },
+      body: JSON.stringify(body)
+    });
+  };
+
+  return { request, get, post, loading, error };
 };
 
 export default useApi;

@@ -1,44 +1,51 @@
 import React from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
-import { APP_ROUTES } from '../../constants';
-import { UserIcon, AdjustmentsIcon, HeartIcon, ChatBubbleIcon, ShoppingBagIcon, CogIcon, SparklesIcon } from '../common/Icon';
+import { 
+  HomeIcon as HomeIconOutline,
+  ChatBubbleLeftEllipsisIcon as ChatIconOutline,
+  UserIcon as UserIconOutline,
+  Cog6ToothIcon as CogIconOutline
+} from '@heroicons/react/24/outline';
 
-interface NavItemProps {
-  to: string;
-  icon: React.ReactNode;
-  label: string;
+interface BottomNavbarProps {
+  activeTab: string;
+  onTabChange: (tab: string) => void;
 }
 
-const NavItem: React.FC<NavItemProps> = ({ to, icon, label }) => {
-  const location = useLocation();
-  const isActive = location.pathname === to || (to === APP_ROUTES.CHAT && location.pathname.startsWith('/chat/'));
-
-
+const BottomNavbar: React.FC<BottomNavbarProps> = ({ activeTab, onTabChange }) => {
   return (
-    <NavLink
-      to={to}
-      className={({ isActive: navLinkIsActive }) => // Use NavLink's isActive if preferred over manual check
-        `flex flex-col items-center justify-center flex-1 p-2 transition-all duration-200 hover:text-neon-blue ${
-          isActive ? 'text-neon-blue scale-110' : 'text-gray-400'
-        }`
-      }
-    >
-      <div className={`mb-0.5 ${isActive ? 'animate-pulseGlow' : ''}`}>{icon}</div>
-      <span className="text-xs font-medium">{label}</span>
-    </NavLink>
-  );
-};
-
-const BottomNavbar: React.FC = () => {
-  return (
-    <nav className="bg-dark-card/80 backdrop-blur-md border-t border-neon-blue/20 shadow-lg flex justify-around items-center h-16 sticky bottom-0 z-10 rounded-b-[34px]">
-      <NavItem to={APP_ROUTES.PROFILE} icon={<UserIcon className="w-5 h-5" />} label="Perfil" />
-      <NavItem to={APP_ROUTES.STYLE_ADJUSTMENT} icon={<AdjustmentsIcon className="w-5 h-5" />} label="Estilo" />
-      <NavItem to={APP_ROUTES.MATCH_AREA} icon={<HeartIcon className="w-5 h-5" />} label="Matches" />
-      <NavItem to={APP_ROUTES.CHAT.replace(':chatId', 'global')} icon={<ChatBubbleIcon className="w-5 h-5" />} label="Chats" />
-      <NavItem to={APP_ROUTES.VENDOR} icon={<ShoppingBagIcon className="w-5 h-5" />} label="Shop" />
-      <NavItem to={APP_ROUTES.SETTINGS} icon={<CogIcon className="w-5 h-5" />} label="Configurar" />
-    </nav>
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around py-3">
+      <button 
+        onClick={() => onTabChange('home')}
+        className={`flex flex-col items-center ${activeTab === 'home' ? 'text-blue-500' : 'text-gray-500'}`}
+      >
+        <HomeIconOutline className="w-6 h-6" />
+        <span className="text-xs mt-1">Home</span>
+      </button>
+      
+      <button 
+        onClick={() => onTabChange('chat')}
+        className={`flex flex-col items-center ${activeTab === 'chat' ? 'text-blue-500' : 'text-gray-500'}`}
+      >
+        <ChatIconOutline className="w-6 h-6" />
+        <span className="text-xs mt-1">Chat</span>
+      </button>
+      
+      <button 
+        onClick={() => onTabChange('profile')}
+        className={`flex flex-col items-center ${activeTab === 'profile' ? 'text-blue-500' : 'text-gray-500'}`}
+      >
+        <UserIconOutline className="w-6 h-6" />
+        <span className="text-xs mt-1">Profile</span>
+      </button>
+      
+      <button 
+        onClick={() => onTabChange('settings')}
+        className={`flex flex-col items-center ${activeTab === 'settings' ? 'text-blue-500' : 'text-gray-500'}`}
+      >
+        <CogIconOutline className="w-6 h-6" />
+        <span className="text-xs mt-1">Settings</span>
+      </button>
+    </div>
   );
 };
 

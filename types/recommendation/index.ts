@@ -1,4 +1,22 @@
 // types/recommendation/index.ts
+
+// Importações adicionais para resolver erros de tipos
+import type { MatchScore } from './match-score';
+import type {
+  RecommendationAlgorithm, 
+  FeedbackAction, 
+  CompatibilityDimensions, 
+  AlgorithmConfig, 
+  AlgorithmPerformance, 
+  RecommendationContext, 
+  RecommendationFilters
+} from './base';
+import type { 
+  UserInteraction,
+  InteractionContext,
+  DeviceInfo 
+} from './user-interaction-core';
+
 // Exportações centralizadas para o Sistema de Recomendação MatchIt
 
 // =====================================================

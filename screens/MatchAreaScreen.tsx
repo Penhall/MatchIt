@@ -1,95 +1,44 @@
-import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import Avatar from '../components/common/Avatar';
-import Button from '../components/common/Button';
-import Card from '../components/common/Card';
-import Modal from '../components/common/Modal';
-import { MOCK_MATCHES, NEON_COLORS } from '../constants';
-import { Match, User } from '../types';
-import { HeartIcon, SparklesIcon } from '../components/common/Icon';
+import React from 'react';
+import { Match } from '../types';
 
-interface MatchCardProps {
-  match: Match;
-  onRequestConnection: (user: User) => void;
-}
+const MOCK_MATCHES: Match[] = [
+  {
+    id: '1',
+    name: 'John Doe',
+    photo: 'https://example.com/photo1.jpg',
+    compatibility: 85
+  },
+  {
+    id: '2',
+    name: 'Jane Smith',
+    photo: 'https://example.com/photo2.jpg',
+    compatibility: 92
+  }
+];
 
-const MatchCardComponent: React.FC<MatchCardProps> = ({ match, onRequestConnection }) => {
-  const { t } = useTranslation();
-  
+const MatchAreaScreen = () => {
   return (
-    <Card className="flex flex-col items-center text-center transition-transform duration-300 hover:scale-105" glowColor="blue">
-      <Avatar src={match.user.avatarUrl} alt={match.user.displayName} size="lg" isVip={match.user.isVip}/>
-      <h3 className="text-xl font-semibold mt-3 text-neon-blue">{match.user.displayName}</h3>
-      <p className="text-sm text-gray-400">{match.user.city}</p>
-      <p className={`text-2xl font-bold mt-2 ${NEON_COLORS.green}`}>{match.compatibilityScore}%</p>
-      <p className="text-xs text-gray-500">{t('matches.compatibility')}</p>
-      <Button 
-        variant="primary" 
-        size="md" 
-        className="mt-4 w-full"
-        onClick={() => onRequestConnection(match.user)}
-      >
-        <HeartIcon className="w-5 h-5 mr-2"/> {t('matches.requestConnection')}
-      </Button>
-    </Card>
-  );
-};
-
-const MatchAreaScreen: React.FC = () => {
-  const { t } = useTranslation();
-  const [matches, setMatches] = useState<Match[]>(MOCK_MATCHES);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [connectedUser, setConnectedUser] = useState<User | null>(null);
-
-  const handleRequestConnection = (user: User) => {
-    console.log('Connection requested with:', user.displayName);
-    setConnectedUser(user);
-    setIsModalOpen(true);
-  };
-  
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setConnectedUser(null);
-  };
-
-  return (
-    <div className="p-4 sm:p-6 space-y-6 text-gray-200 animate-fadeIn">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-neon-blue to-neon-green">
-          {t('matches.potentialConnections')}
-        </h1>
-        <p className="text-gray-400 mt-1">{t('matches.discoverProfiles')}</p>
-      </div>
-
-      {matches.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-          {matches.map(match => (
-            <MatchCardComponent key={match.id} match={match} onRequestConnection={handleRequestConnection} />
-          ))}
-        </div>
-      ) : (
-        <Card className="text-center py-10">
-          <SparklesIcon className="w-16 h-16 mx-auto text-neon-orange mb-4" />
-          <h2 className="text-xl font-semibold text-neon-orange">{t('matches.noMatches')}</h2>
-          <p className="text-gray-400 mt-2">{t('matches.refineStyle')}</p>
-          <Button variant="primary" className="mt-6">{t('styleAdjustment.title')}</Button>
-        </Card>
-      )}
-
-      {connectedUser && (
-        <Modal isOpen={isModalOpen} onClose={closeModal} title={t('matches.connectionEstablished')}>
-          <div className="text-center">
-            <Avatar src={connectedUser.avatarUrl} alt={connectedUser.displayName} size="xl" className="mx-auto mb-4" isVip={connectedUser.isVip} />
-            <p className="text-xl text-neon-green font-semibold">
-              {t('matches.nowConnected', { displayName: connectedUser.displayName })}
-            </p>
-            <p className="text-gray-300 mt-2">{t('matches.startConversation')}</p>
-            <Button variant="primary" size="lg" className="mt-6 w-full" onClick={() => { closeModal(); alert(`Navigate to chat with ${connectedUser.displayName}`); }}>
-              {t('matches.startChatting')}
-            </Button>
+    <div className="p-4">
+      <h1 className="text-2xl font-bold mb-6">Your Matches</h1>
+      
+      <div className="space-y-4">
+        {MOCK_MATCHES.map(match => (
+          <div key={match.id} className="border rounded-lg p-4 flex items-center">
+            <img 
+              src={match.photo} 
+              alt={match.name}
+              className="w-16 h-16 rounded-full mr-4"
+            />
+            <div>
+              <h3 className="font-medium">{match.name}</h3>
+              <div className="flex items-center mt-1">
+                <span className="text-sm text-gray-500 mr-2">Compatibility:</span>
+                <span className="font-medium">{match.compatibility}%</span>
+              </div>
+            </div>
           </div>
-        </Modal>
-      )}
+        ))}
+      </div>
     </div>
   );
 };

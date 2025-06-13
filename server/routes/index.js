@@ -24,6 +24,19 @@ if (config.features.enableRecommendations) {
   }
 }
 
+// Importar rotas de admin e styleAdjustment dinamicamente
+let adminRoutes = null;
+let styleAdjustmentRoutes = null;
+try {
+  const adminModule = await import('./admin.js');
+  adminRoutes = adminModule.default;
+  
+  const styleModule = await import('./styleAdjustment.js');
+  styleAdjustmentRoutes = styleModule.default;
+} catch (error) {
+  console.error('⚠️ Falha ao carregar rotas administrativas ou de ajuste de estilo:', error.message);
+}
+
 const router = Router();
 
 // =====================================================
@@ -47,11 +60,14 @@ router.use('/products', productRoutes);
 router.use(authenticateToken);
 
 // Rotas administrativas
-router.use('/admin', require('./admin'));
+if (adminRoutes) {
+  router.use('/admin', adminRoutes);
+}
 
 // Rotas de Ajuste de Estilo
-const styleAdjustmentRoutes = require('./styleAdjustment.js');
-router.use('/style-adjustment', styleAdjustmentRoutes);
+if (styleAdjustmentRoutes) {
+  router.use('/style-adjustment', styleAdjustmentRoutes);
+}
 
 // Rotas de perfil
 router.use('/profile', profileRoutes);
