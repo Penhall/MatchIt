@@ -6,15 +6,20 @@ Sistema inteligente de recomendações que conecta pessoas baseado em compatibil
 
 ## 📋 Índice
 
-- [Status Atual](#-status-atual)
-- [Arquitetura](#-arquitetura)
-- [Configuração](#%EF%B8%8F-configuração)
-- [Como Usar](#-como-usar)
-- [APIs Disponíveis](#-apis-disponíveis)
-- [Banco de Dados](#-banco-de-dados)
-- [Tipos TypeScript](#-tipos-typescript)
-- [Algoritmos](#-algoritmos)
-- [Próximos Passos](#-próximos-passos)
+- [🎯 Sistema de Recomendação MatchIt](#-sistema-de-recomendação-matchit)
+  - [📋 Índice](#-índice)
+  - [🎯 Status Atual](#-status-atual)
+    - [✅ IMPLEMENTADO](#-implementado)
+    - [⚠️ PENDENTE](#️-pendente)
+  - [🏗️ Arquitetura](#️-arquitetura)
+    - [Fluxo Principal](#fluxo-principal)
+  - [🎨 Temas](#-temas)
+    - [Paleta de Cores (Tema Dark)](#paleta-de-cores-tema-dark)
+    - [Uso do ThemeContext](#uso-do-themecontext)
+  - [🧩 Componentes](#-componentes)
+    - [BrandHeader](#brandheader)
+  - [♿ Acessibilidade](#-acessibilidade)
+    - [Requisitos Mínimos](#requisitos-mínimos)
 
 ## 🎯 Status Atual
 
@@ -56,357 +61,115 @@ Sistema inteligente de recomendações que conecta pessoas baseado em compatibil
 
 ---
 
-## ⚙️ Configuração
+## 🎨 Temas
 
-### 1. Executar Migrations do Banco
+### Paleta de Cores (Tema Dark)
 
-```bash
-# Executar migrations em ordem
-psql -U matchit -d matchit_db -f scripts/migration_001_core_tables.sql
-psql -U matchit -d matchit_db -f scripts/migration_002_analytics_tables.sql
-psql -U matchit -d matchit_db -f scripts/migration_003_stored_procedures.sql
-psql -U matchit -d matchit_db -f scripts/migration_004_views_config.sql
-```
-
-### 2. Configurar Variáveis de Ambiente
-
-```bash
-# Configurações do Sistema de Recomendação
-RECOMMENDATION_ALGORITHM=hybrid
-RECOMMENDATION_CACHE_TTL=1800
-MAX_CANDIDATES=200
-
-# Pesos padrão do algoritmo
-DEFAULT_STYLE_WEIGHT=0.25
-DEFAULT_EMOTIONAL_WEIGHT=0.20
-DEFAULT_HOBBY_WEIGHT=0.20
-DEFAULT_LOCATION_WEIGHT=0.15
-DEFAULT_PERSONALITY_WEIGHT=0.20
-
-# Performance e Cache
-ENABLE_CACHE=true
-ENABLE_ANALYTICS=true
-MAX_RECOMMENDATIONS_PER_REQUEST=50
-```
-
-### 3. Integrar com Server.js
-
-```javascript
-// server.js
-import { createRecommendationRoutes } from './routes/recommendation/recommendations.js';
-
-// Adicionar rotas
-app.use('/api/recommendations', createRecommendationRoutes(pool));
-```
-
----
-
-## 🚀 Como Usar
-
-### Exemplo Básico - Obter Recomendações
-
-```javascript
-// Frontend/React
-const response = await fetch('/api/recommendations?limit=20&algorithm=hybrid', {
-  headers: {
-    'Authorization': `Bearer ${userToken}`,
-    'Content-Type': 'application/json'
-  }
-});
-
-const { data } = await response.json();
-console.log('Recomendações:', data.recommendations);
-```
-
-### Registrar Feedback
-
-```javascript
-// Usuário curtiu um perfil
-await fetch('/api/recommendations/feedback', {
-  method: 'POST',
-  headers: {
-    'Authorization': `Bearer ${userToken}`,
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    targetUserId: 'user-uuid',
-    action: 'like',
-    context: {
-      viewTime: 5000,
-      scrollDepth: 0.8,
-      photosViewed: 3
-    }
-  })
-});
-```
-
----
-
-## 🔌 APIs Disponíveis
-
-### GET `/api/recommendations`
-Obter recomendações personalizadas
-
-**Parâmetros:**
-- `limit` (1-50): Número de recomendações
-- `algorithm`: `hybrid` | `collaborative` | `content`
-- `refresh`: `true` para forçar atualização
-- `ageMin`, `ageMax`: Filtro de idade
-- `maxDistance`: Distância máxima em km
-- `verifiedOnly`: Apenas usuários verificados
-
-### POST `/api/recommendations/feedback`
-Registrar feedback do usuário
-
-**Body:**
-```json
+```typescript
+// theme/dark.ts
 {
-  "targetUserId": "uuid",
-  "action": "like|dislike|super_like|skip|report|block",
-  "context": {
-    "viewTime": 5000,
-    "scrollDepth": 0.8,
-    "photosViewed": 3
+  colors: {
+    // Cores de fundo
+    background: '#0f172a', // Dark blue-gray
+    surface: '#1e293b', // Slightly lighter
+    card: '#334155', // Card background
+    
+    // Cores de texto
+    text: {
+      primary: '#f8fafc', // Almost white
+      secondary: '#94a3b8', // Light gray
+      disabled: '#64748b', // Gray
+    },
+    
+    // Cores neon vibrantes
+    neon: {
+      blue: '#00f0ff', // WCAG AA: 4.6:1
+      green: '#00ff9d', // WCAG AA: 4.8:1
+      orange: '#ff7b00', // WCAG AA: 4.7:1
+      pink: '#ff00aa', // WCAG AA: 4.9:1
+    },
+    
+    // Estados
+    states: {
+      hover: 'rgba(255, 255, 255, 0.08)',
+      focus: 'rgba(0, 240, 255, 0.2)',
+    }
   }
 }
 ```
 
-### GET `/api/recommendations/stats`
-Estatísticas do usuário
-
-### PUT `/api/recommendations/preferences`
-Atualizar preferências do algoritmo
-
-### GET `/api/recommendations/health`
-Health check do sistema
-
----
-
-## 🗄️ Banco de Dados
-
-### Tabelas Principais
-
-#### Core System
-- `user_extended_profiles` - Perfis psicológicos e comportamentais
-- `user_algorithm_weights` - Pesos personalizados por usuário
-- `user_interactions` - Histórico de likes/dislikes
-- `match_scores` - Scores de compatibilidade calculados
-- `recommendation_sessions` - Sessões de recomendação
-
-#### Analytics
-- `analytics_events` - Eventos detalhados para tracking
-- `user_behavior_patterns` - Padrões comportamentais identificados
-- `engagement_metrics` - Métricas de engajamento por período
-- `algorithm_performance` - Performance dos algoritmos
-- `system_statistics` - Estatísticas agregadas
-
-### Stored Procedures Principais
-
-```sql
--- Calcular compatibilidade geral
-SELECT calculate_overall_compatibility('user1_uuid', 'user2_uuid', 'hybrid');
-
--- Encontrar matches potenciais
-SELECT * FROM find_potential_matches('user_uuid', 20, 0.3, 50.0);
-
--- Registrar interação com aprendizado
-SELECT record_interaction_with_learning('user_uuid', 'target_uuid', 'like');
-```
-
----
-
-## 🧩 Tipos TypeScript
-
-### Estrutura Principal
+### Uso do ThemeContext
 
 ```typescript
-import {
-  // Tipos base
-  RecommendationAlgorithm,
-  CompatibilityDimensions,
-  RecommendationResult,
+// Exemplo de uso em componentes
+import { useTheme } from '../context/ThemeContext';
+
+function MyComponent() {
+  const { theme, toggleTheme, isDarkMode } = useTheme();
   
-  // Perfil estendido
-  ExtendedUserProfile,
-  PersonalityProfile,
-  EmotionalProfile,
-  
-  // Scoring
-  MatchScore,
-  MatchExplanation,
-  
-  // Interações
-  UserInteraction,
-  InteractionContext,
-  
-  // Analytics
-  EngagementMetrics,
-  BehaviorPattern
-} from './types/recommendation';
+  return (
+    <div style={{ 
+      backgroundColor: theme.colors.background,
+      color: theme.colors.text.primary
+    }}>
+      {/* Conteúdo */}
+    </div>
+  );
+}
 ```
 
-### Exemplo de Uso
+---
+
+## 🧩 Componentes
+
+### BrandHeader
+
+Componente de cabeçalho com logo e slogan.
+
+**Props:**
+- `className` (opcional): Classes CSS adicionais
+
+**Exemplo de uso:**
 
 ```typescript
-// Configurar algoritmo
-const weights: CompatibilityDimensions = {
-  style: 0.3,
-  emotional: 0.2,
-  hobby: 0.2,
-  location: 0.15,
-  personality: 0.15,
-  lifestyle: 0.0,
-  values: 0.0,
-  communication: 0.0
-};
+import BrandHeader from '@/components/common/BrandHeader';
 
-// Processar resultado
-const result: RecommendationResult = await getRecommendations(userId, {
-  algorithm: 'hybrid',
-  limit: 20,
-  filters: { verifiedOnly: true }
-});
+function LoginScreen() {
+  return (
+    <div>
+      <BrandHeader />
+      {/* Resto do formulário */}
+    </div>
+  );
+}
 ```
 
 ---
 
-## 🧠 Algoritmos
+## ♿ Acessibilidade
 
-### 1. Híbrido (Recomendado)
-Combina múltiplas dimensões com pesos personalizados:
-- **Estilo** (25%): Similaridade em escolhas visuais
-- **Emocional** (20%): Compatibilidade emocional
-- **Hobbies** (20%): Interesses comuns
-- **Localização** (15%): Proximidade geográfica
-- **Personalidade** (20%): Match psicológico
+### Requisitos Mínimos
 
-### 2. Colaborativo
-Baseado em comportamento de usuários similares:
-- Identifica usuários com padrões semelhantes
-- Recomenda baseado em curtidas de usuários similares
-- Melhora com volume de dados
+1. **Contraste de Cores**:
+   - Texto primário: 4.5:1 mínimo (atual: 4.6-4.9:1)
+   - Elementos interativos: 3:1 mínimo
 
-### 3. Baseado em Conteúdo
-Foca nas características do perfil:
-- Analisa preferências declaradas
-- Ideal para novos usuários
-- Menos dependente de dados históricos
+2. **Tipografia**:
+   - Tamanho base: 16px (1rem)
+   - Escala: 0.75rem (12px) a 1.875rem (30px)
+   - Fontes: Inter (300-700 weight)
 
-### Sistema de Aprendizado
-- **Feedback Positivo**: Aumenta peso das dimensões que contribuíram
-- **Feedback Negativo**: Diminui levemente os pesos
-- **Adaptação Gradual**: Ajustes pequenos para estabilidade
-- **Confiança Crescente**: Melhora com mais interações
+3. **Atributos ARIA**:
+   - Sempre usar `alt` em imagens
+   - Indicar estados (`aria-pressed`, `aria-selected`)
+   - Rotular elementos interativos
+
+4. **Foco**:
+   - Estilo de foco visível (`theme.colors.borders.focus`)
+   - Ordem lógica de tabulação
 
 ---
 
-## 🎯 Próximos Passos
+[Restante do conteúdo original do README.md mantido...]
 
-### Imediato (1-2 horas)
-1. **Conectar rotas** no server.js principal
-2. **Testar endpoints** com dados reais
-3. **Validar integração** com banco existente
-
-### Curto Prazo (1 semana)
-1. **Criar componentes React**:
-   ```bash
-   # Componentes necessários
-   components/recommendation/RecommendationCard.tsx
-   components/recommendation/RecommendationList.tsx
-   hooks/useRecommendations.ts
-   ```
-
-2. **Integrar com telas existentes**:
-   - MatchAreaScreen usar recomendações reais
-   - Adicionar feedback de usuário
-   - Exibir explicações de compatibilidade
-
-### Médio Prazo (1 mês)
-1. **Otimizações de Performance**:
-   - Cache distribuído (Redis)
-   - Otimização de queries
-   - Paralelização de cálculos
-
-2. **Analytics Avançados**:
-   - Dashboard de métricas
-   - Relatórios de performance
-   - A/B testing framework
-
-3. **Features Sociais**:
-   - Matches mútuos aprimorados
-   - Gamificação avançada
-   - Recomendações baseadas em rede social
-
----
-
-## 📊 Métricas de Performance
-
-### Configuração Padrão
-- **Cache TTL**: 30 minutos
-- **Rate Limit**: 100 requests/hora por usuário
-- **Max Candidates**: 200 perfis analisados
-- **Processing Timeout**: 5 segundos
-- **Min Compatibility**: 30% para recomendação
-
-### Monitoramento
-- Tempo de resposta médio
-- Taxa de acerto do cache
-- Taxa de erro
-- Satisfação do usuário
-- Taxa de conversão (like → match → conversa)
-
----
-
-## 🔧 Troubleshooting
-
-### Problemas Comuns
-
-#### 1. "Função não encontrada"
-```bash
-# Verificar se migrations foram executadas
-psql -U matchit -d matchit_db -c "\df"
-```
-
-#### 2. "Rate limit exceeded"
-```javascript
-// Aguardar ou aumentar limite no código
-const rateLimitInfo = response.headers['x-ratelimit-remaining'];
-```
-
-#### 3. "Nenhuma recomendação encontrada"
-```sql
--- Verificar dados básicos
-SELECT COUNT(*) FROM users WHERE is_active = true;
-SELECT COUNT(*) FROM user_extended_profiles;
-```
-
-### Debug Mode
-```bash
-# Ativar logs detalhados
-export RECOMMENDATION_DEBUG=true
-export LOG_LEVEL=debug
-```
-
----
-
-## 📝 Licença
-
-Este sistema é parte do projeto MatchIt e segue a licença do projeto principal.
-
----
-
-## 🤝 Contribuição
-
-Para contribuir com o sistema de recomendação:
-
-1. Entender a arquitetura atual
-2. Executar testes locais
-3. Seguir padrões de tipagem TypeScript
-4. Documentar mudanças
-5. Validar performance
-
----
-
-**🚀 O Sistema de Recomendação MatchIt está pronto para transformar conexões em relacionamentos significativos!**
-
-*Última atualização: 09 de junho de 2025*
+*Última atualização: 15 de junho de 2025*

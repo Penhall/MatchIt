@@ -1,4 +1,4 @@
-const EvaluationItem = require('../models/EvaluationItem');
+import EvaluationItem from '../models/EvaluationItem.js';
 
 class AdminEvaluationItemService {
   static async createEvaluationItem(itemData) {
@@ -67,4 +67,4 @@ class AdminEvaluationItemService {
   }
 }
 
-module.exports = AdminEvaluationItemService;
+export default AdminEvaluationItemService;

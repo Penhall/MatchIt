@@ -1,4 +1,4 @@
-const ShoppingItem = require('../models/ShoppingItem');
+import ShoppingItem from '../models/ShoppingItem.js';
 
 class AdminShoppingItemService {
   static async createShoppingItem(itemData) {
@@ -80,4 +80,4 @@ class AdminShoppingItemService {
   }
 }
 
-module.exports = AdminShoppingItemService;
+export default AdminShoppingItemService;

@@ -1,8 +1,8 @@
 // server/routes/styleAdjustment.js
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const StyleAdjustmentService = require('../services/styleAdjustmentService');
-const authMiddleware = require('../middleware/auth'); // Proteger a rota, pois é para usuários logados
+import StyleAdjustmentService from '../services/styleAdjustmentService.js';
+import authMiddleware from '../middleware/auth.js'; // Proteger a rota, pois é para usuários logados
 
 // Rota para buscar perguntas de ajuste de estilo
 // GET /api/style-adjustment/questions?category=Clothing&limit=10
@@ -65,4 +65,4 @@ router.put('/style-preferences', authMiddleware, async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

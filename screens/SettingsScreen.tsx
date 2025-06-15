@@ -7,27 +7,21 @@ import Switch from '../components/common/Switch';
 import { NEON_COLORS } from '../constants';
 import { CogIcon, LogoutIcon, MoonIcon, SunIcon, UserIcon, VipBadgeIcon } from '../components/common/Icon';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { APP_ROUTES } from '../constants';
 
 
 const SettingsScreen: React.FC = () => {
   const { t } = useTranslation();
-  const [isDarkMode, setIsDarkMode] = useState(true); // App-wide dark mode could be context-based
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const { logout } = useAuth();
+  const { theme, toggleTheme, isDarkMode } = useTheme();
   const navigate = useNavigate();
 
   const handleLogout = () => {
     logout();
     navigate(APP_ROUTES.LOGIN);
-  };
-
-  // In a real app, this would toggle a global theme context
-  const toggleDarkMode = (checked: boolean) => {
-    setIsDarkMode(checked);
-    // Example: document.documentElement.classList.toggle('dark', checked);
-    alert(`Dark mode ${checked ? 'enabled' : 'disabled'}. (Visual toggle only for mockup)`);
   };
 
   return (
@@ -46,7 +40,7 @@ const SettingsScreen: React.FC = () => {
             {isDarkMode ? <MoonIcon className="w-5 h-5 mr-2 text-neon-blue" /> : <SunIcon className="w-5 h-5 mr-2 text-yellow-400" />}
             <span>{t('settings.darkMode')}</span>
           </div>
-          <Switch id="darkModeToggle" checked={isDarkMode} onChange={toggleDarkMode} />
+          <Switch id="darkModeToggle" checked={isDarkMode} onChange={toggleTheme} />
         </div>
       </Card>
 

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTheme } from '../../context/ThemeContext';
 
 interface FloatingLabelInputProps {
   label: string;
@@ -8,22 +9,35 @@ interface FloatingLabelInputProps {
   multiline?: boolean;
   className?: string;
   required?: boolean;
+  darkMode?: boolean;
 }
 
-const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({ 
-  label, 
-  value, 
+const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
+  label,
+  value,
   onChange,
   type = 'text',
   multiline = false,
   className = '',
-  required = false
+  required = false,
+  darkMode // Mantido para compatibilidade, mas não recomendado
 }) => {
-  const baseClasses = 'block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500';
+  const { isDarkMode, theme } = useTheme();
+  const effectiveDarkMode = darkMode !== undefined ? darkMode : isDarkMode;
+  
+  const baseClasses = `block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+    effectiveDarkMode
+      ? `border-${theme.colors.borders.primary} bg-${theme.colors.surface} text-${theme.colors.text.primary}`
+      : 'border-gray-300 bg-white text-gray-900'
+  }`;
   
   return (
     <div className={`relative ${className}`}>
-      <label className="absolute -top-2 left-2 bg-white px-1 text-xs text-gray-500">
+      <label className={`absolute -top-2 left-2 px-1 text-xs ${
+        effectiveDarkMode
+          ? `bg-${theme.colors.surface} text-${theme.colors.text.secondary}`
+          : 'bg-white text-gray-500'
+      }`}>
         {label}
       </label>
       {multiline ? (

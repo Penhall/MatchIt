@@ -1,7 +1,7 @@
 // server/services/styleAdjustmentService.js
-const AdminEvaluationItemService = require('./AdminEvaluationItemService');
-const { StyleCategory } = require('../../types');
-const { pool } = require('../config/database');
+import AdminEvaluationItemService from './AdminEvaluationItemService.js';
+import { StyleCategory } from '../../types.js';
+import { pool } from '../config/database.js';
 
 class StyleAdjustmentService {
   /**
@@ -175,4 +175,4 @@ class StyleAdjustmentService {
   }
 }
 
-module.exports = StyleAdjustmentService;
+export default StyleAdjustmentService;

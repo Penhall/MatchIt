@@ -1,10 +1,10 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const AdminEvaluationItemService = require('../services/AdminEvaluationItemService');
-const AdminShoppingItemService = require('../services/AdminShoppingItemService');
-const authMiddleware = require('../middleware/auth');
-const adminMiddleware = require('../middleware/admin');
-const upload = require('../middleware/upload'); // Importar o middleware de upload
+import AdminEvaluationItemService from '../services/AdminEvaluationItemService.js';
+import AdminShoppingItemService from '../services/AdminShoppingItemService.js';
+import authMiddleware from '../middleware/auth.js';
+import adminMiddleware from '../middleware/admin.js';
+import upload from '../middleware/upload.js'; // Importar o middleware de upload
 
 // Rotas para EvaluationItem
 router.post('/evaluation-items', authMiddleware, adminMiddleware, upload.single('image'), async (req, res) => {
@@ -157,4 +157,4 @@ router.delete('/shopping-items/:id', authMiddleware, adminMiddleware, async (req
   }
 });
 
-module.exports = router;
+export default router;

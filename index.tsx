@@ -5,6 +5,7 @@ import './src/i18n';
 import App from './App';
 import { HashRouter } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import './global.d.ts'; // Ensure global types are recognized, though typically not imported directly
 
 const rootElement = document.getElementById('root');
@@ -17,7 +18,9 @@ root.render(
   <React.StrictMode>
     <HashRouter>
       <AuthProvider>
-        <App />
+        <ThemeProvider>
+          <App />
+        </ThemeProvider>
       </AuthProvider>
     </HashRouter>
   </React.StrictMode>
