@@ -14,6 +14,12 @@
   "profile": {
     "editProfile": "Editar Perfil & Fotos",
     "styleProgress": "Progresso do Estilo",
+    "edit": {
+      "title": "Editar Perfil",
+      "displayName": "Nome de Exibição",
+      "city": "Cidade",
+      "saveChanges": "Salvar Alterações"
+    },
     "completion": "{{percent}}% do seu perfil de estilo completo.",
     "adjustStyle": "Ajustar Seu Estilo",
     "accountOptions": "Opções da Conta",

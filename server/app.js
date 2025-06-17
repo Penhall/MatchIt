@@ -1,4 +1,5 @@
 // server/app.js - Entry point principal do MatchIt Backend (Estrutura Modular)
+import 'dotenv/config'; // Adicionado para carregar variáveis do .env
 import express from 'express';
 import { initializeDatabase } from './config/database.js';
 import { config, validateConfig, isDevelopment } from './config/environment.js';

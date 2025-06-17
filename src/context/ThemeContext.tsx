@@ -1,5 +1,5 @@
 import { createContext, useContext, useState } from 'react';
-import { theme as darkTheme } from '../theme/dark';
+import { theme as darkTheme } from '../../theme/dark';
 
 type ThemeContextType = {
   theme: typeof darkTheme;

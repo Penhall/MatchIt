@@ -272,6 +272,60 @@ class MigrationRunner:
             logger.error("❌ Falha na Migration 002")
             return False
     
+    def run_migration_000(self):
+        """Executa Migration 000: Schema Inicial"""
+        version = "1.0.0"
+        name = "Schema Inicial do Sistema"
+        
+        if self.migration_exists(version):
+            logger.info("⏭️  Migration 000 já foi executada, pulando...")
+            return True
+        
+        logger.info("🏗️  Executando Migration 000: Schema Inicial")
+        start_time = time.time()
+        
+        # Ler conteúdo do arquivo SQL
+        migration_path = os.path.join(os.path.dirname(__file__), 'migration_000_initial_schema.sql')
+        with open(migration_path, 'r', encoding='utf-8') as f:
+            sql_000 = f.read()
+        
+        if self.execute_sql_command(sql_000):
+            end_time = time.time()
+            execution_time_ms = int((end_time - start_time) * 1000)
+            self.register_migration(version, name, execution_time_ms)
+            logger.info("✅ Migration 000 concluída")
+            return True
+        else:
+            logger.error("❌ Falha na Migration 000")
+            return False
+
+    def run_migration_003(self):
+        """Executa Migration 003: Tabela User Profiles"""
+        version = "1.3.003"
+        name = "Tabela de Perfis de Usuário"
+        
+        if self.migration_exists(version):
+            logger.info("⏭️  Migration 003 já foi executada, pulando...")
+            return True
+        
+        logger.info("👤 Executando Migration 003: User Profiles")
+        start_time = time.time()
+        
+        # Ler conteúdo do arquivo SQL
+        migration_path = os.path.join(os.path.dirname(__file__), 'migration_003_user_profiles.sql')
+        with open(migration_path, 'r', encoding='utf-8') as f:
+            sql_003 = f.read()
+        
+        if self.execute_sql_command(sql_003):
+            end_time = time.time()
+            execution_time_ms = int((end_time - start_time) * 1000)
+            self.register_migration(version, name, execution_time_ms)
+            logger.info("✅ Migration 003 concluída")
+            return True
+        else:
+            logger.error("❌ Falha na Migration 003")
+            return False
+
     def run_all_migrations(self):
         """Executa todas as migrations em sequência"""
         self.print_header()
@@ -284,9 +338,10 @@ class MigrationRunner:
             return False
         
         migrations = [
+            self.run_migration_000,
             self.run_migration_001,
             self.run_migration_002,
-            # Adicionar mais migrations conforme necessário
+            self.run_migration_003,
         ]
         
         for migration in migrations:
