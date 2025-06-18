@@ -1,5 +1,16 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
+/**
+ * @typedef {Object} EvaluationItem
+ * @property {string} name - Nome do item de avaliação
+ * @property {string} [description] - Descrição opcional do item
+ * @property {'tênis'|'roupa'|'hobby'} category - Categoria do item
+ * @property {string} imageUrl - URL da imagem do item
+ * @property {string[]} [tags] - Tags associadas ao item
+ * @property {boolean} [active=true] - Status de ativação do item
+ * @property {Date} [createdAt] - Data de criação
+ * @property {Date} [updatedAt] - Data de atualização
+ */
 const EvaluationItemSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -36,4 +47,4 @@ const EvaluationItemSchema = new mongoose.Schema({
   }
 });
 
-module.exports = mongoose.model('EvaluationItem', EvaluationItemSchema);
+export default mongoose.model('EvaluationItem', EvaluationItemSchema);

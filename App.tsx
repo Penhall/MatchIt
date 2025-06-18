@@ -66,13 +66,12 @@ const App: React.FC = () => {
               path={APP_ROUTES.SETTINGS}
               element={<ProtectedRoute><SettingsScreen /></ProtectedRoute>}
             />
-            <Route path="*" element={<Navigate to={isAuthenticated ? APP_ROUTES.EDIT_PROFILE : APP_ROUTES.LOGIN} replace />} />
+            <Route path="/" element={<Navigate to={APP_ROUTES.LOGIN} replace />} />
+            <Route path="*" element={<Navigate to={isAuthenticated ? APP_ROUTES.PROFILE : APP_ROUTES.LOGIN} replace />} />
           </Routes>
         </main>
         {isAuthenticated && (
           <BottomNavbar 
-            activeTab={location.pathname} 
-            onTabChange={(path) => navigate(path)}
           />
         )}
       </div>

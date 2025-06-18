@@ -56,7 +56,8 @@ export class AuthService {
       const token = this.generateToken({ userId, email });
       
       return {
-        token,
+        token, // Mantido para compatibilidade
+        auth_token: token,
         user: {
           id: userId,
           email: userResult.rows[0].email,
@@ -105,7 +106,8 @@ export class AuthService {
       const token = this.generateToken({ userId: user.id, email: user.email });
       
       return {
-        token,
+        token, // Mantido para compatibilidade
+        auth_token: token,
         user: {
           id: user.id,
           email: user.email,
@@ -133,7 +135,8 @@ export class AuthService {
       });
       
       return {
-        token: newToken,
+        token: newToken, // Mantido para compatibilidade
+        auth_token: newToken,
         message: 'Token refreshed successfully'
       };
     } catch (error) {

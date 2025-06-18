@@ -6,3 +6,16 @@ declare module 'axios' {
     delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<T>;
   }
 }
+
+declare module '../components/LoadingSpinner' {
+  import { FC } from 'react';
+  
+  interface LoadingSpinnerProps {
+    size?: 'sm' | 'md' | 'lg';
+    color?: string;
+    className?: string;
+  }
+  
+  const LoadingSpinner: FC<LoadingSpinnerProps>;
+  export default LoadingSpinner;
+}

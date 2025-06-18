@@ -1,5 +1,6 @@
 // context/AuthContext.tsx - Corrigido
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import api from '../services/api';
 
 interface User {
   id: string;
@@ -14,11 +15,13 @@ interface User {
 interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
-  login: (email?: string, password?: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   register: (email: string, password: string, name: string) => Promise<void>;
   updateProfile: (profileData: Partial<User>) => Promise<void>;
   loading: boolean;
+  isLoggingIn: boolean;
+  isRegistering: boolean;
   error: string | null;
   setError: (error: string | null) => void;
   setUserState: (user: User | null) => void;
@@ -34,12 +37,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [isLoggingIn, setIsLoggingIn] = useState<boolean>(false);
+  const [isRegistering, setIsRegistering] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   // Verificar se há token armazenado ao inicializar
   useEffect(() => {
-    const token = localStorage.getItem('matchit_token');
-    const isAuth = localStorage.getItem('matchit_auth');
+    const token = localStorage.getItem('auth_token');
+    const isAuth = localStorage.getItem('auth_token') ? 'true' : null;
     
     if (token && isAuth === 'true') {
       setIsAuthenticated(true);
@@ -61,7 +66,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('matchit_token')}`
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         },
         body: JSON.stringify(profileData)
       });
@@ -81,145 +86,74 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const login = async (email?: string, password?: string) => {
+  const login = async (email: string, password: string) => {
     try {
       setLoading(true);
+      setIsLoggingIn(true);
       setError(null);
 
       if (!email || !password) {
-        // Login rápido para desenvolvimento
-        const mockToken = 'mock_jwt_token_' + Date.now();
-        localStorage.setItem('matchit_token', mockToken);
-        localStorage.setItem('matchit_auth', 'true');
-        setUser({
-          id: 'currentUser',
-          email: email || 'user@example.com',
-          name: 'User'
-        });
-        setIsAuthenticated(true);
-        return;
+        throw new Error('Email e senha são obrigatórios');
       }
 
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({ email, password })
-      });
+      const response = await api.post<{auth_token: string, user: User}>('/auth/login', { email, password });
 
-      const contentType = response.headers.get('content-type');
-
-      if (response.ok && contentType && contentType.includes('application/json')) {
-        const data = await response.json();
-        
-        if (data.token) {
-          localStorage.setItem('matchit_token', data.token);
-          localStorage.setItem('matchit_auth', 'true');
-          setUser(data.user || {
-            id: 'currentUser',
-            email: email,
-            name: 'User'
-          });
-          setIsAuthenticated(true);
-        } else {
-          throw new Error('Token não recebido');
-        }
-      } else {
-        // Fallback para modo desenvolvimento
-        console.warn('Backend não disponível, usando login mock');
-        const mockToken = 'mock_jwt_token_' + Date.now();
-        localStorage.setItem('matchit_token', mockToken);
-        localStorage.setItem('matchit_auth', 'true');
-        setUser({
-          id: 'currentUser',
-          email: email,
-          name: 'User'
-        });
+      if (response.success && response.data?.auth_token) {
+        localStorage.setItem('auth_token', response.data.auth_token);
+        setUser(response.data.user);
         setIsAuthenticated(true);
+      } else {
+        const errorMessage = response.error?.message || 'Falha no login';
+        if (response.error?.code === 'INVALID_CREDENTIALS') {
+          throw new Error('Credenciais inválidas');
+        }
+        throw new Error(errorMessage);
       }
     } catch (err: unknown) {
-      console.warn('Erro no login, usando modo desenvolvimento:', err);
-      // Fallback para modo desenvolvimento
-      const mockToken = 'mock_jwt_token_' + Date.now();
-      localStorage.setItem('matchit_token', mockToken);
-      localStorage.setItem('matchit_auth', 'true');
-      setUser({
-        id: 'currentUser',
-        email: email || 'user@example.com',
-        name: 'User'
-      });
-      setIsAuthenticated(true);
+      const message = err instanceof Error ? err.message : 'Erro desconhecido';
+      setError(message);
+      throw err;
     } finally {
       setLoading(false);
+      setIsLoggingIn(false);
     }
   };
 
   const register = async (email: string, password: string, name: string) => {
     try {
       setLoading(true);
+      setIsRegistering(true);
       setError(null);
 
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({ email, password, name })
-      });
+      if (!email || !password || !name) {
+        throw new Error('Email, senha e nome são obrigatórios');
+      }
 
-      const contentType = response.headers.get('content-type');
+      const response = await api.post<{auth_token: string, user: User}>('/auth/register', { email, password, name });
 
-      if (response.ok && contentType && contentType.includes('application/json')) {
-        const data = await response.json();
-        
-        if (data.token) {
-          localStorage.setItem('matchit_token', data.token);
-          localStorage.setItem('matchit_auth', 'true');
-          setUser(data.user || {
-            id: 'currentUser',
-            email: email,
-            name: name
-          });
-          setIsAuthenticated(true);
-        } else {
-          throw new Error('Token não recebido');
-        }
-      } else {
-        // Fallback para modo desenvolvimento
-        console.warn('Backend não disponível, usando registro mock');
-        const mockToken = 'mock_jwt_token_' + Date.now();
-        localStorage.setItem('matchit_token', mockToken);
-        localStorage.setItem('matchit_auth', 'true');
-        setUser({
-          id: 'currentUser',
-          email: email,
-          name: name
-        });
+      if (response.success && response.data?.auth_token) {
+        localStorage.setItem('auth_token', response.data.auth_token);
+        setUser(response.data.user);
         setIsAuthenticated(true);
+      } else {
+        const errorMessage = response.error?.message || 'Falha no registro';
+        if (response.error?.code === 'EMAIL_EXISTS') {
+          throw new Error('Email já cadastrado');
+        }
+        throw new Error(errorMessage);
       }
     } catch (err: unknown) {
-      console.warn('Erro no registro, usando modo desenvolvimento:', err);
-      // Fallback para modo desenvolvimento
-      const mockToken = 'mock_jwt_token_' + Date.now();
-      localStorage.setItem('matchit_token', mockToken);
-      localStorage.setItem('matchit_auth', 'true');
-      setUser({
-        id: 'currentUser',
-        email: email,
-        name: name
-      });
-      setIsAuthenticated(true);
+      const message = err instanceof Error ? err.message : 'Erro desconhecido';
+      setError(message);
+      throw err;
     } finally {
       setLoading(false);
+      setIsRegistering(false);
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('matchit_token');
-    localStorage.removeItem('matchit_auth');
+    localStorage.removeItem('auth_token');
     setUser(null);
     setIsAuthenticated(false);
     setError(null);
@@ -238,6 +172,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       register,
       updateProfile,
       loading,
+      isLoggingIn,
+      isRegistering,
       error,
       setError,
       setUserState

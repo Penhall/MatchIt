@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import LoadingSpinner from '../components/LoadingSpinner';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Button from '../components/common/Button';
@@ -13,19 +14,33 @@ const LoginScreen: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, register, isLoggingIn, isRegistering, error, setError } = useAuth();
   const { t } = useTranslation();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Mock login/signup logic
-    console.log(`${isSignUp ? 'Signing up' : 'Logging in'} with:`, email, password);
-    login(); // Set authenticated state
-    navigate(APP_ROUTES.PROFILE);
+    setError(null);
+    
+    if (isSignUp && password !== confirmPassword) {
+      setError(t('login.passwordsDontMatch'));
+      return;
+    }
+
+    try {
+      if (isSignUp) {
+        await register(email, password, email.split('@')[0]);
+      } else {
+        await login(email, password);
+      }
+      navigate(APP_ROUTES.PROFILE);
+    } catch (err) {
+      console.error('Auth error:', err);
+      setError(t('login.authError'));
+    }
   };
 
   return (
-    <div className="min-h-full flex flex-col justify-center items-center p-4 sm:p-8 bg-dark-bg text-gray-200 relative overflow-hidden" style={{ width: '100%', maxWidth: '420px', margin: '1rem auto' }}>
+    <div className="min-h-full flex flex-col justify-center items-center p-4 sm:p-6 bg-dark-bg text-gray-200 relative overflow-hidden" style={{ width: '100%', maxWidth: '420px', margin: '1rem auto' }}>
        {/* Background holographic/grid effect */}
       <div className="absolute inset-0 opacity-10 pointer-events-none">
         <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
@@ -47,7 +62,7 @@ const LoginScreen: React.FC = () => {
           <p className="mt-2 text-gray-300 text-xs sm:text-sm">{t('login.subtitle')}</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8 p-4 sm:p-8 bg-dark-card/70 backdrop-blur-sm rounded-xl shadow-lg border border-neon-blue/20">
+        <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8 p-4 sm:p-6 bg-dark-card/70 backdrop-blur-sm rounded-xl shadow-lg border border-neon-blue/20">
           <FloatingLabelInput
             label={t('login.email')}
             type="email"
@@ -71,9 +86,28 @@ const LoginScreen: React.FC = () => {
               required
             />
           )}
-          <Button type="submit" variant="primary" size="lg" className="w-full" glowEffect="blue">
-            {isSignUp ? t('login.signUp') : t('login.logIn')}
+          <Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            className="w-full"
+            glowEffect="blue"
+            disabled={isLoggingIn || isRegistering}
+          >
+            {(isLoggingIn || isRegistering) ? (
+              <span className="flex items-center justify-center">
+                <LoadingSpinner size="sm" color="text-white" className="mr-2" />
+                {isSignUp ? t('login.signingUp') : t('login.loggingIn')}
+              </span>
+            ) : (
+              isSignUp ? t('login.signUp') : t('login.logIn')
+            )}
           </Button>
+          {error && (
+            <div className="mt-2 p-2 bg-red-50 rounded text-red-600 text-sm text-center animate-fadeIn">
+              {error}
+            </div>
+          )}
         </form>
 
         <div className="text-center">
