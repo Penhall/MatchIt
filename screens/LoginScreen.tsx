@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import LoadingSpinner from '../components/LoadingSpinner';
+import LoadingSpinner from '@components/LoadingSpinner';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import Button from '../components/common/Button';
-import FloatingLabelInput from '../components/common/FloatingLabelInput';
+import Button from '@components/common/Button';
+import FloatingLabelInput from '@components/common/FloatingLabelInput';
 import { APP_ROUTES } from '../constants';
 import { useAuth } from '../src/context/AuthContext';
 import { GoogleIcon, AppleIcon, SparklesIcon } from '../components/common/Icon';

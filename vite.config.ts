@@ -8,7 +8,24 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@context': path.resolve(__dirname, './src/context')
+      '@context': path.resolve(__dirname, './src/context'),
+      '@components': path.resolve(__dirname, './src/components'),
+      '@components/common': path.resolve(__dirname, './src/components/common')
+    }
+  },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+        configure: (proxy) => {
+          proxy.on('proxyReq', (proxyReq) => {
+            proxyReq.setHeader('Origin', 'http://localhost:3000');
+          });
+        }
+      }
     }
   },
   build: {

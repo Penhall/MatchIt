@@ -35,7 +35,6 @@ export class AuthService {
       
       // Create user profile
       const styleData = {
-        display_name: displayName || name,
         city: city || 'Unknown',
         gender: gender || 'other',
         age: age || 25,
@@ -45,9 +44,10 @@ export class AuthService {
       };
       
       await client.query(
-        `INSERT INTO user_profiles (user_id, avatar_url, style_data) 
-         VALUES ($1, $2, $3)`,
-        [userId, null, JSON.stringify(styleData)]
+        `INSERT INTO user_profiles
+         (user_id, display_name, avatar_url, style_data)
+         VALUES ($1, $2, $3, $4)`,
+        [userId, displayName || name, null, JSON.stringify(styleData)]
       );
       
       await client.query('COMMIT');
@@ -78,6 +78,7 @@ export class AuthService {
 
   async loginUser(email, password) {
     try {
+      console.log(`[AuthService] Tentativa de login para: ${email}`);
       // Find user
       const userResult = await pool.query(
         `SELECT u.id, u.email, u.name, u.password_hash, up.style_data
@@ -86,21 +87,27 @@ export class AuthService {
          WHERE u.email = $1 AND u.is_active = true`,
         [email]
       );
-      
       if (userResult.rows.length === 0) {
+        console.error(`[AuthService] Usuário não encontrado: ${email}`);
         throw new Error('Invalid credentials');
       }
+      console.log(`[AuthService] Usuário encontrado: ${userResult.rows[0].email}`);
+      
       
       const user = userResult.rows[0];
       
       // Verify password
       const validPassword = await bcrypt.compare(password, user.password_hash);
       if (!validPassword) {
+        console.error('[AuthService] Senha inválida para usuário:', email);
         throw new Error('Invalid credentials');
       }
+      console.log('[AuthService] Credenciais válidas');
       
       // Extract style data
-      const styleData = user.style_data ? JSON.parse(user.style_data) : {};
+      const styleData = typeof user.style_data === 'string'
+        ? JSON.parse(user.style_data)
+        : user.style_data || {};
       
       // Generate token
       const token = this.generateToken({ userId: user.id, email: user.email });
@@ -119,6 +126,7 @@ export class AuthService {
       };
       
     } catch (error) {
+      console.error('[AuthService] Erro no login:', error.message, '\nStack:', error.stack);
       throw error;
     }
   }

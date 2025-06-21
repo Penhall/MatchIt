@@ -20,6 +20,12 @@ Sistema inteligente de recomendações que conecta pessoas baseado em compatibil
     - [BrandHeader](#brandheader)
   - [♿ Acessibilidade](#-acessibilidade)
     - [Requisitos Mínimos](#requisitos-mínimos)
+  - [🌱 Seeds de Dados Iniciais](#-seeds-de-dados-iniciais)
+    - [1. Migração SQL (`009_seed_initial_data.sql`)](#1-migração-sql-009_seed_initial_datasql)
+    - [2. Script JavaScript (`scripts/seedDatabase.js`)](#2-script-javascript-scriptsseeddatabasejs)
+      - [Cenários de Teste Validados](#cenários-de-teste-validados)
+    - [Configuração](#configuração)
+    - [Índice Atualizado](#índice-atualizado)
 
 ## 🎯 Status Atual
 
@@ -168,8 +174,71 @@ function LoginScreen() {
    - Estilo de foco visível (`theme.colors.borders.focus`)
    - Ordem lógica de tabulação
 
+
 ---
 
-[Restante do conteúdo original do README.md mantido...]
+## 🌱 Seeds de Dados Iniciais
 
-*Última atualização: 15 de junho de 2025*
+O sistema possui dois métodos para popular dados iniciais:
+
+### 1. Migração SQL (`009_seed_initial_data.sql`)
+- Executada automaticamente em ambiente de desenvolvimento (`NODE_ENV=development`)
+- Inclui:
+  - Usuário admin: `admin@example.com` / `admin123`
+  - Usuário teste: `test@example.com` / `test123`
+  - Dados de perfil iniciais
+  - Configurações padrão do sistema
+
+### 2. Script JavaScript (`scripts/seedDatabase.js`)
+- Execução manual: `node scripts/seedDatabase.js`
+- Vantagens:
+  - Usa bcrypt para hash de senhas (salt 12)
+  - Transações atômicas
+  - Validação de ambiente
+
+#### Cenários de Teste Validados
+1. **Ambiente de Desenvolvimento (NODE_ENV=development)**
+   ```bash
+   node scripts/seedDatabase.js
+   ```
+   - ✅ Executa normalmente
+   - Saída esperada:
+     ```
+     [SEED] Iniciando seed de dados...
+     [SEED] Conexão com banco estabelecida
+     [SEED] Dados inseridos com sucesso
+     ```
+
+2. **Modo Forçado (--force)**
+   ```bash
+   node scripts/seedDatabase.js --force
+   ```
+   - ✅ Ignora verificação de ambiente
+   - Saída esperada:
+     ```
+     [SEED] Modo forçado ativado
+     [SEED] Ignorando verificação de ambiente...
+     [SEED] Dados inseridos com sucesso
+     ```
+
+3. **Ambiente de Produção (NODE_ENV=production)**
+   ```bash
+   set NODE_ENV=production && node scripts/seedDatabase.js
+   ```
+   - ✅ Bloqueia execução por segurança
+   - Saída esperada:
+     ```
+     [SEED] ERRO: Script não pode ser executado em produção
+     [SEED] Use --force para sobrescrever (não recomendado)
+     ```
+
+### Configuração
+- **Desabilitar seeds**: Definir `matchit.disable_seeds=true` no PostgreSQL
+- **Ambiente**: Só executa em `development`
+- **Segurança**: Nunca executar em produção
+
+### Índice Atualizado
+- [🌱 Seeds de Dados Iniciais](#-seeds-de-dados-iniciais)
+  - [Cenários de Teste Validados](#cenários-de-teste-validados)
+
+*Última atualização: 18 de junho de 2025 - Documentação de testes do seedDatabase.js*

@@ -11,10 +11,12 @@
     "server": "nodemon server.js",
     "tailwind": "tailwindcss -i ./src/assets/index.css -o ./dist/assets/index.css --watch",
     "modular:test": "node server/app.js",
-    "original": "node server.js.pre-modular-backup-*"
+    "original": "node server.js.pre-modular-backup-*",
+    "test": "vitest run"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
+    "@testing-library/react": "^16.3.0",
     "@types/axios": "^0.9.36",
     "axios": "^1.10.0",
     "bcryptjs": "^2.4.3",
@@ -26,6 +28,7 @@
     "i18next": "^25.2.1",
     "i18next-browser-languagedetector": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.16.0",
     "morgan": "^1.10.0",
     "multer": "^2.0.1",
     "node-fetch": "^3.3.2",
@@ -33,16 +36,20 @@
     "react-i18next": "^15.5.2",
     "react-router-dom": "^7.6.1",
     "recharts": "^2.15.3",
+    "supertest": "^7.1.1",
     "winston": "^3.12.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.3",
-    "@types/node": "^22.14.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^22.15.32",
     "@types/pg": "^8.15.4",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.5",
     "@types/react-native": "^0.72.8",
+    "@types/supertest": "^6.0.3",
     "@vitejs/plugin-react": "^4.5.0",
+    "@vitest/coverage-v8": "^3.2.4",
     "autoprefixer": "^10.4.21",
     "axe-core": "^4.10.3",
     "jsdom": "^26.1.0",
@@ -51,7 +58,9 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "tailwindcss": "^4.1.8",
+    "ts-node": "^10.9.2",
     "typescript": "~5.7.2",
-    "vite": "^6.2.0"
+    "vite": "^6.2.0",
+    "vitest": "^3.2.4"
   }
 }
