@@ -1,61 +1,62 @@
 // server/middleware/auth.js - Middleware de autenticação corrigido
-import jwt from "jsonwebtoken";
-import { config } from "../config/environment.js";
+import jwt from 'jsonwebtoken';
+import { config } from '../config/environment.js';
 
 const authenticateToken = (req, res, next) => {
-  console.log(`[Auth] ${req.method} ${req.path} - Verificando autenticação`);
-  
-  const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1];
+  try {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
 
-  if (!token) {
-    console.log(`[Auth] Token não fornecido para ${req.method} ${req.path}`);
-    return res.status(401).json({ error: "Access token required" });
-  }
-
-  jwt.verify(token, config.jwt.secret, (err, user) => {
-    if (err) {
-      console.log(`[Auth] Erro na verificação do token:`, err.message);
-      return res.status(403).json({ error: "Invalid token" });
+    if (!token) {
+      return res.status(401).json({ 
+        error: 'Token de acesso obrigatório',
+        code: 'MISSING_TOKEN'
+      });
     }
-    
-    console.log(`[Auth] Token válido. Dados do usuário:`, user);
-    
-    // Normalizar dados do usuário (compatibilidade com diferentes estruturas)
-    req.user = {
-      id: user.id || user.userId,
-      userId: user.userId || user.id,
-      email: user.email,
-      ...user
-    };
-    
-    console.log(`[Auth] req.user definido:`, { id: req.user.id, userId: req.user.userId, email: req.user.email });
-    next();
-  });
+
+    jwt.verify(token, config.jwt.secret, (err, user) => {
+      if (err) {
+        console.error('❌ Token inválido:', err.message);
+        return res.status(403).json({ 
+          error: 'Token inválido ou expirado',
+          code: 'INVALID_TOKEN'
+        });
+      }
+      
+      req.user = user;
+      console.log('✅ Usuário autenticado:', user.id || user.email);
+      next();
+    });
+  } catch (error) {
+    console.error('❌ Erro no middleware de autenticação:', error);
+    res.status(500).json({ 
+      error: 'Erro interno no servidor',
+      code: 'AUTH_ERROR'
+    });
+  }
 };
 
 const optionalAuth = (req, res, next) => {
-  const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1];
+  try {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
 
-  if (!token) {
-    req.user = null;
-    return next();
-  }
-
-  jwt.verify(token, config.jwt.secret, (err, user) => {
-    if (err) {
-      req.user = null;
+    if (token) {
+      jwt.verify(token, config.jwt.secret, (err, user) => {
+        if (!err) {
+          req.user = user;
+        }
+        next();
+      });
     } else {
-      req.user = {
-        id: user.id || user.userId,
-        userId: user.userId || user.id,
-        email: user.email,
-        ...user
-      };
+      next();
     }
+  } catch (error) {
     next();
-  });
+  }
 };
 
+// EXPORTS COMPATÍVEIS
 export { authenticateToken, optionalAuth };
+export default authenticateToken;
+export { authenticateToken as authMiddleware };

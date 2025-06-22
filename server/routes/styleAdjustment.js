@@ -2,7 +2,7 @@
 import express from 'express';
 const router = express.Router();
 import StyleAdjustmentService from '../services/styleAdjustmentService.js';
-import authMiddleware from '../middleware/auth.js'; // Proteger a rota, pois é para usuários logados
+import { authenticateToken as authMiddleware } from '../middleware/auth.js';
 
 // Rota para buscar perguntas de ajuste de estilo
 // GET /api/style-adjustment/questions?category=Clothing&limit=10

@@ -9,7 +9,7 @@ import {
   PaginationParams,
   PaginatedResponse
 } from '../recommendation';
-import { pool } from '@db';
+import { pool } from '@db/index';
 import { Pool } from 'pg';
 
 // Funções de banco de dados

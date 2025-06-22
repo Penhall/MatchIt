@@ -2,7 +2,7 @@ import express from 'express';
 const router = express.Router();
 import AdminEvaluationItemService from '../services/AdminEvaluationItemService.js';
 import AdminShoppingItemService from '../services/AdminShoppingItemService.js';
-import authMiddleware from '../middleware/auth.js';
+import { authenticateToken as authMiddleware } from '../middleware/auth.js';
 import adminMiddleware from '../middleware/admin.js';
 import upload from '../middleware/upload.js'; // Importar o middleware de upload
 

@@ -6,8 +6,8 @@ import Button from '../components/common/Button';
 import Switch from '../components/common/Switch';
 import { NEON_COLORS } from '../constants';
 import { CogIcon, LogoutIcon, MoonIcon, SunIcon, UserIcon, VipBadgeIcon } from '../components/common/Icon';
-import { useAuth } from '@context/AuthContext';
-import { useTheme } from '@context/ThemeContext';
+import { useAuth } from "../src/context/AuthContext";
+import { useTheme } from '../src/context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { APP_ROUTES } from '../constants';
 

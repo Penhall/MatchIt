@@ -1,30 +1,28 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import path from 'path';
 
 export default defineConfig({
   base: '/',
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
-      '@context': path.resolve(__dirname, './src/context'),
-      '@components': path.resolve(__dirname, './src/components'),
-      '@components/common': path.resolve(__dirname, './src/components/common')
+      '@': './src',
+      '@context': './src/context',
+      '@components': './src/components',
+      '@services': './src/services',
+      '@types': './src/types',
+      '@utils': './src/utils',
+      '@assets': './src/assets',
+      '@db': './src/db'
     }
   },
   server: {
+    port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: 'http://localhost:3001',
         changeOrigin: true,
-        secure: false,
-        rewrite: (path) => path.replace(/^\/api/, ''),
-        configure: (proxy) => {
-          proxy.on('proxyReq', (proxyReq) => {
-            proxyReq.setHeader('Origin', 'http://localhost:3000');
-          });
-        }
+        secure: false
       }
     }
   },
@@ -32,6 +30,18 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: 'assets',
     emptyOutDir: true,
-    manifest: true
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          router: ['react-router-dom'],
+          i18n: ['react-i18next', 'i18next']
+        }
+      },
+      external: []
+    }
+  },
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'react-router-dom']
   }
 });

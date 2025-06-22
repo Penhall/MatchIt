@@ -1,7 +1,7 @@
 // types/recommendation/extended-user.ts
 // Extensão do perfil do usuário para sistema de recomendação
 
-import { User, StyleCategory } from '@/types.ts'; // Usando alias @/ para a raiz do projeto
+import { User, StyleCategory } from '@/types'; // Usando alias @/ para a raiz do projeto
 import { 
   GeographicLocation, 
   UserActivity, 

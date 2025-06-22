@@ -1,0 +1,61 @@
+// server/middleware/auth.js - Middleware de autenticação corrigido
+import jwt from "jsonwebtoken";
+import { config } from "../config/environment.js";
+
+const authenticateToken = (req, res, next) => {
+  console.log(`[Auth] ${req.method} ${req.path} - Verificando autenticação`);
+  
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+
+  if (!token) {
+    console.log(`[Auth] Token não fornecido para ${req.method} ${req.path}`);
+    return res.status(401).json({ error: "Access token required" });
+  }
+
+  jwt.verify(token, config.jwt.secret, (err, user) => {
+    if (err) {
+      console.log(`[Auth] Erro na verificação do token:`, err.message);
+      return res.status(403).json({ error: "Invalid token" });
+    }
+    
+    console.log(`[Auth] Token válido. Dados do usuário:`, user);
+    
+    // Normalizar dados do usuário (compatibilidade com diferentes estruturas)
+    req.user = {
+      id: user.id || user.userId,
+      userId: user.userId || user.id,
+      email: user.email,
+      ...user
+    };
+    
+    console.log(`[Auth] req.user definido:`, { id: req.user.id, userId: req.user.userId, email: req.user.email });
+    next();
+  });
+};
+
+const optionalAuth = (req, res, next) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+
+  if (!token) {
+    req.user = null;
+    return next();
+  }
+
+  jwt.verify(token, config.jwt.secret, (err, user) => {
+    if (err) {
+      req.user = null;
+    } else {
+      req.user = {
+        id: user.id || user.userId,
+        userId: user.userId || user.id,
+        email: user.email,
+        ...user
+      };
+    }
+    next();
+  });
+};
+
+export { authenticateToken, optionalAuth };

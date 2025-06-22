@@ -1,0 +1,89 @@
+// server/models/ShoppingItem.js - Versão corrigida com exports adequados
+
+class ShoppingItem {
+  constructor(data = {}) {
+    Object.assign(this, {
+      id: null,
+      user_id: null,
+      name: '',
+      category: '',
+      brand: null,
+      price: null,
+      currency: 'BRL',
+      image_url: null,
+      purchase_url: null,
+      description: null,
+      tags: [],
+      status: 'active',
+      created_at: null,
+      updated_at: null,
+      ...data
+    });
+  }
+
+  validate() {
+    const errors = [];
+    if (!this.user_id) errors.push('user_id é obrigatório');
+    if (!this.name?.trim()) errors.push('nome é obrigatório');
+    if (!this.category?.trim()) errors.push('categoria é obrigatória');
+    return { isValid: errors.length === 0, errors };
+  }
+
+  toDatabase() {
+    return {
+      ...this,
+      name: this.name?.trim(),
+      category: this.category?.trim(),
+      brand: this.brand?.trim() || null,
+      price: this.price ? parseFloat(this.price) : null,
+      tags: JSON.stringify(this.tags || []),
+      updated_at: new Date().toISOString()
+    };
+  }
+
+  static fromDatabase(dbRow) {
+    if (!dbRow) return null;
+    
+    const data = { ...dbRow };
+    if (typeof data.tags === 'string') {
+      try {
+        data.tags = JSON.parse(data.tags);
+      } catch {
+        data.tags = [];
+      }
+    }
+    
+    return new ShoppingItem(data);
+  }
+
+  toJSON() {
+    return {
+      id: this.id,
+      userId: this.user_id,
+      name: this.name,
+      category: this.category,
+      brand: this.brand,
+      price: this.price,
+      currency: this.currency,
+      imageUrl: this.image_url,
+      purchaseUrl: this.purchase_url,
+      description: this.description,
+      tags: this.tags,
+      status: this.status,
+      createdAt: this.created_at,
+      updatedAt: this.updated_at
+    };
+  }
+}
+
+// EXPORTS CORRIGIDOS - Esta é a parte mais importante!
+export default ShoppingItem;
+export { ShoppingItem };
+
+// Constantes auxiliares
+export const SHOPPING_CATEGORIES = [
+  'clothing', 'shoes', 'accessories', 'bags', 'jewelry',
+  'beauty', 'fragrances', 'watches', 'sunglasses', 'other'
+];
+
+export const SHOPPING_STATUSES = ['active', 'inactive', 'deleted'];
