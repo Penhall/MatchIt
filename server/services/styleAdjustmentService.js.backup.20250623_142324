@@ -64,13 +64,18 @@ class StyleAdjustmentService {
 
   /**
    * Busca as preferências de estilo de um usuário
-   * @param {string} userId - ID do usuário (UUID ou integer)
+   * @param {string} userId - ID do usuário
    * @returns {Promise<Array<StylePreference>>}
    */
   static async getUserStylePreferences(userId) {
     const client = await pool.connect();
     try {
-      // Não converter para integer - pode ser UUID
+      // Converter userId para integer se necessário
+      const userIdInt = parseInt(userId, 10);
+      if (isNaN(userIdInt)) {
+        throw new Error('ID de usuário inválido');
+      }
+      
       const query = `
         SELECT 
           category, 
@@ -83,7 +88,7 @@ class StyleAdjustmentService {
         ORDER BY created_at DESC
       `;
       
-      const result = await client.query(query, [userId]);
+      const result = await client.query(query, [userIdInt]);
       return result.rows;
     } catch (error) {
       console.error(`Erro ao buscar preferências de estilo para usuário ${userId}:`, error);
@@ -102,37 +107,67 @@ class StyleAdjustmentService {
 
   /**
    * Atualiza uma preferência de estilo do usuário
-   * @param {string} userId - ID do usuário (UUID ou integer)
+   * @param {string} userId - ID do usuário
    * @param {object} preference - Preferência a ser atualizada
    * @returns {Promise<object>}
    */
   static async updateUserStylePreference(userId, preference) {
     const client = await pool.connect();
     try {
-      // Não converter para integer - pode ser UUID
+      // Converter userId para integer se necessário
+      const userIdInt = parseInt(userId, 10);
+      if (isNaN(userIdInt)) {
+        throw new Error('ID de usuário inválido');
+      }
+
       const { category, questionId, selectedOption } = preference;
       
       if (!category || !questionId || selectedOption === undefined) {
         throw new Error('Dados incompletos: category, questionId e selectedOption são obrigatórios');
       }
       
-      // Usar UPSERT (INSERT ... ON CONFLICT) para compatibilidade com a estrutura existente
-      const upsertQuery = `
-        INSERT INTO style_choices (user_id, category, question_id, selected_option, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, NOW(), NOW())
-        ON CONFLICT (user_id, category, question_id)
-        DO UPDATE SET 
-          selected_option = EXCLUDED.selected_option,
-          updated_at = NOW()
-        RETURNING 
-          category, 
-          question_id AS "questionId", 
-          selected_option AS "selectedOption", 
-          updated_at AS "updatedAt"
+      // Primeiro tenta atualizar
+      const updateQuery = `
+        UPDATE style_choices
+        SET selected_option = $1,
+            updated_at = NOW()
+        WHERE user_id = $2
+          AND category = $3
+          AND question_id = $4
+        RETURNING category, question_id AS "questionId", selected_option AS "selectedOption", updated_at AS "updatedAt"
       `;
       
-      const result = await client.query(upsertQuery, [userId, category, questionId, selectedOption]);
-      return result.rows[0];
+      const updateParams = [
+        selectedOption,
+        userIdInt,
+        category,
+        questionId
+      ];
+      
+      const updateResult = await client.query(updateQuery, updateParams);
+      
+      // Se não atualizou nenhuma linha, insere nova
+      if (updateResult.rowCount === 0) {
+        const insertQuery = `
+          INSERT INTO style_choices
+            (user_id, category, question_id, selected_option, created_at, updated_at)
+          VALUES
+            ($1, $2, $3, $4, NOW(), NOW())
+          RETURNING category, question_id AS "questionId", selected_option AS "selectedOption", created_at AS "createdAt", updated_at AS "updatedAt"
+        `;
+        
+        const insertParams = [
+          userIdInt,
+          category,
+          questionId,
+          selectedOption
+        ];
+        
+        const insertResult = await client.query(insertQuery, insertParams);
+        return insertResult.rows[0];
+      }
+      
+      return updateResult.rows[0];
     } catch (error) {
       console.error(`Erro ao atualizar preferência de estilo para usuário ${userId}:`, error);
       
@@ -149,14 +184,19 @@ class StyleAdjustmentService {
 
   /**
    * Remove todas as preferências de estilo de um usuário
-   * @param {string} userId - ID do usuário (UUID ou integer)
+   * @param {string} userId - ID do usuário
    * @returns {Promise<number>} Número de registros removidos
    */
   static async clearUserStylePreferences(userId) {
     const client = await pool.connect();
     try {
+      const userIdInt = parseInt(userId, 10);
+      if (isNaN(userIdInt)) {
+        throw new Error('ID de usuário inválido');
+      }
+
       const query = `DELETE FROM style_choices WHERE user_id = $1`;
-      const result = await client.query(query, [userId]);
+      const result = await client.query(query, [userIdInt]);
       
       return result.rowCount || 0;
     } catch (error) {

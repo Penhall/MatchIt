@@ -20,7 +20,7 @@ const config = {
   
   // JWT
   jwt: {
-    secret: process.env.JWT_SECRET || 'matchit_secret_key_development',
+    secret: process.env.JWT_SECRET, // Removido o valor padrão para forçar o uso do .env
     expiresIn: process.env.JWT_EXPIRES_IN || '24h'
   },
   
@@ -60,7 +60,7 @@ const validateConfig = () => {
     'database.user', 
     'database.password',
     'database.name',
-    'jwt.secret'
+    'jwt.secret' // Agora é obrigatório vir do ambiente
   ];
   
   const missing = required.filter(key => {
