@@ -1,8 +1,8 @@
-# Dinâmica de Atualização do Perfil - 22/06/2025
+# Dinâmica de Atualização do Perfil - 22/06/2025 (Atualizado)
 
 ## 1. Visão Geral
 
-A atualização do perfil no MatchIt é um processo fundamental para garantir que as recomendações sejam precisas e relevantes. Os usuários podem modificar suas informações pessoais, preferências de estilo e outras configurações, e essas alterações são refletidas no sistema de recomendação e na experiência geral do aplicativo.
+A atualização do perfil no MatchIt é um processo fundamental para garantir que as recomendações sejam precisas e relevantes. Os usuários podem modificar suas informações pessoais, preferências de estilo e outras configurações, e essas alterações são refletidas no sistema de recomendação e na experiência geral do aplicativo. O "Style Adjustment" é uma funcionalidade central para a construção do perfil, permitindo que o usuário se expresse através de escolhas visuais.
 
 ## 2. Campos do Perfil e Atualização
 
@@ -11,11 +11,11 @@ A atualização do perfil no MatchIt é um processo fundamental para garantir qu
 - **Atualização**: Através do serviço `updateProfile` no frontend, que interage com o backend para persistir as mudanças.
 - **Impacto**: Afetam diretamente os filtros de busca e a proximidade nas recomendações.
 
-### 2.2. Preferências de Estilo (`stylePreferences`)
-- **Campos**: Preferências em tênis, roupas, cores, hobbies e sentimentos.
+### 2.2. Preferências de Estilo (`stylePreferences`) - "Style Adjustment"
+- **Campos**: Preferências em tênis, roupas, cores, hobbies e sentimentos. Essas são as 5 categorias principais onde o usuário escolhe entre pares de imagens para construir seu perfil.
 - **Atualização**: Realizada na "Tela de Ajuste de Estilo" (`screens/StyleAdjustmentScreen.tsx`). O frontend envia as atualizações via `updateStylePreference` para o backend.
 - **Armazenamento**: Os dados são salvos como JSONB na tabela `user_profiles` no PostgreSQL.
-- **Impacto**: Essencial para o cálculo de compatibilidade de estilo no algoritmo de recomendação. Alterações aqui podem levar a um novo conjunto de recomendações.
+- **Impacto**: Essencial para o cálculo de compatibilidade de estilo no algoritmo de recomendação. Alterações aqui podem levar a um novo conjunto de recomendações. A "Taxa de conclusão do Style Adjustment" é uma métrica chave para o engajamento inicial.
 
 ### 2.3. Preferências de Busca (`preferences`)
 - **Campos**: Faixa etária (`ageRange`), distância máxima (`maxDistance`).

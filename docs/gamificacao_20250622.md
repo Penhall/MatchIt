@@ -1,8 +1,8 @@
-# Sistema de Gamificação - 22/06/2025
+# Sistema de Gamificação - 22/06/2025 (Atualizado)
 
 ## 1. Visão Geral
 
-O sistema de gamificação do MatchIt visa engajar os usuários e incentivar comportamentos desejados dentro do aplicativo, como completar o perfil, interagir com outros usuários e utilizar as funcionalidades do sistema de recomendação. Através de elementos de jogo, buscamos tornar a experiência do usuário mais divertida e recompensadora.
+O sistema de gamificação do MatchIt visa engajar os usuários e incentivar comportamentos desejados dentro do aplicativo, como completar o perfil, interagir com outros usuários e utilizar as funcionalidades do sistema de recomendação. Através de elementos de jogo, buscamos tornar a experiência do usuário mais divertida e recompensadora, alinhando-se ao diferencial do produto de "Gamificação e progresso visual do perfil" mencionado no pitch deck original.
 
 ## 2. Elementos de Gamificação
 
@@ -14,11 +14,12 @@ O sistema de gamificação do MatchIt visa engajar os usuários e incentivar com
     - Iniciar conversas.
     - Participar de eventos ou desafios.
     - Fornecer feedback ao sistema de recomendação.
+    - Concluir o "Style Adjustment" (quiz visual).
 
 ### 2.2. Níveis
 - À medida que os usuários acumulam XP, eles sobem de nível.
 - Cada nível pode desbloquear novas funcionalidades, ícones de perfil, ou outros benefícios.
-- A progressão de nível serve como um indicador de engajamento e maestria no aplicativo.
+- A progressão de nível serve como um indicador de engajamento e maestria no aplicativo, contribuindo para o "progresso visual do perfil".
 
 ### 2.3. Conquistas (Achievements)
 - Conquistas são medalhas ou distintivos virtuais concedidos por atingir marcos específicos.
@@ -26,8 +27,9 @@ O sistema de gamificação do MatchIt visa engajar os usuários e incentivar com
     - "Perfil Completo": Por preencher 100% do perfil.
     - "Primeiro Match": Por conseguir o primeiro match.
     - "Social Borboleta": Por iniciar X conversas.
-    - "Explorador de Estilo": Por ajustar as preferências de estilo Y vezes.
+    - "Explorador de Estilo": Por ajustar as preferências de estilo Y vezes (relacionado ao "Style Adjustment").
     - "Feedback Master": Por fornecer Z feedbacks ao sistema de recomendação.
+    - "VIP Conectado": Por converter de freemium para VIP (relacionado à "Conversão de freemium para VIP" nas métricas chave).
 
 ### 2.4. Recompensas
 - As recompensas podem ser virtuais ou, em alguns casos, tangíveis (se houver parcerias).
@@ -36,14 +38,14 @@ O sistema de gamificação do MatchIt visa engajar os usuários e incentivar com
     - Emojis e adesivos especiais para o chat.
     - Acesso antecipado a novas funcionalidades.
     - Destaque temporário no feed de recomendações.
-    - Descontos ou ofertas de parceiros (se aplicável).
+    - Descontos ou ofertas de parceiros (se aplicável, especialmente na "Vendor Area").
 
 ## 3. Integração com o Sistema de Recomendação
 
 A gamificação pode ser integrada ao sistema de recomendação incentivando os usuários a:
-- **Ajustar preferências de estilo**: Conceder XP por cada ajuste de preferência, melhorando a qualidade das recomendações.
+- **Ajustar preferências de estilo**: Conceder XP por cada ajuste de preferência, melhorando a qualidade das recomendações. A "Taxa de conclusão do Style Adjustment" é uma métrica chave para isso.
 - **Fornecer feedback**: Recompensar usuários por dar likes/dislikes, o que alimenta o algoritmo de aprendizado adaptativo.
-- **Interagir com recomendações**: Pontuar usuários por interagir com os perfis recomendados, aumentando o engajamento geral.
+- **Interagir com recomendações**: Pontuar usuários por interagir com os perfis recomendados, aumentando o engajamento geral e impactando a métrica de "Matchs efetuados por usuário".
 
 ## 4. Implementação Técnica (Sugestões)
 
