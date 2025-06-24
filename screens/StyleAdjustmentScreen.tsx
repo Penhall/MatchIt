@@ -1,12 +1,9 @@
-// screens/StyleAdjustmentScreen.tsx - Tela de ajuste de estilo com integração real ao backend
-import React, { useState, useEffect, useCallback } from 'react';
+// screens/StyleAdjustmentScreen.tsx - Tela de ajuste de estilo com integração real simplificada
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, Alert, ActivityIndicator, TouchableOpacity } from 'react-native';
-import { useAuth } from '../hooks/useAuth';
-import { useApi } from '../hooks/useApi';
-import Button from '../components/common/Button';
-import { logger } from '../middleware/logger';
+
 // ==============================================
-// TIPOS E INTERFACES
+// TIPOS E INTERFACES SIMPLIFICADAS
 // ==============================================
 
 interface StylePreferences {
@@ -17,25 +14,10 @@ interface StylePreferences {
   sentimentos: number[];
 }
 
-interface StylePreferencesResponse {
-  success: boolean;
-  data: {
-    userId: string;
-    preferences: StylePreferences;
-    completionStatus: {
-      completed: boolean;
-      totalCategories: number;
-      completedCategories: number;
-      completionPercentage: number;
-    };
-    metadata: {
-      profileId: number;
-      createdAt: string;
-      updatedAt: string;
-      isNew: boolean;
-    };
-  };
-  processingTime: number;
+interface StyleOption {
+  id: string;
+  value: number;
+  label: string;
 }
 
 interface StyleQuestion {
@@ -45,24 +27,42 @@ interface StyleQuestion {
   options: StyleOption[];
 }
 
-interface StyleOption {
-  id: string;
-  value: number;
-  label: string;
-  imageUrl?: string;
-}
+// ==============================================
+// CONFIGURAÇÃO DA API
+// ==============================================
 
-interface LoadingState {
-  fetching: boolean;
-  saving: boolean;
-  updating: boolean;
-}
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
 
-interface ErrorState {
-  fetch: string | null;
-  save: string | null;
-  update: string | null;
-}
+// Função helper para fazer requisições
+const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
+  const url = `${API_BASE_URL}${endpoint}`;
+  
+  // Simular token de autenticação (substituir por implementação real)
+  const token = localStorage.getItem('authToken') || 'dev-token-12345';
+  
+  const defaultOptions: RequestInit = {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      ...options.headers,
+    },
+    ...options,
+  };
+
+  try {
+    const response = await fetch(url, defaultOptions);
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || `HTTP ${response.status}`);
+    }
+    
+    return data;
+  } catch (error) {
+    console.error(`API Error [${endpoint}]:`, error);
+    throw error;
+  }
+};
 
 // ==============================================
 // DADOS DE QUESTÕES
@@ -136,12 +136,9 @@ interface StyleAdjustmentScreenProps {
 
 const StyleAdjustmentScreen: React.FC<StyleAdjustmentScreenProps> = ({ navigation }) => {
   // ==============================================
-  // HOOKS E ESTADO
+  // ESTADO
   // ==============================================
   
-  const { user } = useAuth();
-  const { api } = useApi();
-
   const [preferences, setPreferences] = useState<StylePreferences>({
     tenis: [],
     roupas: [],
@@ -150,19 +147,13 @@ const StyleAdjustmentScreen: React.FC<StyleAdjustmentScreenProps> = ({ navigatio
     sentimentos: []
   });
   
-  const [selectedOptions, setSelectedOptions] = useState<Record<string, number>>({});
-  
-  const [loading, setLoading] = useState<LoadingState>({
+  const [loading, setLoading] = useState({
     fetching: false,
     saving: false,
     updating: false
   });
   
-  const [errors, setErrors] = useState<ErrorState>({
-    fetch: null,
-    save: null,
-    update: null
-  });
+  const [error, setError] = useState<string | null>(null);
   
   const [completionStats, setCompletionStats] = useState({
     completed: false,
@@ -175,96 +166,91 @@ const StyleAdjustmentScreen: React.FC<StyleAdjustmentScreenProps> = ({ navigatio
   // FUNÇÕES DE API
   // ==============================================
 
-  /**
-   * Busca preferências existentes do usuário
-   */
-  const fetchStylePreferences = useCallback(async () => {
-    if (!user?.id) {
-      logger.warn('[StyleAdjustment] Usuário não autenticado');
-      return;
-    }
-
+  const fetchStylePreferences = async () => {
     setLoading(prev => ({ ...prev, fetching: true }));
-    setErrors(prev => ({ ...prev, fetch: null }));
+    setError(null);
 
     try {
-      logger.info(`[StyleAdjustment] Buscando preferências para usuário ${user.id}`);
+      console.log('[StyleAdjustment] Buscando preferências...');
       
-      const response = await api.get('/api/profile/style-preferences');
+      const response = await apiRequest('/profile/style-preferences', {
+        method: 'GET'
+      });
       
-      if (response.data.success) {
-        const { preferences: userPrefs, completionStatus } = response.data.data;
+      if (response.success) {
+        const { preferences: userPrefs, completionStatus } = response.data;
         
         setPreferences(userPrefs);
         setCompletionStats(completionStatus);
         
-        // Converter preferências para selectedOptions para exibição
-        const selected: Record<string, number> = {};
-        STYLE_QUESTIONS.forEach(question => {
-          const categoryPrefs = userPrefs[question.category];
-          if (categoryPrefs && categoryPrefs.length > 0) {
-            // Pegar a primeira opção como selecionada para cada questão
-            const firstChoice = categoryPrefs[0];
-            selected[`${question.category}_${question.id}`] = firstChoice;
-          }
-        });
-        
-        setSelectedOptions(selected);
-        
-        logger.info(`[StyleAdjustment] Preferências carregadas: ${completionStatus.completionPercentage}% completo`);
+        console.log(`[StyleAdjustment] Preferências carregadas: ${completionStatus.completionPercentage}% completo`);
       } else {
-        throw new Error(response.data.error || 'Erro ao carregar preferências');
+        throw new Error(response.error || 'Erro ao carregar preferências');
       }
 
     } catch (error: any) {
-      const errorMessage = error.response?.data?.error || error.message || 'Erro ao carregar preferências';
-      logger.error('[StyleAdjustment] Erro ao buscar preferências:', errorMessage);
+      const errorMessage = error.message || 'Erro ao carregar preferências';
+      console.error('[StyleAdjustment] Erro ao buscar preferências:', errorMessage);
       
-      setErrors(prev => ({ ...prev, fetch: errorMessage }));
+      setError(errorMessage);
       
-      Alert.alert(
-        'Erro',
-        `Não foi possível carregar suas preferências: ${errorMessage}`,
-        [{ text: 'OK' }]
-      );
+      // Se for erro de conexão, mostrar dados vazios para permitir configuração inicial
+      if (errorMessage.includes('fetch')) {
+        console.log('[StyleAdjustment] Modo offline - usando dados vazios');
+        setPreferences({
+          tenis: [],
+          roupas: [],
+          cores: [],
+          hobbies: [],
+          sentimentos: []
+        });
+      }
     } finally {
       setLoading(prev => ({ ...prev, fetching: false }));
     }
-  }, [user?.id, api]);
+  };
 
-  /**
-   * Atualiza uma categoria específica
-   */
   const updateCategoryPreference = async (category: keyof StylePreferences, choices: number[]) => {
-    if (!user?.id) return;
-
     setLoading(prev => ({ ...prev, updating: true }));
-    setErrors(prev => ({ ...prev, update: null }));
 
     try {
-      logger.info(`[StyleAdjustment] Atualizando categoria ${category} para usuário ${user.id}`);
+      console.log(`[StyleAdjustment] Atualizando categoria ${category}:`, choices);
       
-      const response = await api.patch(`/api/profile/style-preferences/${category}`, {
-        choices
+      const response = await apiRequest(`/profile/style-preferences/${category}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ choices })
       });
       
-      if (response.data.success) {
+      if (response.success) {
         // Atualizar estado local
         setPreferences(prev => ({
           ...prev,
           [category]: choices
         }));
         
-        logger.info(`[StyleAdjustment] Categoria ${category} atualizada com sucesso`);
+        // Recalcular estatísticas
+        const newPrefs = { ...preferences, [category]: choices };
+        const completedCategories = Object.keys(newPrefs).filter(cat => 
+          newPrefs[cat as keyof StylePreferences].length > 0
+        ).length;
+        
+        setCompletionStats({
+          completed: completedCategories === 5,
+          totalCategories: 5,
+          completedCategories,
+          completionPercentage: Math.round((completedCategories / 5) * 100)
+        });
+        
+        console.log(`[StyleAdjustment] Categoria ${category} atualizada com sucesso`);
       } else {
-        throw new Error(response.data.error || 'Erro ao atualizar categoria');
+        throw new Error(response.error || 'Erro ao atualizar categoria');
       }
 
     } catch (error: any) {
-      const errorMessage = error.response?.data?.error || error.message || 'Erro ao atualizar preferência';
-      logger.error('[StyleAdjustment] Erro ao atualizar categoria:', errorMessage);
+      const errorMessage = error.message || 'Erro ao atualizar preferência';
+      console.error('[StyleAdjustment] Erro ao atualizar categoria:', errorMessage);
       
-      setErrors(prev => ({ ...prev, update: errorMessage }));
+      Alert.alert('Erro', `Não foi possível salvar: ${errorMessage}`);
       
       // Reverter mudança local
       await fetchStylePreferences();
@@ -274,24 +260,19 @@ const StyleAdjustmentScreen: React.FC<StyleAdjustmentScreenProps> = ({ navigatio
     }
   };
 
-  /**
-   * Salva todas as preferências de uma vez
-   */
   const saveAllPreferences = async () => {
-    if (!user?.id) return;
-
     setLoading(prev => ({ ...prev, saving: true }));
-    setErrors(prev => ({ ...prev, save: null }));
 
     try {
-      logger.info(`[StyleAdjustment] Salvando todas as preferências para usuário ${user.id}`);
+      console.log('[StyleAdjustment] Salvando todas as preferências...');
       
-      const response = await api.put('/api/profile/style-preferences', {
-        preferences
+      const response = await apiRequest('/profile/style-preferences', {
+        method: 'PUT',
+        body: JSON.stringify({ preferences })
       });
       
-      if (response.data.success) {
-        const { completionStatus } = response.data.data;
+      if (response.success) {
+        const { completionStatus } = response.data;
         setCompletionStats(completionStatus);
         
         Alert.alert(
@@ -302,46 +283,37 @@ const StyleAdjustmentScreen: React.FC<StyleAdjustmentScreenProps> = ({ navigatio
               text: 'OK',
               onPress: () => {
                 if (navigation && completionStatus.completed) {
-                  navigation.navigate('MatchArea'); // ou próxima tela
+                  navigation.navigate('MatchArea');
                 }
               }
             }
           ]
         );
         
-        logger.info(`[StyleAdjustment] Todas as preferências salvas com sucesso`);
+        console.log('[StyleAdjustment] Todas as preferências salvas com sucesso');
       } else {
-        throw new Error(response.data.error || 'Erro ao salvar preferências');
+        throw new Error(response.error || 'Erro ao salvar preferências');
       }
 
     } catch (error: any) {
-      const errorMessage = error.response?.data?.error || error.message || 'Erro ao salvar preferências';
-      logger.error('[StyleAdjustment] Erro ao salvar:', errorMessage);
+      const errorMessage = error.message || 'Erro ao salvar preferências';
+      console.error('[StyleAdjustment] Erro ao salvar:', errorMessage);
       
-      setErrors(prev => ({ ...prev, save: errorMessage }));
-      
-      Alert.alert(
-        'Erro',
-        `Não foi possível salvar suas preferências: ${errorMessage}`,
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Erro', `Não foi possível salvar: ${errorMessage}`);
     } finally {
       setLoading(prev => ({ ...prev, saving: false }));
     }
   };
 
-  /**
-   * Limpa todas as preferências
-   */
   const clearAllPreferences = async () => {
-    if (!user?.id) return;
-
     try {
-      logger.info(`[StyleAdjustment] Limpando preferências para usuário ${user.id}`);
+      console.log('[StyleAdjustment] Limpando preferências...');
       
-      const response = await api.delete('/api/profile/style-preferences');
+      const response = await apiRequest('/profile/style-preferences', {
+        method: 'DELETE'
+      });
       
-      if (response.data.success) {
+      if (response.success) {
         setPreferences({
           tenis: [],
           roupas: [],
@@ -349,7 +321,6 @@ const StyleAdjustmentScreen: React.FC<StyleAdjustmentScreenProps> = ({ navigatio
           hobbies: [],
           sentimentos: []
         });
-        setSelectedOptions({});
         setCompletionStats({
           completed: false,
           totalCategories: 5,
@@ -358,16 +329,16 @@ const StyleAdjustmentScreen: React.FC<StyleAdjustmentScreenProps> = ({ navigatio
         });
         
         Alert.alert('Sucesso', 'Todas as preferências foram removidas');
-        logger.info(`[StyleAdjustment] Preferências limpas com sucesso`);
+        console.log('[StyleAdjustment] Preferências limpas com sucesso');
       } else {
-        throw new Error(response.data.error || 'Erro ao limpar preferências');
+        throw new Error(response.error || 'Erro ao limpar preferências');
       }
 
     } catch (error: any) {
-      const errorMessage = error.response?.data?.error || error.message || 'Erro ao limpar preferências';
-      logger.error('[StyleAdjustment] Erro ao limpar:', errorMessage);
+      const errorMessage = error.message || 'Erro ao limpar preferências';
+      console.error('[StyleAdjustment] Erro ao limpar:', errorMessage);
       
-      Alert.alert('Erro', `Não foi possível limpar as preferências: ${errorMessage}`);
+      Alert.alert('Erro', `Não foi possível limpar: ${errorMessage}`);
     }
   };
 
@@ -375,36 +346,23 @@ const StyleAdjustmentScreen: React.FC<StyleAdjustmentScreenProps> = ({ navigatio
   // HANDLERS DE EVENTOS
   // ==============================================
 
-  /**
-   * Handler para seleção de uma opção
-   */
   const handleOptionSelect = async (question: StyleQuestion, option: StyleOption) => {
-    const key = `${question.category}_${question.id}`;
-    
-    // Atualizar estado local imediatamente para feedback visual
-    setSelectedOptions(prev => ({
-      ...prev,
-      [key]: option.value
-    }));
-
-    // Atualizar preferências locais
     const currentCategoryPrefs = preferences[question.category];
-    const newChoices = currentCategoryPrefs.includes(option.value) 
-      ? currentCategoryPrefs.filter(v => v !== option.value)
-      : [...currentCategoryPrefs, option.value];
-
-    setPreferences(prev => ({
-      ...prev,
-      [question.category]: newChoices
-    }));
+    const isSelected = currentCategoryPrefs.includes(option.value);
+    
+    let newChoices: number[];
+    if (isSelected) {
+      // Remover se já selecionado
+      newChoices = currentCategoryPrefs.filter(v => v !== option.value);
+    } else {
+      // Adicionar se não selecionado
+      newChoices = [...currentCategoryPrefs, option.value];
+    }
 
     // Atualizar no backend
     await updateCategoryPreference(question.category, newChoices);
   };
 
-  /**
-   * Handler para limpar preferências com confirmação
-   */
   const handleClearPreferences = () => {
     Alert.alert(
       'Confirmar',
@@ -422,7 +380,7 @@ const StyleAdjustmentScreen: React.FC<StyleAdjustmentScreenProps> = ({ navigatio
 
   useEffect(() => {
     fetchStylePreferences();
-  }, [fetchStylePreferences]);
+  }, []);
 
   // ==============================================
   // RENDER HELPERS
@@ -459,7 +417,6 @@ const StyleAdjustmentScreen: React.FC<StyleAdjustmentScreenProps> = ({ navigatio
   };
 
   const renderQuestion = (question: StyleQuestion) => {
-    const selectedValue = selectedOptions[`${question.category}_${question.id}`];
     const hasSelections = preferences[question.category].length > 0;
     
     return (
@@ -547,53 +504,64 @@ const StyleAdjustmentScreen: React.FC<StyleAdjustmentScreenProps> = ({ navigatio
 
         {renderProgress()}
 
-        {errors.fetch && (
+        {error && (
           <View style={{ backgroundColor: '#ffebee', padding: 12, borderRadius: 8, marginBottom: 16 }}>
-            <Text style={{ color: '#c62828' }}>Erro: {errors.fetch}</Text>
+            <Text style={{ color: '#c62828' }}>⚠️ {error}</Text>
             <TouchableOpacity onPress={fetchStylePreferences} style={{ marginTop: 8 }}>
               <Text style={{ color: '#007AFF', fontWeight: '600' }}>Tentar novamente</Text>
             </TouchableOpacity>
           </View>
         )}
 
-        {errors.update && (
-          <View style={{ backgroundColor: '#fff3e0', padding: 12, borderRadius: 8, marginBottom: 16 }}>
-            <Text style={{ color: '#ef6c00' }}>Erro ao atualizar: {errors.update}</Text>
-          </View>
-        )}
-
         {STYLE_QUESTIONS.map(renderQuestion)}
 
         <View style={{ marginTop: 32, gap: 16 }}>
-          <Button
-            title={loading.saving ? "Salvando..." : "Salvar Todas as Preferências"}
+          <TouchableOpacity
             onPress={saveAllPreferences}
-            disabled={loading.saving || Object.keys(selectedOptions).length === 0}
+            disabled={loading.saving || completionStats.completedCategories === 0}
             style={{ 
               backgroundColor: '#007AFF', 
               paddingVertical: 16,
-              opacity: loading.saving || Object.keys(selectedOptions).length === 0 ? 0.6 : 1
+              borderRadius: 8,
+              opacity: loading.saving || completionStats.completedCategories === 0 ? 0.6 : 1
             }}
-            textStyle={{ fontSize: 18, fontWeight: 'bold' }}
-          />
+          >
+            <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold', textAlign: 'center' }}>
+              {loading.saving ? "Salvando..." : "Salvar Todas as Preferências"}
+            </Text>
+          </TouchableOpacity>
 
-          <Button
-            title="Limpar Preferências"
+          <TouchableOpacity
             onPress={handleClearPreferences}
             disabled={loading.saving || completionStats.completedCategories === 0}
             style={{ 
               backgroundColor: '#FF3B30', 
               paddingVertical: 12,
+              borderRadius: 8,
               opacity: completionStats.completedCategories === 0 ? 0.6 : 1
             }}
-            textStyle={{ fontSize: 16 }}
-          />
+          >
+            <Text style={{ color: 'white', fontSize: 16, textAlign: 'center' }}>
+              Limpar Preferências
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {loading.updating && (
           <View style={{ marginTop: 16, alignItems: 'center' }}>
             <ActivityIndicator size="small" color="#007AFF" />
             <Text style={{ marginTop: 8, color: '#666' }}>Salvando...</Text>
+          </View>
+        )}
+
+        {/* Debug info */}
+        {process.env.NODE_ENV === 'development' && (
+          <View style={{ marginTop: 32, padding: 16, backgroundColor: '#f5f5f5', borderRadius: 8 }}>
+            <Text style={{ fontSize: 12, fontWeight: 'bold', marginBottom: 8 }}>Debug Info:</Text>
+            <Text style={{ fontSize: 10, color: '#666' }}>
+              API: {API_BASE_URL}{'\n'}
+              Preferências: {JSON.stringify(preferences, null, 2)}
+            </Text>
           </View>
         )}
       </View>

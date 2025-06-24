@@ -1,12 +1,11 @@
-// server/routes/profile/index.js - Rotas de perfil com integração de preferências de estilo
-const express = require('express');
-const router = express.Router();
-const pool = require('../../config/database');
-const { authenticateToken } = require('../../middleware/auth');
-const { logger } = require('../../middleware/logger');
+// server/routes/profile/index.js - Rotas de perfil com integração de preferências de estilo (ES Modules)
+import express from 'express';
+import pool from '../../config/database.js';
+import { authenticateToken } from '../../middleware/auth.js';
+import { logger } from '../../middleware/logger.js';
+import stylePreferencesRoutes from './style-preferences.js';
 
-// Importar sub-rotas
-const stylePreferencesRoutes = require('./style-preferences');
+const router = express.Router();
 
 // ==============================================
 // MIDDLEWARE
@@ -125,7 +124,7 @@ router.get('/', authenticateToken, validateUserExists, async (req, res) => {
         userCreatedAt: profileData.user_created_at,
         profileCreatedAt: profileData.profile_created_at,
         profileUpdatedAt: profileData.profile_updated_at,
-        isComplete: this.calculateProfileCompleteness(profileData)
+        isComplete: calculateProfileCompleteness(profileData)
       }
     };
     
@@ -286,7 +285,7 @@ router.get('/completeness', authenticateToken, validateUserExists, async (req, r
     }
     
     const profile = result.rows[0];
-    const completeness = this.calculateProfileCompleteness(profile);
+    const completeness = calculateProfileCompleteness(profile);
     
     res.json({
       success: true,
@@ -360,7 +359,4 @@ function calculateProfileCompleteness(profileData) {
   };
 }
 
-// Adicionar função ao router para poder ser chamada
-router.calculateProfileCompleteness = calculateProfileCompleteness;
-
-module.exports = router;
+export default router;

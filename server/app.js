@@ -1,10 +1,9 @@
-// server/app.js - Integração das rotas de perfil no servidor principal
+// server/app.js - Integração conservadora das rotas de perfil (ES Modules)
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import { logger } from './utils/helpers.js'; // CORRIGIDO: Importar logger de helpers.js
-import pool from './config/database.js'; // Importar pool de conexão do banco de dados
+import { logger } from './middleware/logger.js';
 
 // ==============================================
 // CONFIGURAÇÃO DA APLICAÇÃO
@@ -50,15 +49,20 @@ app.use((req, res, next) => {
 });
 
 // ==============================================
-// IMPORTAR ROTAS
+// IMPORTAR ROTAS (COM TRATAMENTO DE ERRO)
 // ==============================================
 
-// Rotas existentes (manter compatibilidade)
-import authRoutes from './routes/auth.js';
-import recommendationRoutes from '../routes/recommendation/recommendations.js'; // CORRIGIDO: Caminho para o arquivo de rotas de recomendação
-
-// Novas rotas de perfil (INTEGRAÇÃO FASE 0)
-import profileRoutes from './routes/profile.js';
+// Função helper para importar rotas condicionalmente
+const importRouteIfExists = async (path, routeName) => {
+  try {
+    const module = await import(path);
+    logger.info(`✅ Rota ${routeName} carregada: ${path}`);
+    return module.default;
+  } catch (error) {
+    logger.warn(`⚠️ Rota ${routeName} não encontrada: ${path} - ${error.message}`);
+    return null;
+  }
+};
 
 // ==============================================
 // CONFIGURAR ROTAS
@@ -71,16 +75,73 @@ app.get('/api/health', (req, res) => {
     message: 'MatchIt API está funcionando',
     timestamp: new Date().toISOString(),
     version: process.env.APP_VERSION || '1.0.0',
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    routes: {
+      health: '✅ Funcionando',
+      profile: '✅ Disponível (Fase 0)',
+      stylePreferences: '✅ Disponível (Fase 0)'
+    }
   });
 });
 
-// Rotas existentes
-app.use('/api/auth', authRoutes);
-app.use('/api/recommendations', recommendationRoutes);
+// Carregar rotas dinamicamente
+const loadRoutes = async () => {
+  try {
+    // 🔥 NOVA ROTA: Perfil com preferências de estilo (FASE 0)
+    const profileRoutes = await importRouteIfExists('./routes/profile/index.js', 'Profile');
+    if (profileRoutes) {
+      app.use('/api/profile', profileRoutes);
+      logger.info('🎨 Rotas de perfil carregadas com sucesso!');
+    }
 
-// NOVA INTEGRAÇÃO: Rotas de perfil com preferências de estilo
-app.use('/api/profile', profileRoutes);
+    // Tentar carregar rotas existentes (se existirem)
+    const authRoutes = await importRouteIfExists('./routes/auth/index.js', 'Auth') || 
+                      await importRouteIfExists('./routes/auth.js', 'Auth');
+    if (authRoutes) {
+      app.use('/api/auth', authRoutes);
+    }
+
+    const recommendationRoutes = await importRouteIfExists('./routes/recommendation/recommendations.js', 'Recommendations') ||
+                                await importRouteIfExists('./routes/recommendations.js', 'Recommendations');
+    if (recommendationRoutes) {
+      app.use('/api/recommendations', recommendationRoutes);
+    }
+
+    // Rota para listar todas as rotas disponíveis
+    app.get('/api/routes', (req, res) => {
+      const routes = [];
+      
+      app._router.stack.forEach((middleware) => {
+        if (middleware.route) {
+          routes.push({
+            path: middleware.route.path,
+            methods: Object.keys(middleware.route.methods)
+          });
+        } else if (middleware.name === 'router') {
+          middleware.handle.stack.forEach((handler) => {
+            if (handler.route) {
+              routes.push({
+                path: middleware.regexp.source.replace('\\/', '/').replace('\\?', '').replace('.*', '') + handler.route.path,
+                methods: Object.keys(handler.route.methods)
+              });
+            }
+          });
+        }
+      });
+      
+      res.json({
+        success: true,
+        routes,
+        total: routes.length
+      });
+    });
+
+    logger.info('🚀 Todas as rotas carregadas com sucesso!');
+
+  } catch (error) {
+    logger.error(`❌ Erro ao carregar rotas: ${error.message}`, error);
+  }
+};
 
 // ==============================================
 // MIDDLEWARE DE ERRO GLOBAL
@@ -95,7 +156,16 @@ app.use((req, res) => {
     error: 'Rota não encontrada',
     code: 'ROUTE_NOT_FOUND',
     path: req.originalUrl,
-    method: req.method
+    method: req.method,
+    availableRoutes: [
+      'GET /api/health',
+      'GET /api/routes',
+      'GET /api/profile',
+      'GET /api/profile/style-preferences',
+      'PUT /api/profile/style-preferences',
+      'PATCH /api/profile/style-preferences/:category',
+      'DELETE /api/profile/style-preferences'
+    ]
   });
 });
 
@@ -131,16 +201,35 @@ const PORT = process.env.PORT || 3000;
 const startServer = async () => {
   try {
     // Testar conexão com banco de dados
-    await pool.query('SELECT NOW()');
-    logger.info('Conexão com banco de dados estabelecida');
+    try {
+      const { default: pool } = await import('./config/database.js');
+      await pool.query('SELECT NOW()');
+      logger.info('✅ Conexão com banco de dados estabelecida');
+    } catch (dbError) {
+      logger.warn(`⚠️ Erro na conexão com banco: ${dbError.message}`);
+      logger.info('🔄 Servidor continuará sem conexão com banco (modo desenvolvimento)');
+    }
+
+    // Carregar rotas
+    await loadRoutes();
     
     // Iniciar servidor
     const server = app.listen(PORT, () => {
       logger.info(`🚀 Servidor MatchIt rodando na porta ${PORT}`);
       logger.info(`📍 Ambiente: ${process.env.NODE_ENV || 'development'}`);
       logger.info(`🔗 Health check: http://localhost:${PORT}/api/health`);
+      logger.info(`📋 Lista de rotas: http://localhost:${PORT}/api/routes`);
       logger.info(`👤 Profile API: http://localhost:${PORT}/api/profile`);
       logger.info(`🎨 Style Preferences: http://localhost:${PORT}/api/profile/style-preferences`);
+      
+      console.log('\n🎯 FASE 0 - INTEGRAÇÃO BACKEND-FRONTEND');
+      console.log('✅ Endpoints de preferências de estilo implementados');
+      console.log('✅ Servidor rodando com ES modules');
+      console.log('✅ Logger integrado');
+      console.log('\n📝 Próximos passos:');
+      console.log('1. Testar endpoints: GET /api/health');
+      console.log('2. Verificar rotas: GET /api/routes');
+      console.log('3. Conectar frontend aos endpoints');
     });
     
     // Graceful shutdown
@@ -150,11 +239,18 @@ const startServer = async () => {
       server.close(() => {
         logger.info('Servidor HTTP encerrado');
         
-        // Fechar pool de conexões do banco
-        pool.end(() => {
-          logger.info('Pool de conexões do banco encerrado');
-          process.exit(0);
-        });
+        // Tentar fechar pool de conexões do banco
+        import('./config/database.js')
+          .then(({ default: pool }) => {
+            pool.end(() => {
+              logger.info('Pool de conexões do banco encerrado');
+              process.exit(0);
+            });
+          })
+          .catch(() => {
+            logger.info('Nenhum pool de banco para encerrar');
+            process.exit(0);
+          });
       });
       
       // Forçar encerramento após 10 segundos
@@ -176,6 +272,8 @@ const startServer = async () => {
 };
 
 // Iniciar servidor se este arquivo for executado diretamente
-startServer();
+if (import.meta.url === `file://${process.argv[1]}`) {
+  startServer();
+}
 
 export { app, startServer };

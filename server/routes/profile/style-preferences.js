@@ -1,9 +1,10 @@
-// server/routes/profile/style-preferences.js - Endpoints para preferências de estilo
-const express = require('express');
+// server/routes/profile/style-preferences.js - Endpoints para preferências de estilo (ES Modules)
+import express from 'express';
+import pool from '../../config/database.js';
+import { authenticateToken } from '../../middleware/auth.js';
+import { logger } from '../../middleware/logger.js';
+
 const router = express.Router();
-const pool = require('../../config/database');
-const { authenticateToken } = require('../../middleware/auth');
-const { logger } = require('../../middleware/logger');
 
 // ==============================================
 // VALIDADORES E UTILITÁRIOS
@@ -493,4 +494,4 @@ router.delete('/', authenticateToken, async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;
