@@ -1,0 +1,468 @@
+# docker-compose.redis.yml
+# Configuração Docker para Redis
+
+version: '3.8'
+
+services:
+  # Redis Cache para Analytics
+  redis:
+    image: redis:7-alpine
+    container_name: matchit-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    environment:
+      # Configurações de segurança
+      - REDIS_PASSWORD=matchit_redis_123
+    command: >
+      redis-server 
+      --appendonly yes 
+      --maxmemory 512mb 
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+      --requirepass matchit_redis_123
+    volumes:
+      # Persistir dados do Redis
+      - redis_data:/data
+      # Configuração personalizada (opcional)
+      - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf
+    networks:
+      - matchit_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "matchit_redis_123", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Redis Commander (Interface Web - Opcional)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: matchit-redis-commander
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      - REDIS_HOSTS=redis:redis:6379:0:matchit_redis_123
+      - HTTP_USER=admin
+      - HTTP_PASSWORD=admin123
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - matchit_network
+    profiles:
+      - tools  # Usar apenas quando necessário
+
+volumes:
+  redis_data:
+    driver: local
+
+networks:
+  matchit_network:
+    driver: bridge
+
+---
+
+# docker-compose.yml
+# Configuração completa para desenvolvimento (Redis + PostgreSQL + App)
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database (seus dados atuais)
+  postgres:
+    image: postgres:15-alpine
+    container_name: matchit-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=matchit_db
+      - POSTGRES_USER=matchit
+      - POSTGRES_PASSWORD=matchit123
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Scripts de inicialização (opcional)
+      - ./docker/postgres/init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - matchit_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U matchit -d matchit_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: matchit-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    environment:
+      - REDIS_PASSWORD=matchit_redis_123
+    command: >
+      redis-server 
+      --appendonly yes 
+      --maxmemory 512mb 
+      --maxmemory-policy allkeys-lru
+      --requirepass matchit_redis_123
+    volumes:
+      - redis_data:/data
+    networks:
+      - matchit_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "matchit_redis_123", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Aplicação MatchIt (opcional - para containerizar sua app)
+  matchit-app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: matchit-app
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=matchit_db
+      - DB_USER=matchit
+      - DB_PASSWORD=matchit123
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=matchit_redis_123
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      # Hot reload para desenvolvimento
+      - .:/app
+      - /app/node_modules
+      - logs_data:/app/logs
+      - reports_data:/app/reports
+    networks:
+      - matchit_network
+    profiles:
+      - fullstack  # Usar apenas se quiser containerizar a app também
+
+  # Redis Commander (Interface Web)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: matchit-redis-commander
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      - REDIS_HOSTS=redis:redis:6379:0:matchit_redis_123
+      - HTTP_USER=admin
+      - HTTP_PASSWORD=admin123
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - matchit_network
+    profiles:
+      - tools
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  logs_data:
+    driver: local
+  reports_data:
+    driver: local
+
+networks:
+  matchit_network:
+    driver: bridge
+
+---
+
+# Dockerfile.dev
+# Dockerfile para desenvolvimento (opcional)
+
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Instalar dependências do sistema
+RUN apk add --no-cache postgresql-client curl
+
+# Copiar package files
+COPY package*.json ./
+
+# Instalar dependências
+RUN npm install
+
+# Copiar código fonte
+COPY . .
+
+# Criar diretórios necessários
+RUN mkdir -p logs reports backups storage
+
+# Expor porta
+EXPOSE 3001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:3001/health || exit 1
+
+# Comando de início
+CMD ["npm", "run", "dev"]
+
+---
+
+# docker/redis/redis.conf
+# Configuração personalizada do Redis (opcional)
+
+# Configurações de rede
+bind 0.0.0.0
+port 6379
+protected-mode yes
+
+# Configurações de memória
+maxmemory 512mb
+maxmemory-policy allkeys-lru
+
+# Configurações de persistência
+save 900 1
+save 300 10
+save 60 10000
+appendonly yes
+appendfsync everysec
+
+# Configurações de log
+loglevel notice
+logfile ""
+
+# Configurações de segurança
+# requirepass será definido via command no docker-compose
+
+# Configurações de performance
+tcp-keepalive 300
+timeout 0
+
+# Configurações de cliente
+maxclients 10000
+
+---
+
+# scripts/redis-docker.sh
+#!/bin/bash
+
+# Script para gerenciar Redis via Docker
+
+set -e
+
+# Cores para output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Função para log
+log() {
+    echo -e "${GREEN}[$(date +'%Y-%m-%d %H:%M:%S')] $1${NC}"
+}
+
+warn() {
+    echo -e "${YELLOW}[$(date +'%Y-%m-%d %H:%M:%S')] WARNING: $1${NC}"
+}
+
+error() {
+    echo -e "${RED}[$(date +'%Y-%m-%d %H:%M:%S')] ERROR: $1${NC}"
+}
+
+# Verificar se Docker está instalado
+check_docker() {
+    if ! command -v docker &> /dev/null; then
+        error "Docker não está instalado. Instale Docker primeiro."
+        exit 1
+    fi
+    
+    if ! command -v docker-compose &> /dev/null; then
+        error "Docker Compose não está instalado. Instale Docker Compose primeiro."
+        exit 1
+    fi
+    
+    log "Docker e Docker Compose encontrados ✅"
+}
+
+# Iniciar Redis
+start_redis() {
+    log "Iniciando Redis via Docker..."
+    
+    # Usar apenas o Redis
+    docker-compose -f docker-compose.redis.yml up -d redis
+    
+    # Aguardar Redis ficar saudável
+    log "Aguardando Redis ficar disponível..."
+    for i in {1..30}; do
+        if docker exec matchit-redis redis-cli --no-auth-warning -a matchit_redis_123 ping &>/dev/null; then
+            log "Redis está funcionando! ✅"
+            return 0
+        fi
+        sleep 2
+    done
+    
+    error "Redis não ficou disponível em 60 segundos"
+    exit 1
+}
+
+# Parar Redis
+stop_redis() {
+    log "Parando Redis..."
+    docker-compose -f docker-compose.redis.yml down
+    log "Redis parado ✅"
+}
+
+# Reiniciar Redis
+restart_redis() {
+    log "Reiniciando Redis..."
+    stop_redis
+    start_redis
+}
+
+# Status do Redis
+status_redis() {
+    log "Verificando status do Redis..."
+    
+    if docker ps | grep -q matchit-redis; then
+        log "Container Redis: ✅ Rodando"
+        
+        if docker exec matchit-redis redis-cli --no-auth-warning -a matchit_redis_123 ping &>/dev/null; then
+            log "Conexão Redis: ✅ OK"
+            
+            # Mostrar informações
+            echo ""
+            echo "📊 Informações do Redis:"
+            docker exec matchit-redis redis-cli --no-auth-warning -a matchit_redis_123 info memory | grep used_memory_human
+            docker exec matchit-redis redis-cli --no-auth-warning -a matchit_redis_123 info clients | grep connected_clients
+            docker exec matchit-redis redis-cli --no-auth-warning -a matchit_redis_123 dbsize
+        else
+            warn "Container rodando, mas Redis não responde"
+        fi
+    else
+        warn "Container Redis não está rodando"
+    fi
+}
+
+# Logs do Redis
+logs_redis() {
+    log "Mostrando logs do Redis..."
+    docker-compose -f docker-compose.redis.yml logs -f redis
+}
+
+# Conectar ao Redis CLI
+cli_redis() {
+    log "Conectando ao Redis CLI..."
+    docker exec -it matchit-redis redis-cli --no-auth-warning -a matchit_redis_123
+}
+
+# Backup do Redis
+backup_redis() {
+    log "Fazendo backup do Redis..."
+    
+    # Criar diretório de backup se não existir
+    mkdir -p ./backups/redis
+    
+    # Gerar backup
+    timestamp=$(date +%Y%m%d_%H%M%S)
+    backup_file="./backups/redis/redis_backup_${timestamp}.rdb"
+    
+    docker exec matchit-redis redis-cli --no-auth-warning -a matchit_redis_123 BGSAVE
+    sleep 5
+    docker cp matchit-redis:/data/dump.rdb "$backup_file"
+    
+    log "Backup salvo em: $backup_file ✅"
+}
+
+# Iniciar Redis Commander (Interface Web)
+start_commander() {
+    log "Iniciando Redis Commander (Interface Web)..."
+    docker-compose -f docker-compose.redis.yml --profile tools up -d redis-commander
+    log "Redis Commander disponível em: http://localhost:8081 ✅"
+    log "Usuário: admin | Senha: admin123"
+}
+
+# Menu principal
+show_menu() {
+    echo ""
+    echo "🔧 Redis Docker Manager - MatchIt Analytics"
+    echo "==========================================="
+    echo "1) Iniciar Redis"
+    echo "2) Parar Redis"
+    echo "3) Reiniciar Redis"
+    echo "4) Status do Redis"
+    echo "5) Ver logs"
+    echo "6) Conectar CLI"
+    echo "7) Backup Redis"
+    echo "8) Interface Web (Redis Commander)"
+    echo "9) Sair"
+    echo ""
+}
+
+# Main
+main() {
+    check_docker
+    
+    if [ $# -eq 0 ]; then
+        # Menu interativo
+        while true; do
+            show_menu
+            read -p "Escolha uma opção [1-9]: " choice
+            
+            case $choice in
+                1) start_redis ;;
+                2) stop_redis ;;
+                3) restart_redis ;;
+                4) status_redis ;;
+                5) logs_redis ;;
+                6) cli_redis ;;
+                7) backup_redis ;;
+                8) start_commander ;;
+                9) log "Saindo..."; exit 0 ;;
+                *) warn "Opção inválida!" ;;
+            esac
+            
+            echo ""
+            read -p "Pressione Enter para continuar..."
+        done
+    else
+        # Comando direto
+        case $1 in
+            start) start_redis ;;
+            stop) stop_redis ;;
+            restart) restart_redis ;;
+            status) status_redis ;;
+            logs) logs_redis ;;
+            cli) cli_redis ;;
+            backup) backup_redis ;;
+            commander) start_commander ;;
+            *) 
+                echo "Uso: $0 [start|stop|restart|status|logs|cli|backup|commander]"
+                exit 1
+                ;;
+        esac
+    fi
+}
+
+main "$@"
