@@ -19,4 +19,21 @@ const timeoutMiddleware = (timeoutMs = 30000) => {
   };
 };
 
-export { requestLogger, timeoutMiddleware };
+// Novo objeto logger com métodos info, warn e error
+const logger = {
+  info: (message, ...args) => {
+    if (isDevelopment()) {
+      console.log(`[INFO] ${new Date().toISOString()} - ${message}`, ...args);
+    }
+  },
+  warn: (message, ...args) => {
+    if (isDevelopment()) {
+      console.warn(`[WARN] ${new Date().toISOString()} - ${message}`, ...args);
+    }
+  },
+  error: (message, ...args) => {
+    console.error(`[ERROR] ${new Date().toISOString()} - ${message}`, ...args);
+  }
+};
+
+export { requestLogger, timeoutMiddleware, logger };

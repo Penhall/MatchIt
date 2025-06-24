@@ -3,7 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import { logger } from './middleware/logger.js';
+import { requestLogger, logger } from './middleware/logger.js'; // Importação corrigida
 
 // ==============================================
 // CONFIGURAÇÃO DA APLICAÇÃO
@@ -37,16 +37,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Middleware de logging
-app.use((req, res, next) => {
-  const startTime = Date.now();
-  
-  res.on('finish', () => {
-    const duration = Date.now() - startTime;
-    logger.info(`${req.method} ${req.originalUrl} - ${res.statusCode} - ${duration}ms`);
-  });
-  
-  next();
-});
+app.use(requestLogger); // Usando requestLogger importado
 
 // ==============================================
 // IMPORTAR ROTAS (COM TRATAMENTO DE ERRO)
@@ -102,7 +93,7 @@ const loadRoutes = async () => {
     }
 
     const recommendationRoutes = await importRouteIfExists('./routes/recommendation/recommendations.js', 'Recommendations') ||
-                                await importRouteIfExists('./routes/recommendations.js', 'Recommendations');
+                                await importRouteIfExists('./routes/recommendation/recommendations.js', 'Recommendations');
     if (recommendationRoutes) {
       app.use('/api/recommendations', recommendationRoutes);
     }
