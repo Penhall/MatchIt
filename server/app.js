@@ -448,7 +448,13 @@ app.use((req, res) => {
       'GET /api/profile/style-preferences',
       'PUT /api/profile/style-preferences',
       'PATCH /api/profile/style-preferences/:category',
-      'DELETE /api/profile/style-preferences'
+      'DELETE /api/profile/style-preferences',
+      'GET /api/profile/emotional',
+      'GET /api/profile/emotional/questionnaire',
+      'POST /api/profile/emotional/responses',
+      'PUT /api/profile/emotional',
+      'GET /api/profile/emotional/compatibility/:targetUserId',
+      'DELETE /api/profile/emotional'
     ]
   });
 });
