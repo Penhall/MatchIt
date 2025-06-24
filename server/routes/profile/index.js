@@ -1,362 +1,266 @@
-// server/routes/profile/index.js - Rotas de perfil com integração de preferências de estilo (ES Modules)
-import express from 'express';
-import pool from '../../config/database.js';
-import { authenticateToken } from '../../middleware/auth.js';
-import { logger } from '../../middleware/logger.js';
-import stylePreferencesRoutes from './style-preferences.js';
+// server/routes/profile/index.js
 
+const express = require('express');
 const router = express.Router();
 
-// ==============================================
-// MIDDLEWARE
-// ==============================================
+// Importar rotas específicas
+const stylePreferencesRoutes = require('./style-preferences');
+const emotionalProfileRoutes = require('./emotional-profile');
+const weightAdjustmentRoutes = require('./weight-adjustment');
 
-// Middleware para validar existência de usuário
-const validateUserExists = async (req, res, next) => {
+// Registrar rotas com seus respectivos caminhos
+router.use('/style-preferences', stylePreferencesRoutes);
+router.use('/emotional-profile', emotionalProfileRoutes);
+router.use('/weight-adjustment', weightAdjustmentRoutes);
+
+// Middleware para log de requisições (opcional, para debug)
+router.use((req, res, next) => {
+  console.log(`Profile API: ${req.method} ${req.originalUrl} - ${new Date().toISOString()}`);
+  next();
+});
+
+// Rota de status geral do sistema de perfil
+router.get('/status', async (req, res) => {
   try {
-    const userId = req.user.id;
-    const userQuery = 'SELECT id, email, created_at FROM users WHERE id = $1';
-    const result = await pool.query(userQuery, [userId]);
+    const { Pool } = require('pg');
+    const db = new Pool();
     
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: 'Usuário não encontrado',
-        code: 'USER_NOT_FOUND'
-      });
-    }
-    
-    req.userData = result.rows[0];
-    next();
-  } catch (error) {
-    logger.error(`[Profile] Erro ao validar usuário: ${error.message}`);
-    res.status(500).json({
-      success: false,
-      error: 'Erro interno do servidor',
-      code: 'USER_VALIDATION_ERROR'
-    });
-  }
-};
+    // Verificar status de todas as tabelas relacionadas ao perfil
+    const statusChecks = await Promise.allSettled([
+      // Verificar style_preferences
+      db.query('SELECT COUNT(*) FROM style_preferences LIMIT 1'),
+      // Verificar emotional_profiles
+      db.query('SELECT COUNT(*) FROM emotional_profiles LIMIT 1'),
+      // Verificar feedback_events
+      db.query('SELECT COUNT(*) FROM feedback_events LIMIT 1'),
+      // Verificar weight_adjustments
+      db.query('SELECT COUNT(*) FROM weight_adjustments LIMIT 1'),
+      // Verificar adaptive_recommendation_configs
+      db.query('SELECT COUNT(*) FROM adaptive_recommendation_configs LIMIT 1')
+    ]);
 
-// ==============================================
-// SUB-ROTAS
-// ==============================================
-
-// Rotas de preferências de estilo
-router.use('/style-preferences', validateUserExists, stylePreferencesRoutes);
-
-// ==============================================
-// ROTAS PRINCIPAIS DE PERFIL
-// ==============================================
-
-/**
- * GET /api/profile
- * Busca perfil completo do usuário
- */
-router.get('/', authenticateToken, validateUserExists, async (req, res) => {
-  const startTime = Date.now();
-  
-  try {
-    const userId = req.user.id;
-    
-    logger.info(`[Profile] Buscando perfil completo para usuário ${userId}`);
-    
-    // Buscar dados do perfil
-    const profileQuery = `
-      SELECT 
-        up.id as profile_id,
-        up.user_id,
-        up.bio,
-        up.age,
-        up.gender,
-        up.location,
-        up.style_preferences,
-        up.preferences,
-        up.personality_vector,
-        up.activity_level,
-        up.created_at as profile_created_at,
-        up.updated_at as profile_updated_at,
-        u.email,
-        u.phone,
-        u.created_at as user_created_at
-      FROM user_profiles up
-      RIGHT JOIN users u ON up.user_id = u.id
-      WHERE u.id = $1
-    `;
-    
-    const result = await pool.query(profileQuery, [userId]);
-    const profileData = result.rows[0];
-    
-    // Estruturar resposta
-    const profile = {
-      userId: profileData.user_id || userId,
-      email: profileData.email,
-      phone: profileData.phone,
-      
-      // Dados do perfil
-      bio: profileData.bio || '',
-      age: profileData.age || null,
-      gender: profileData.gender || null,
-      location: profileData.location || null,
-      
-      // Preferências
-      stylePreferences: profileData.style_preferences || {
-        tenis: [],
-        roupas: [],
-        cores: [],
-        hobbies: [],
-        sentimentos: []
+    const systemStatus = {
+      timestamp: new Date().toISOString(),
+      database: 'connected',
+      modules: {
+        stylePreferences: statusChecks[0].status === 'fulfilled' ? 'active' : 'error',
+        emotionalProfile: statusChecks[1].status === 'fulfilled' ? 'active' : 'error',
+        feedbackTracking: statusChecks[2].status === 'fulfilled' ? 'active' : 'error',
+        weightAdjustment: statusChecks[3].status === 'fulfilled' ? 'active' : 'error',
+        adaptiveRecommendation: statusChecks[4].status === 'fulfilled' ? 'active' : 'error'
       },
-      preferences: profileData.preferences || {
-        ageRange: [18, 35],
-        maxDistance: 50,
-        genderPreference: []
-      },
-      
-      // Vetores (para sistema de recomendação)
-      personalityVector: profileData.personality_vector || [],
-      activityLevel: profileData.activity_level || 5,
-      
-      // Metadados
-      metadata: {
-        profileId: profileData.profile_id,
-        hasProfile: !!profileData.profile_id,
-        userCreatedAt: profileData.user_created_at,
-        profileCreatedAt: profileData.profile_created_at,
-        profileUpdatedAt: profileData.profile_updated_at,
-        isComplete: calculateProfileCompleteness(profileData)
-      }
+      version: '2.0.0',
+      features: [
+        'Style Preferences',
+        'Emotional Profiling',
+        'Feedback Tracking',
+        'Weight Adjustment',
+        'Adaptive Recommendations'
+      ]
     };
-    
-    logger.info(`[Profile] Perfil encontrado para usuário ${userId}, completude: ${profile.metadata.isComplete.percentage}%`);
-    
+
     res.json({
       success: true,
-      data: profile,
-      processingTime: Date.now() - startTime
+      data: systemStatus
     });
-    
+
   } catch (error) {
-    logger.error(`[Profile] Erro ao buscar perfil: ${error.message}`, error);
-    
+    console.error('Error checking profile system status:', error);
     res.status(500).json({
       success: false,
-      error: 'Erro interno do servidor ao buscar perfil',
-      code: 'FETCH_PROFILE_ERROR',
-      processingTime: Date.now() - startTime
+      message: 'Failed to check system status',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });
 
-/**
- * PUT /api/profile
- * Atualiza dados básicos do perfil
- */
-router.put('/', authenticateToken, validateUserExists, async (req, res) => {
-  const startTime = Date.now();
-  
+// Rota para obter resumo completo do perfil do usuário
+router.get('/summary', require('../../middleware/auth').authenticateToken, async (req, res) => {
   try {
+    const { Pool } = require('pg');
+    const db = new Pool();
     const userId = req.user.id;
-    const { bio, age, gender, location, preferences } = req.body;
-    
-    logger.info(`[Profile] Atualizando perfil básico para usuário ${userId}`);
-    
-    // Validações
-    if (age && (typeof age !== 'number' || age < 18 || age > 100)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Idade deve ser um número entre 18 e 100',
-        code: 'INVALID_AGE'
-      });
-    }
-    
-    if (gender && !['male', 'female', 'other'].includes(gender)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Gênero deve ser: male, female ou other',
-        code: 'INVALID_GENDER'
-      });
-    }
-    
-    // Verificar se perfil existe
-    const checkQuery = 'SELECT id FROM user_profiles WHERE user_id = $1';
-    const checkResult = await pool.query(checkQuery, [userId]);
-    
-    const updateData = {
-      bio: bio || null,
-      age: age || null,
-      gender: gender || null,
-      location: location || null,
-      preferences: preferences || null
-    };
-    
-    // Remover campos null/undefined para não sobrescrever dados existentes
-    Object.keys(updateData).forEach(key => {
-      if (updateData[key] === null || updateData[key] === undefined) {
-        delete updateData[key];
-      }
-    });
-    
-    let query, values, result;
-    
-    if (checkResult.rows.length === 0) {
-      // Criar perfil
-      const fields = Object.keys(updateData);
-      const placeholders = fields.map((_, i) => `$${i + 2}`);
+
+    // Buscar dados de todos os módulos do perfil
+    const [
+      stylePrefs,
+      emotionalProfile,
+      adaptiveConfig,
+      recentFeedback,
+      adjustmentStats
+    ] = await Promise.allSettled([
+      // Style Preferences
+      db.query('SELECT * FROM style_preferences WHERE user_id = $1', [userId]),
       
-      query = `
-        INSERT INTO user_profiles (user_id, ${fields.join(', ')}, created_at, updated_at)
-        VALUES ($1, ${placeholders.join(', ')}, NOW(), NOW())
-        RETURNING *
-      `;
-      values = [userId, ...Object.values(updateData)];
+      // Emotional Profile
+      db.query('SELECT * FROM emotional_profiles WHERE user_id = $1 ORDER BY updated_at DESC LIMIT 1', [userId]),
       
-      logger.info(`[Profile] Criando novo perfil para usuário ${userId}`);
-    } else {
-      // Atualizar perfil
-      const fields = Object.keys(updateData);
-      const setClause = fields.map((field, i) => `${field} = $${i + 2}`).join(', ');
+      // Adaptive Configuration
+      db.query('SELECT * FROM adaptive_recommendation_configs WHERE user_id = $1', [userId]),
       
-      query = `
-        UPDATE user_profiles 
-        SET ${setClause}, updated_at = NOW()
+      // Recent Feedback (last 7 days)
+      db.query(`
+        SELECT 
+          event_type,
+          COUNT(*) as count,
+          AVG(match_score) as avg_score
+        FROM feedback_events 
+        WHERE user_id = $1 
+          AND timestamp > NOW() - INTERVAL '7 days'
+        GROUP BY event_type
+      `, [userId]),
+      
+      // Adjustment Statistics
+      db.query(`
+        SELECT 
+          COUNT(*) as total_adjustments,
+          AVG(confidence_score) as avg_confidence,
+          MAX(timestamp) as last_adjustment
+        FROM weight_adjustments 
         WHERE user_id = $1
-        RETURNING *
-      `;
-      values = [userId, ...Object.values(updateData)];
+      `, [userId])
+    ]);
+
+    const profileSummary = {
+      userId,
+      timestamp: new Date().toISOString(),
       
-      logger.info(`[Profile] Atualizando perfil existente para usuário ${userId}`);
-    }
-    
-    result = await pool.query(query, values);
-    const updatedProfile = result.rows[0];
-    
-    logger.info(`[Profile] Perfil atualizado com sucesso para usuário ${userId}`);
-    
-    res.json({
-      success: true,
-      data: {
-        profileId: updatedProfile.id,
-        userId: updatedProfile.user_id,
-        updatedFields: Object.keys(updateData),
-        updatedAt: updatedProfile.updated_at
+      stylePreferences: {
+        configured: stylePrefs.status === 'fulfilled' && stylePrefs.value.rows.length > 0,
+        data: stylePrefs.status === 'fulfilled' ? stylePrefs.value.rows[0] : null
       },
-      message: 'Perfil atualizado com sucesso',
-      processingTime: Date.now() - startTime
-    });
-    
-  } catch (error) {
-    logger.error(`[Profile] Erro ao atualizar perfil: ${error.message}`, error);
-    
-    res.status(500).json({
-      success: false,
-      error: 'Erro interno do servidor ao atualizar perfil',
-      code: 'UPDATE_PROFILE_ERROR',
-      processingTime: Date.now() - startTime
-    });
-  }
-});
+      
+      emotionalProfile: {
+        configured: emotionalProfile.status === 'fulfilled' && emotionalProfile.value.rows.length > 0,
+        data: emotionalProfile.status === 'fulfilled' ? emotionalProfile.value.rows[0] : null
+      },
+      
+      adaptiveSettings: {
+        configured: adaptiveConfig.status === 'fulfilled' && adaptiveConfig.value.rows.length > 0,
+        data: adaptiveConfig.status === 'fulfilled' ? adaptiveConfig.value.rows[0] : null
+      },
+      
+      recentActivity: {
+        available: recentFeedback.status === 'fulfilled',
+        events: recentFeedback.status === 'fulfilled' ? recentFeedback.value.rows : []
+      },
+      
+      learningStats: {
+        available: adjustmentStats.status === 'fulfilled',
+        data: adjustmentStats.status === 'fulfilled' ? adjustmentStats.value.rows[0] : null
+      },
+      
+      completionScore: calculateProfileCompletion({
+        stylePreferences: stylePrefs.status === 'fulfilled' && stylePrefs.value.rows.length > 0,
+        emotionalProfile: emotionalProfile.status === 'fulfilled' && emotionalProfile.value.rows.length > 0,
+        adaptiveSettings: adaptiveConfig.status === 'fulfilled' && adaptiveConfig.value.rows.length > 0
+      })
+    };
 
-/**
- * GET /api/profile/completeness
- * Verifica completude do perfil
- */
-router.get('/completeness', authenticateToken, validateUserExists, async (req, res) => {
-  const startTime = Date.now();
-  
-  try {
-    const userId = req.user.id;
-    
-    const query = 'SELECT * FROM user_profiles WHERE user_id = $1';
-    const result = await pool.query(query, [userId]);
-    
-    if (result.rows.length === 0) {
-      return res.json({
-        success: true,
-        data: {
-          percentage: 0,
-          completed: false,
-          missing: ['bio', 'age', 'gender', 'location', 'stylePreferences'],
-          requiredFields: 5,
-          completedFields: 0
-        },
-        processingTime: Date.now() - startTime
-      });
-    }
-    
-    const profile = result.rows[0];
-    const completeness = calculateProfileCompleteness(profile);
-    
     res.json({
       success: true,
-      data: completeness,
-      processingTime: Date.now() - startTime
+      data: profileSummary
     });
-    
+
   } catch (error) {
-    logger.error(`[Profile] Erro ao verificar completude: ${error.message}`, error);
-    
+    console.error('Error getting profile summary:', error);
     res.status(500).json({
       success: false,
-      error: 'Erro interno do servidor',
-      code: 'COMPLETENESS_ERROR',
-      processingTime: Date.now() - startTime
+      message: 'Failed to get profile summary'
     });
   }
 });
 
-// ==============================================
-// FUNÇÕES UTILITÁRIAS
-// ==============================================
-
-/**
- * Calcula completude do perfil
- */
-function calculateProfileCompleteness(profileData) {
-  const requiredFields = ['bio', 'age', 'gender', 'location', 'style_preferences'];
-  const completed = [];
-  const missing = [];
-  
-  requiredFields.forEach(field => {
-    if (field === 'style_preferences') {
-      // Verificar se tem pelo menos uma preferência em cada categoria
-      const stylePrefs = profileData.style_preferences;
-      if (stylePrefs) {
-        const categories = ['tenis', 'roupas', 'cores', 'hobbies', 'sentimentos'];
-        const completedCategories = categories.filter(cat => 
-          stylePrefs[cat] && Array.isArray(stylePrefs[cat]) && stylePrefs[cat].length > 0
-        ).length;
-        
-        if (completedCategories >= 3) { // Pelo menos 3 de 5 categorias
-          completed.push('stylePreferences');
-        } else {
-          missing.push('stylePreferences');
-        }
-      } else {
-        missing.push('stylePreferences');
-      }
-    } else {
-      if (profileData[field] && profileData[field] !== '') {
-        completed.push(field);
-      } else {
-        missing.push(field);
-      }
-    }
-  });
-  
-  const percentage = Math.round((completed.length / requiredFields.length) * 100);
-  
-  return {
-    percentage,
-    completed: percentage === 100,
-    missing,
-    requiredFields: requiredFields.length,
-    completedFields: completed.length,
-    breakdown: {
-      basicInfo: completed.filter(f => ['bio', 'age', 'gender', 'location'].includes(f)).length,
-      stylePreferences: completed.includes('stylePreferences') ? 1 : 0
-    }
-  };
+// Função auxiliar para calcular completude do perfil
+function calculateProfileCompletion(modules) {
+  const totalModules = Object.keys(modules).length;
+  const completedModules = Object.values(modules).filter(Boolean).length;
+  return Math.round((completedModules / totalModules) * 100);
 }
 
-export default router;
+// Rota para reset completo do perfil (cuidado!)
+router.post('/reset', require('../../middleware/auth').authenticateToken, async (req, res) => {
+  try {
+    const { Pool } = require('pg');
+    const db = new Pool();
+    const userId = req.user.id;
+    const { confirmReset } = req.body;
+
+    if (confirmReset !== 'YES_RESET_EVERYTHING') {
+      return res.status(400).json({
+        success: false,
+        message: 'Reset confirmation required'
+      });
+    }
+
+    // Executar reset em transação
+    await db.query('BEGIN');
+
+    try {
+      // Deletar dados de todos os módulos
+      await Promise.all([
+        db.query('DELETE FROM feedback_events WHERE user_id = $1', [userId]),
+        db.query('DELETE FROM weight_adjustments WHERE user_id = $1', [userId]),
+        db.query('DELETE FROM feedback_analytics WHERE user_id = $1', [userId]),
+        db.query('DELETE FROM adaptive_recommendation_configs WHERE user_id = $1', [userId]),
+        db.query('DELETE FROM user_learning_profiles WHERE user_id = $1', [userId]),
+        db.query('DELETE FROM emotional_profiles WHERE user_id = $1', [userId]),
+        db.query('DELETE FROM style_preferences WHERE user_id = $1', [userId])
+      ]);
+
+      await db.query('COMMIT');
+
+      res.json({
+        success: true,
+        message: 'Profile completely reset',
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error) {
+      await db.query('ROLLBACK');
+      throw error;
+    }
+
+  } catch (error) {
+    console.error('Error resetting profile:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to reset profile'
+    });
+  }
+});
+
+// Middleware de tratamento de erros específico para rotas de perfil
+router.use((error, req, res, next) => {
+  console.error('Profile routes error:', error);
+  
+  if (error.name === 'ValidationError') {
+    return res.status(400).json({
+      success: false,
+      message: 'Validation error',
+      errors: error.details
+    });
+  }
+  
+  if (error.code === '23505') { // Unique constraint violation
+    return res.status(409).json({
+      success: false,
+      message: 'Resource already exists'
+    });
+  }
+  
+  if (error.code === '23503') { // Foreign key violation
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid reference'
+    });
+  }
+  
+  res.status(500).json({
+    success: false,
+    message: 'Internal server error',
+    error: process.env.NODE_ENV === 'development' ? error.message : undefined
+  });
+});
+
+module.exports = router;
