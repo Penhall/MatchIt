@@ -1,561 +1,328 @@
-// server/app.js - Servidor simplificado e robusto para debug (ES Modules)
-import express from 'express';
-import cors from 'cors';
+// server/app.js - Servidor Principal MatchIt com Debug de Imports
+require('dotenv').config();
 
-// ==============================================
-// CONFIGURAÇÃO INICIAL E DEBUG
-// ==============================================
-
-console.log('🔄 Iniciando servidor MatchIt...');
-console.log('📁 Arquivo:', import.meta.url);
-console.log('🌍 Node version:', process.version);
-console.log('📦 Processo:', process.argv[1]);
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const compression = require('compression');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
-// ==============================================
-// LOGGER SIMPLES (FALLBACK)
-// ==============================================
+console.log('🚀 Iniciando servidor MatchIt...');
 
-const logger = {
-  info: (message, ...args) => {
-    console.log(`[INFO] ${new Date().toISOString()} - ${message}`, ...args);
-  },
-  error: (message, ...args) => {
-    console.error(`[ERROR] ${new Date().toISOString()} - ${message}`, ...args);
-  },
-  warn: (message, ...args) => {
-    console.warn(`[WARN] ${new Date().toISOString()} - ${message}`, ...args);
-  }
-};
+// =====================================================
+// CONFIGURAÇÕES DE SEGURANÇA E MIDDLEWARE
+// =====================================================
 
-logger.info('✅ Logger inicializado');
+// Helmet para segurança
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 
-// ==============================================
-// MIDDLEWARE BÁSICO
-// ==============================================
+// Compressão
+app.use(compression());
 
-// CORS simples
+// CORS
 app.use(cors({
-  origin: '*', // Permitir todas as origens para teste
+  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : '*',
   credentials: true
 }));
+
+// Rate limiting global
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 1000, // máximo 1000 requests por IP
+  message: {
+    success: false,
+    error: 'Muitas requisições deste IP, tente novamente mais tarde.',
+    code: 'RATE_LIMIT_EXCEEDED'
+  }
+});
+app.use(globalLimiter);
 
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Middleware de logging
-app.use((req, res, next) => {
-  const startTime = Date.now();
-  logger.info(`→ ${req.method} ${req.originalUrl}`);
-  
-  res.on('finish', () => {
-    const duration = Date.now() - startTime;
-    logger.info(`← ${req.method} ${req.originalUrl} - ${res.statusCode} - ${duration}ms`);
+// Log de requests em desenvolvimento
+if (process.env.NODE_ENV === 'development') {
+  app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+    next();
   });
-  
-  next();
-});
+}
 
-logger.info('✅ Middleware básico configurado');
+// =====================================================
+// FUNÇÃO PARA IMPORTAR ROTAS COM SEGURANÇA
+// =====================================================
 
-// ==============================================
-// ROTAS BÁSICAS (SEM DEPENDÊNCIAS)
-// ==============================================
-
-// Health check
-app.get('/api/health', (req, res) => {
-  logger.info('Health check solicitado');
-  
-  res.json({
-    success: true,
-    message: 'MatchIt API está funcionando!',
-    timestamp: new Date().toISOString(),
-    version: '1.0.0-fase0',
-    environment: process.env.NODE_ENV || 'development',
-    port: PORT,
-    status: {
-      server: '✅ Funcionando',
-      cors: '✅ Configurado',
-      bodyParser: '✅ Configurado',
-      logger: '✅ Funcionando'
-    }
-  });
-});
-
-// Informações do servidor
-app.get('/api/info', (req, res) => {
-  res.json({
-    success: true,
-    server: {
-      node: process.version,
-      platform: process.platform,
-      uptime: process.uptime(),
-      memory: process.memoryUsage(),
-      pid: process.pid
-    },
-    routes: {
-      available: [
-        'GET /api/health',
-        'GET /api/info',
-        'GET /api/test',
-        'POST /api/test'
-      ]
-    }
-  });
-});
-
-// Rota de teste
-app.get('/api/test', (req, res) => {
-  logger.info('Rota de teste GET acessada');
-  res.json({
-    success: true,
-    message: 'Rota de teste funcionando',
-    method: 'GET',
-    timestamp: new Date().toISOString()
-  });
-});
-
-app.post('/api/test', (req, res) => {
-  logger.info('Rota de teste POST acessada', req.body);
-  res.json({
-    success: true,
-    message: 'Rota de teste POST funcionando',
-    method: 'POST',
-    body: req.body,
-    timestamp: new Date().toISOString()
-  });
-});
-
-logger.info('✅ Rotas básicas configuradas');
-
-// ==============================================
-// CARREGAR ROTAS AVANÇADAS (CONDICIONALMENTE)
-// ==============================================
-
-const loadAdvancedRoutes = async () => {
+const safeRequire = (modulePath, fallbackName) => {
   try {
-    logger.info('🔄 Tentando carregar rotas avançadas...');
+    const module = require(modulePath);
     
-    // Tentar carregar middleware de autenticação
-    let authenticateToken = null;
-    try {
-      const authModule = await import('./middleware/auth.js');
-      authenticateToken = authModule.authenticateToken;
-      logger.info('✅ Middleware de autenticação carregado');
-    } catch (error) {
-      logger.warn('⚠️ Middleware de autenticação não encontrado:', error.message);
-      // Criar mock de autenticação para desenvolvimento
-      authenticateToken = (req, res, next) => {
-        req.user = { id: 'dev-user-123' };
-        next();
-      };
-      logger.info('✅ Mock de autenticação criado');
+    // Verificar se é um router válido
+    if (typeof module === 'function') {
+      console.log(`✅ ${fallbackName} carregado com sucesso`);
+      return module;
+    } else if (module && typeof module === 'object' && typeof module.router === 'function') {
+      console.log(`✅ ${fallbackName} carregado (usando module.router)`);
+      return module.router;
+    } else {
+      console.error(`❌ ${fallbackName} não é um router válido:`, typeof module);
+      console.error('Módulo exportado:', module);
+      throw new Error(`${fallbackName} não exporta um router do Express`);
     }
-
-    // Tentar carregar pool de banco
-    let pool = null;
-    try {
-      const dbModule = await import('./config/database.js');
-      pool = dbModule.default;
-      await pool.query('SELECT NOW()');
-      logger.info('✅ Conexão com banco estabelecida');
-    } catch (error) {
-      logger.warn('⚠️ Banco de dados não disponível:', error.message);
-      // Criar mock de pool para desenvolvimento
-      pool = {
-        query: async (sql, params) => {
-          logger.info(`Mock DB Query: ${sql}`, params);
-          
-          // Mock responses básicos
-          if (sql.includes('user_profiles')) {
-            return {
-              rows: [{
-                id: 1,
-                user_id: 'dev-user-123',
-                style_preferences: {
-                  tenis: [],
-                  roupas: [],
-                  cores: [],
-                  hobbies: [],
-                  sentimentos: []
-                },
-                created_at: new Date(),
-                updated_at: new Date()
-              }]
-            };
-          }
-          
-          return { rows: [] };
-        }
-      };
-      logger.info('✅ Mock de banco criado');
-    }
-
-    // Criar rotas de preferências de estilo inline
-    const styleRouter = express.Router();
-
-    // GET /api/profile/style-preferences
-    styleRouter.get('/', authenticateToken, async (req, res) => {
-      const startTime = Date.now();
-      
-      try {
-        const userId = req.user.id;
-        logger.info(`[StylePreferences] Buscando preferências para usuário ${userId}`);
-        
-        const preferences = {
-          tenis: [],
-          roupas: [],
-          cores: [],
-          hobbies: [],
-          sentimentos: []
-        };
-        
-        const completionStatus = {
-          completed: false,
-          totalCategories: 5,
-          completedCategories: 0,
-          completionPercentage: 0
-        };
-        
-        res.json({
-          success: true,
-          data: {
-            userId,
-            preferences,
-            completionStatus,
-            metadata: {
-              profileId: 1,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-              isNew: true
-            }
-          },
-          processingTime: Date.now() - startTime
-        });
-        
-      } catch (error) {
-        logger.error(`[StylePreferences] Erro: ${error.message}`);
-        
-        res.status(500).json({
-          success: false,
-          error: 'Erro interno do servidor',
-          code: 'FETCH_PREFERENCES_ERROR',
-          processingTime: Date.now() - startTime
-        });
-      }
-    });
-
-    // PUT /api/profile/style-preferences
-    styleRouter.put('/', authenticateToken, async (req, res) => {
-      const startTime = Date.now();
-      
-      try {
-        const userId = req.user.id;
-        const { preferences } = req.body;
-        
-        logger.info(`[StylePreferences] Atualizando preferências para usuário ${userId}`, preferences);
-        
-        // Simular salvamento
-        const completionStatus = {
-          completed: true,
-          totalCategories: 5,
-          completedCategories: 5,
-          completionPercentage: 100
-        };
-        
-        res.json({
-          success: true,
-          data: {
-            userId,
-            preferences: preferences || {},
-            completionStatus,
-            metadata: {
-              profileId: 1,
-              updatedAt: new Date().toISOString(),
-              totalUpdates: 1
-            }
-          },
-          message: 'Preferências atualizadas com sucesso',
-          processingTime: Date.now() - startTime
-        });
-        
-      } catch (error) {
-        logger.error(`[StylePreferences] Erro: ${error.message}`);
-        
-        res.status(500).json({
-          success: false,
-          error: 'Erro interno do servidor',
-          code: 'UPDATE_PREFERENCES_ERROR',
-          processingTime: Date.now() - startTime
-        });
-      }
-    });
-
-    // PATCH /api/profile/style-preferences/:category
-    styleRouter.patch('/:category', authenticateToken, async (req, res) => {
-      const startTime = Date.now();
-      
-      try {
-        const userId = req.user.id;
-        const { category } = req.params;
-        const { choices } = req.body;
-        
-        logger.info(`[StylePreferences] Atualizando categoria ${category} para usuário ${userId}`, choices);
-        
-        const validCategories = ['tenis', 'roupas', 'cores', 'hobbies', 'sentimentos'];
-        if (!validCategories.includes(category)) {
-          return res.status(400).json({
-            success: false,
-            error: `Categoria inválida. Válidas: ${validCategories.join(', ')}`,
-            code: 'INVALID_CATEGORY'
-          });
-        }
-        
-        res.json({
-          success: true,
-          data: {
-            userId,
-            category,
-            choices: choices || [],
-            allPreferences: { [category]: choices || [] },
-            metadata: {
-              profileId: 1,
-              updatedAt: new Date().toISOString(),
-              isNewProfile: false
-            }
-          },
-          message: `Categoria ${category} atualizada`,
-          processingTime: Date.now() - startTime
-        });
-        
-      } catch (error) {
-        logger.error(`[StylePreferences] Erro: ${error.message}`);
-        
-        res.status(500).json({
-          success: false,
-          error: 'Erro interno do servidor',
-          code: 'UPDATE_CATEGORY_ERROR',
-          processingTime: Date.now() - startTime
-        });
-      }
-    });
-
-    // DELETE /api/profile/style-preferences
-    styleRouter.delete('/', authenticateToken, async (req, res) => {
-      const startTime = Date.now();
-      
-      try {
-        const userId = req.user.id;
-        logger.info(`[StylePreferences] Removendo preferências para usuário ${userId}`);
-        
-        const emptyPreferences = {
-          tenis: [],
-          roupas: [],
-          cores: [],
-          hobbies: [],
-          sentimentos: []
-        };
-        
-        res.json({
-          success: true,
-          data: {
-            userId,
-            preferences: emptyPreferences,
-            metadata: {
-              profileId: 1,
-              updatedAt: new Date().toISOString(),
-              cleared: true
-            }
-          },
-          message: 'Todas as preferências foram removidas',
-          processingTime: Date.now() - startTime
-        });
-        
-      } catch (error) {
-        logger.error(`[StylePreferences] Erro: ${error.message}`);
-        
-        res.status(500).json({
-          success: false,
-          error: 'Erro interno do servidor',
-          code: 'DELETE_PREFERENCES_ERROR',
-          processingTime: Date.now() - startTime
-        });
-      }
-    });
-
-    // Registrar rotas
-    app.use('/api/profile/style-preferences', styleRouter);
-    
-    // Rota de perfil simples
-    app.get('/api/profile', authenticateToken, async (req, res) => {
-      try {
-        res.json({
-          success: true,
-          data: {
-            userId: req.user.id,
-            email: 'dev@example.com',
-            stylePreferences: {
-              tenis: [],
-              roupas: [],
-              cores: [],
-              hobbies: [],
-              sentimentos: []
-            },
-            metadata: {
-              hasProfile: true,
-              isComplete: { percentage: 0 }
-            }
-          }
-        });
-      } catch (error) {
-        res.status(500).json({
-          success: false,
-          error: 'Erro interno do servidor'
-        });
-      }
-    });
-
-    logger.info('✅ Rotas avançadas carregadas com sucesso');
-    
   } catch (error) {
-    logger.error('❌ Erro ao carregar rotas avançadas:', error.message);
+    console.warn(`⚠️ ${fallbackName} não encontrado ou inválido:`, error.message);
+    
+    // Criar router de fallback
+    const fallbackRouter = express.Router();
+    fallbackRouter.all('*', (req, res) => {
+      res.status(501).json({
+        success: false,
+        error: `${fallbackName} em desenvolvimento`,
+        message: `Por favor, verifique o arquivo ${modulePath}`,
+        details: error.message
+      });
+    });
+    return fallbackRouter;
   }
 };
 
-// ==============================================
-// MIDDLEWARE DE ERRO
-// ==============================================
+// =====================================================
+// ROTAS BÁSICAS (HEALTH CHECK)
+// =====================================================
 
-// 404 handler
-app.use((req, res) => {
-  logger.warn(`Rota não encontrada: ${req.method} ${req.originalUrl}`);
-  
+// Health check
+app.get('/api/health', (req, res) => {
+  res.json({
+    success: true,
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    version: '1.0.0'
+  });
+});
+
+// Info da aplicação
+app.get('/api/info', (req, res) => {
+  res.json({
+    success: true,
+    app: 'MatchIt Backend',
+    version: '1.0.0',
+    environment: process.env.NODE_ENV || 'development',
+    features: {
+      authentication: true,
+      profile: true,
+      stylePreferences: true,
+      emotionalProfile: true
+    },
+    endpoints: {
+      health: 'GET /api/health',
+      info: 'GET /api/info',
+      auth: {
+        register: 'POST /api/auth/register',
+        login: 'POST /api/auth/login',
+        me: 'GET /api/auth/me',
+        logout: 'POST /api/auth/logout'
+      },
+      profile: {
+        get: 'GET /api/profile',
+        stylePreferences: 'GET /api/profile/style-preferences',
+        updateStylePreferences: 'PUT /api/profile/style-preferences'
+      }
+    }
+  });
+});
+
+// =====================================================
+// IMPORTAR E CONFIGURAR ROTAS
+// =====================================================
+
+console.log('📋 Carregando rotas...');
+
+// Carregar rotas de autenticação
+const authRoutes = safeRequire('./routes/auth', 'Rotas de autenticação');
+app.use('/api/auth', authRoutes);
+
+// Carregar rotas de perfil
+const profileRoutes = safeRequire('./routes/profile', 'Rotas de perfil');
+app.use('/api/profile', profileRoutes);
+
+// =====================================================
+// ROTAS DE DESENVOLVIMENTO E TESTE
+// =====================================================
+
+if (process.env.NODE_ENV === 'development') {
+  // Rota de teste simples
+  app.get('/api/test', (req, res) => {
+    res.json({
+      success: true,
+      message: 'Servidor funcionando!',
+      timestamp: new Date().toISOString(),
+      node_version: process.version,
+      platform: process.platform
+    });
+  });
+
+  // Rota de teste de banco de dados
+  app.get('/api/test/database', async (req, res) => {
+    try {
+      const { pool } = require('./config/database');
+      const result = await pool.query('SELECT NOW() as current_time, version() as db_version');
+      
+      res.json({
+        success: true,
+        message: 'Banco de dados conectado!',
+        current_time: result.rows[0].current_time,
+        db_version: result.rows[0].db_version
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Erro na conexão com banco de dados',
+        details: error.message
+      });
+    }
+  });
+
+  // Rota de debug para verificar rotas carregadas
+  app.get('/api/debug/routes', (req, res) => {
+    const routes = [];
+    
+    app._router.stack.forEach(function(middleware) {
+      if (middleware.route) {
+        const methods = Object.keys(middleware.route.methods);
+        routes.push({
+          path: middleware.route.path,
+          methods: methods
+        });
+      } else if (middleware.name === 'router') {
+        middleware.handle.stack.forEach(function(handler) {
+          if (handler.route) {
+            const methods = Object.keys(handler.route.methods);
+            routes.push({
+              path: handler.route.path,
+              methods: methods
+            });
+          }
+        });
+      }
+    });
+    
+    res.json({
+      success: true,
+      routes: routes,
+      total: routes.length
+    });
+  });
+}
+
+// =====================================================
+// MIDDLEWARE DE ERRO E FALLBACK
+// =====================================================
+
+// Middleware para rotas não encontradas
+app.use('*', (req, res) => {
+  const availableRoutes = [
+    'GET /api/health',
+    'GET /api/info',
+    'POST /api/auth/register',
+    'POST /api/auth/login',
+    'GET /api/auth/me',
+    'POST /api/auth/logout',
+    'GET /api/profile',
+    'GET /api/profile/style-preferences',
+    'PUT /api/profile/style-preferences',
+    'PATCH /api/profile/style-preferences/:category',
+    'DELETE /api/profile/style-preferences',
+    'GET /api/test (dev only)',
+    'GET /api/test/database (dev only)',
+    'GET /api/debug/routes (dev only)'
+  ];
+
   res.status(404).json({
     success: false,
     error: 'Rota não encontrada',
     code: 'ROUTE_NOT_FOUND',
-    path: req.originalUrl,
+    path: req.path,
     method: req.method,
-    availableRoutes: [
-      'GET /api/health',
-      'GET /api/info', 
-      'GET /api/test',
-      'POST /api/test',
-      'GET /api/profile',
-      'GET /api/profile/style-preferences',
-      'PUT /api/profile/style-preferences',
-      'PATCH /api/profile/style-preferences/:category',
-      'DELETE /api/profile/style-preferences',
-      'GET /api/profile/emotional',
-      'GET /api/profile/emotional/questionnaire',
-      'POST /api/profile/emotional/responses',
-      'PUT /api/profile/emotional',
-      'GET /api/profile/emotional/compatibility/:targetUserId',
-      'DELETE /api/profile/emotional'
-    ]
+    availableRoutes: availableRoutes
   });
 });
 
-// Error handler
+// Middleware de tratamento de erros global
 app.use((error, req, res, next) => {
-  logger.error(`Erro não tratado: ${error.message}`, error.stack);
-  
+  console.error('❌ Erro não tratado:', error);
+
+  // Não enviar stack trace em produção
+  const isDevelopment = process.env.NODE_ENV === 'development';
+
   res.status(error.status || 500).json({
     success: false,
-    error: process.env.NODE_ENV === 'development' ? error.message : 'Erro interno do servidor',
-    code: error.code || 'INTERNAL_SERVER_ERROR'
+    error: error.message || 'Erro interno do servidor',
+    code: error.code || 'INTERNAL_ERROR',
+    ...(isDevelopment && { 
+      stack: error.stack,
+      details: error 
+    })
   });
 });
 
-logger.info('✅ Middleware de erro configurado');
-
-// ==============================================
+// =====================================================
 // INICIALIZAÇÃO DO SERVIDOR
-// ==============================================
+// =====================================================
 
-const startServer = async () => {
-  try {
-    logger.info('🚀 Iniciando processo de startup...');
-    
-    // Carregar rotas avançadas
-    await loadAdvancedRoutes();
-    
-    // Iniciar servidor HTTP
-    const server = app.listen(PORT, () => {
-      logger.info('='.repeat(60));
-      logger.info('🎉 SERVIDOR MATCHIT INICIADO COM SUCESSO!');
-      logger.info('='.repeat(60));
-      logger.info(`🌐 URL: http://localhost:${PORT}`);
-      logger.info(`📍 Ambiente: ${process.env.NODE_ENV || 'development'}`);
-      logger.info(`🕐 Iniciado em: ${new Date().toISOString()}`);
-      logger.info('');
-      logger.info('🔗 Endpoints disponíveis:');
-      logger.info(`   Health Check: http://localhost:${PORT}/api/health`);
-      logger.info(`   Server Info:  http://localhost:${PORT}/api/info`);
-      logger.info(`   Teste GET:    http://localhost:${PORT}/api/test`);
-      logger.info(`   Profile:      http://localhost:${PORT}/api/profile`);
-      logger.info(`   Preferências: http://localhost:${PORT}/api/profile/style-preferences`);
-      logger.info('');
-      logger.info('🎯 FASE 0 - INTEGRAÇÃO BACKEND-FRONTEND');
-      logger.info('✅ Endpoints de preferências implementados');
-      logger.info('✅ Mock de autenticação ativo');
-      logger.info('✅ Mock de banco de dados ativo');
-      logger.info('✅ CORS configurado para desenvolvimento');
-      logger.info('');
-      logger.info('📝 Para testar:');
-      logger.info('   curl http://localhost:3000/api/health');
-      logger.info('   curl http://localhost:3000/api/info');
-      logger.info('='.repeat(60));
-    });
-    
-    // Graceful shutdown
-    const gracefulShutdown = (signal) => {
-      logger.info(`Recebido sinal ${signal}, encerrando servidor...`);
-      
-      server.close(() => {
-        logger.info('✅ Servidor HTTP encerrado');
-        process.exit(0);
-      });
-      
-      // Forçar encerramento após 10 segundos
-      setTimeout(() => {
-        logger.error('❌ Forçando encerramento...');
-        process.exit(1);
-      }, 10000);
-    };
-    
-    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
-    
-    return server;
-    
-  } catch (error) {
-    logger.error(`❌ ERRO CRÍTICO ao iniciar servidor: ${error.message}`);
-    logger.error(error.stack);
+const server = app.listen(PORT, () => {
+  console.log('');
+  console.log('🚀 Servidor MatchIt iniciado com sucesso!');
+  console.log(`📍 URL: http://localhost:${PORT}`);
+  console.log(`🌍 Ambiente: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🕐 Hora: ${new Date().toLocaleString()}`);
+  console.log('');
+  console.log('📋 Endpoints principais:');
+  console.log('  ✅ GET  /api/health           - Health check');
+  console.log('  ✅ GET  /api/info             - Informações da API');
+  console.log('  ✅ POST /api/auth/register    - Registrar usuário');
+  console.log('  ✅ POST /api/auth/login       - Login');
+  console.log('  ✅ GET  /api/profile          - Perfil do usuário');
+  console.log('  ✅ GET  /api/profile/style-preferences - Preferências');
+  console.log('');
+  console.log('🔧 Para testar:');
+  console.log(`   curl http://localhost:${PORT}/api/health`);
+  console.log(`   curl http://localhost:${PORT}/api/info`);
+  console.log('');
+});
+
+// Tratamento de sinais de encerramento
+const gracefulShutdown = (signal) => {
+  console.log(`📴 Recebido ${signal}, encerrando servidor graciosamente...`);
+  server.close(() => {
+    console.log('✅ Servidor encerrado com sucesso');
+    process.exit(0);
+  });
+  
+  // Forçar encerramento após 10 segundos
+  setTimeout(() => {
+    console.log('⚠️ Forçando encerramento...');
     process.exit(1);
-  }
+  }, 10000);
 };
 
-// ==============================================
-// EXECUÇÃO
-// ==============================================
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
-logger.info('🔄 Chamando startServer()...');
+// Capturar erros não tratados
+process.on('uncaughtException', (error) => {
+  console.error('❌ Erro não capturado:', error);
+  gracefulShutdown('uncaughtException');
+});
 
-// Chamar startServer imediatamente
-startServer()
-  .then(() => {
-    logger.info('✅ startServer() executado com sucesso');
-  })
-  .catch((error) => {
-    logger.error('❌ Erro em startServer():', error);
-    process.exit(1);
-  });
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Promise rejeitada não tratada:', reason);
+  gracefulShutdown('unhandledRejection');
+});
 
-// Log final para debug
-logger.info('📝 Final do arquivo app.js alcançado');
-
-export { app, startServer };
+module.exports = app;
