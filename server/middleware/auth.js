@@ -1,62 +1,54 @@
-// server/middleware/auth.js - Middleware de autenticação corrigido
+// server/middleware/auth.js - Middleware de autenticação (ES Modules)
 import jwt from 'jsonwebtoken';
-import { config } from '../config/environment.js';
+import { query } from '../config/database.js';
 
-const authenticateToken = (req, res, next) => {
+const authMiddleware = async (req, res, next) => {
   try {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-
-    if (!token) {
-      return res.status(401).json({ 
-        error: 'Token de acesso obrigatório',
-        code: 'MISSING_TOKEN'
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        error: 'Token de acesso necessário',
+        code: 'NO_TOKEN'
       });
     }
-
-    jwt.verify(token, config.jwt.secret, (err, user) => {
-      if (err) {
-        console.error('❌ Token inválido:', err.message);
-        return res.status(403).json({ 
-          error: 'Token inválido ou expirado',
-          code: 'INVALID_TOKEN'
-        });
-      }
-      
-      req.user = user;
-      console.log('✅ Usuário autenticado:', user.id || user.email);
-      next();
-    });
-  } catch (error) {
-    console.error('❌ Erro no middleware de autenticação:', error);
-    res.status(500).json({ 
-      error: 'Erro interno no servidor',
-      code: 'AUTH_ERROR'
-    });
-  }
-};
-
-const optionalAuth = (req, res, next) => {
-  try {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-
-    if (token) {
-      jwt.verify(token, config.jwt.secret, (err, user) => {
-        if (!err) {
-          req.user = user;
-        }
-        next();
+    
+    const token = authHeader.substring(7);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'matchit-default-secret');
+    
+    // Buscar usuário no banco
+    const result = await query('SELECT id, email, name FROM users WHERE id = $1', [decoded.userId]);
+    
+    if (result.rows.length === 0) {
+      return res.status(401).json({
+        success: false,
+        error: 'Usuário não encontrado',
+        code: 'USER_NOT_FOUND'
       });
-    } else {
-      next();
     }
-  } catch (error) {
+    
+    req.user = result.rows[0];
+    req.userId = result.rows[0].id;
     next();
+    
+  } catch (error) {
+    console.error('Erro na autenticação:', error.message);
+    
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({
+        success: false,
+        error: 'Token expirado',
+        code: 'TOKEN_EXPIRED'
+      });
+    }
+    
+    return res.status(401).json({
+      success: false,
+      error: 'Token inválido',
+      code: 'INVALID_TOKEN'
+    });
   }
 };
 
-// EXPORTS COMPATÍVEIS
-export { authenticateToken, optionalAuth };
-export default authenticateToken;
-export { authenticateToken as authMiddleware };
+export default authMiddleware;

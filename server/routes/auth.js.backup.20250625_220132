@@ -1,4 +1,4 @@
-// server/routes/auth.js - CORRIGIDO para usar password_hash
+// server/routes/auth.js - Rotas compatíveis com estrutura real (ES Modules)
 import express from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
@@ -14,7 +14,7 @@ const generateToken = (userId) => {
   );
 };
 
-// POST /api/auth/register - CORRIGIDO para password_hash
+// POST /api/auth/register - Compatível com estrutura UUID
 router.post('/register', async (req, res) => {
   try {
     console.log('📝 Registro solicitado:', { email: req.body.email, name: req.body.name });
@@ -56,18 +56,32 @@ router.post('/register', async (req, res) => {
     console.log('🔒 Gerando hash da senha...');
     const hashedPassword = await bcrypt.hash(password, 10);
     
-    // INSERIR USUÁRIO - USANDO password_hash (campo obrigatório)
-    console.log('💾 Inserindo usuário com password_hash...');
-    const insertQuery = `
-      INSERT INTO users (email, password_hash, name) 
-      VALUES ($1, $2, $3) 
-      RETURNING id, email, name
-    `;
+    // Inserir usuário - ADAPTADO para estrutura real
+    console.log('💾 Inserindo usuário no banco...');
     
-    console.log('📝 Query final:', insertQuery);
-    console.log('📝 Parâmetros:', [email, '[SENHA_HASH]', name]);
+    let insertQuery;
+    let insertParams;
     
-    const result = await query(insertQuery, [email, hashedPassword, name]);
+    if ('uuid' === 'uuid') {
+      // Para UUID: gerar UUID automaticamente
+      if ('password' === 'password_hash') {
+        insertQuery = 'INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3) RETURNING id, email, name';
+      } else {
+        insertQuery = 'INSERT INTO users (email, password, name) VALUES ($1, $2, $3) RETURNING id, email, name';
+      }
+      insertParams = [email, hashedPassword, name];
+    } else {
+      // Para SERIAL: ID gerado automaticamente
+      if ('password' === 'password_hash') {
+        insertQuery = 'INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3) RETURNING id, email, name';
+      } else {
+        insertQuery = 'INSERT INTO users (email, password, name) VALUES ($1, $2, $3) RETURNING id, email, name';
+      }
+      insertParams = [email, hashedPassword, name];
+    }
+    
+    console.log('📝 Query:', insertQuery);
+    const result = await query(insertQuery, insertParams);
     
     if (result.rows.length === 0) {
       console.log('❌ Falha ao inserir usuário');
@@ -79,7 +93,7 @@ router.post('/register', async (req, res) => {
     }
     
     const user = result.rows[0];
-    console.log('✅ Usuário criado com sucesso:', { id: user.id, email: user.email });
+    console.log('✅ Usuário criado:', { id: user.id, email: user.email });
     
     const token = generateToken(user.id);
     
@@ -105,7 +119,7 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// POST /api/auth/login - CORRIGIDO para password_hash
+// POST /api/auth/login - Compatível com estrutura real
 router.post('/login', async (req, res) => {
   try {
     console.log('🔐 Login solicitado:', { email: req.body.email });
@@ -120,14 +134,15 @@ router.post('/login', async (req, res) => {
       });
     }
     
-    // BUSCAR USUÁRIO - USANDO password_hash
-    console.log('🔍 Buscando usuário com password_hash...');
-    const selectQuery = `
-      SELECT id, email, name, password_hash 
-      FROM users 
-      WHERE email = $1
-    `;
+    // Buscar usuário - ADAPTADO para campo de senha correto
+    let selectQuery;
+    if ('password' === 'password_hash') {
+      selectQuery = 'SELECT id, email, name, password_hash as password FROM users WHERE email = $1';
+    } else {
+      selectQuery = 'SELECT id, email, name, password FROM users WHERE email = $1';
+    }
     
+    console.log('🔍 Buscando usuário...');
     const result = await query(selectQuery, [email]);
     
     if (result.rows.length === 0) {
@@ -141,9 +156,7 @@ router.post('/login', async (req, res) => {
     
     const user = result.rows[0];
     console.log('🔍 Verificando senha...');
-    
-    // Comparar com password_hash
-    const isValidPassword = await bcrypt.compare(password, user.password_hash);
+    const isValidPassword = await bcrypt.compare(password, user.password);
     
     if (!isValidPassword) {
       console.log('❌ Senha inválida');
@@ -225,7 +238,6 @@ router.get('/test', (req, res) => {
     success: true,
     message: 'Rotas de autenticação funcionando!',
     timestamp: new Date().toISOString(),
-    database_field: 'password_hash (NOT NULL)',
     endpoints: [
       'POST /api/auth/register',
       'POST /api/auth/login', 

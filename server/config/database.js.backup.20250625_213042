@@ -1,9 +1,6 @@
-// server/config/database.js - Configuração do banco (ES Modules)
-import pkg from 'pg';
-const { Pool } = pkg;
-import dotenv from 'dotenv';
-
-dotenv.config();
+// server/config/database.js - Configuração do banco com credenciais corretas
+const { Pool } = require('pg');
+require('dotenv').config();
 
 // Configurações do pool de conexões
 const pool = new Pool({
@@ -12,43 +9,45 @@ const pool = new Pool({
   database: process.env.DB_NAME || 'matchit_db',
   user: process.env.DB_USER || 'matchit',
   password: process.env.DB_PASSWORD || 'matchit123',
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  max: 20,                    // máximo de conexões no pool
+  idleTimeoutMillis: 30000,   // tempo para fechar conexões inativas
+  connectionTimeoutMillis: 2000, // tempo limite para estabelecer conexão
 });
 
-// Event listeners
-pool.on('connect', () => {
-  console.log('🔗 Nova conexão com banco estabelecida');
+// Event listeners para o pool
+pool.on('connect', (client) => {
+  console.log('🔗 Nova conexão estabelecida com o banco de dados');
 });
 
-pool.on('error', (err) => {
-  console.error('❌ Erro no cliente do banco:', err);
+pool.on('error', (err, client) => {
+  console.error('❌ Erro inesperado no cliente do banco:', err);
   process.exit(-1);
 });
 
 // Função para testar conexão
-export const testConnection = async () => {
+const testConnection = async () => {
   try {
     const start = Date.now();
     const client = await pool.connect();
     const result = await client.query('SELECT NOW() as current_time, version() as db_version');
     const duration = Date.now() - start;
     
-    console.log('✅ Conexão com banco bem-sucedida:', {
+    console.log('✅ Teste de conexão bem-sucedido:', {
       database: process.env.DB_NAME || 'matchit_db',
       user: process.env.DB_USER || 'matchit',
       host: process.env.DB_HOST || 'localhost',
       duration: `${duration}ms`,
-      server_time: result.rows[0].current_time
+      server_time: result.rows[0].current_time,
+      version: result.rows[0].db_version.split(' ')[0] + ' ' + result.rows[0].db_version.split(' ')[1]
     });
     
     client.release();
     return true;
   } catch (error) {
-    console.error('❌ Falha na conexão:', {
+    console.error('❌ Falha na conexão com o banco de dados:', {
       error: error.message,
       code: error.code,
+      detail: error.detail,
       host: process.env.DB_HOST || 'localhost',
       database: process.env.DB_NAME || 'matchit_db',
       user: process.env.DB_USER || 'matchit'
@@ -57,16 +56,18 @@ export const testConnection = async () => {
   }
 };
 
-// Função para executar queries
-export const query = async (text, params) => {
+// Função para executar queries com logging
+const query = async (text, params) => {
   const start = Date.now();
   try {
     const result = await pool.query(text, params);
     const duration = Date.now() - start;
     
+    // Log apenas em desenvolvimento e para queries lentas
     if (process.env.NODE_ENV === 'development' || duration > 100) {
       console.log('🔍 Query executada:', {
         text: text.length > 100 ? text.substring(0, 100) + '...' : text,
+        params: params ? (params.length > 0 ? '[' + params.length + ' params]' : '[]') : '[]',
         duration: `${duration}ms`,
         rows: result.rows.length
       });
@@ -77,15 +78,17 @@ export const query = async (text, params) => {
     const duration = Date.now() - start;
     console.error('❌ Erro na query:', {
       error: error.message,
-      text: text.substring(0, 100),
+      code: error.code,
+      text: text.substring(0, 100) + (text.length > 100 ? '...' : ''),
+      params: params ? '[' + params.length + ' params]' : '[]',
       duration: `${duration}ms`
     });
     throw error;
   }
 };
 
-// Função para transações
-export const transaction = async (callback) => {
+// Função para executar transações
+const transaction = async (callback) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -94,17 +97,17 @@ export const transaction = async (callback) => {
     return result;
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error('❌ Erro na transação:', error.message);
+    console.error('❌ Erro na transação, rollback executado:', error.message);
     throw error;
   } finally {
     client.release();
   }
 };
 
-// Função para criar tabelas essenciais
-export const ensureRequiredTables = async () => {
+// Função para verificar e criar tabelas essenciais
+const ensureRequiredTables = async () => {
   try {
-    // Tabela users
+    // Verificar tabela users
     await query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -116,7 +119,7 @@ export const ensureRequiredTables = async () => {
       );
     `);
     
-    // Tabela style_choices
+    // Verificar tabela style_choices
     await query(`
       CREATE TABLE IF NOT EXISTS style_choices (
         id SERIAL PRIMARY KEY,
@@ -130,23 +133,24 @@ export const ensureRequiredTables = async () => {
       );
     `);
     
-    // Índices
+    // Criar índices para performance
     await query(`
       CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
       CREATE INDEX IF NOT EXISTS idx_style_choices_user_id ON style_choices(user_id);
+      CREATE INDEX IF NOT EXISTS idx_style_choices_category ON style_choices(category);
     `);
     
     console.log('✅ Tabelas essenciais verificadas/criadas');
     return true;
   } catch (error) {
-    console.error('❌ Erro ao criar tabelas:', error.message);
+    console.error('❌ Erro ao criar tabelas essenciais:', error.message);
     return false;
   }
 };
 
-// Inicialização
-export const init = async () => {
-  console.log('🔄 Inicializando conexão com banco...');
+// Função de inicialização
+const init = async () => {
+  console.log('🔄 Inicializando conexão com banco de dados...');
   console.log('📋 Configurações:', {
     host: process.env.DB_HOST || 'localhost',
     port: process.env.DB_PORT || 5432,
@@ -157,7 +161,9 @@ export const init = async () => {
   const connected = await testConnection();
   if (connected) {
     await ensureRequiredTables();
-    console.log('🚀 Sistema de banco pronto!');
+    console.log('🚀 Sistema de banco de dados pronto!');
+  } else {
+    console.error('❌ Falha na inicialização do banco de dados');
   }
   
   return connected;
@@ -167,10 +173,16 @@ export const init = async () => {
 process.on('SIGINT', () => {
   console.log('🔄 Encerrando pool de conexões...');
   pool.end(() => {
-    console.log('✅ Pool encerrado');
+    console.log('✅ Pool de conexões encerrado');
     process.exit(0);
   });
 });
 
-export { pool };
-export default { pool, query, transaction, testConnection, ensureRequiredTables, init };
+module.exports = {
+  pool,
+  query,
+  transaction,
+  testConnection,
+  ensureRequiredTables,
+  init
+};

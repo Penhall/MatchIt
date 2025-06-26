@@ -5,7 +5,6 @@ import express from 'express';
 // IMPORTAÇÕES REAIS (não mocks)
 // =====================================================
 import authRoutes from './routes/auth.js';
-import tournamentRoutes from './routes/tournament.js';
 import authMiddleware from './middleware/auth.js';
 import database from './config/database.js';
 import cors from 'cors';
@@ -73,10 +72,6 @@ logger.info('✅ Middleware básico configurado');
 // ROTAS DE AUTENTICAÇÃO REAIS
 // =====================================================
 app.use('/api/auth', authRoutes);
-
-// Rotas de torneio (protegidas por autenticação)
-app.use('/api/tournament', authMiddleware, tournamentRoutes);
-console.log(logger.info('✅ Rotas de torneio carregadas'));
 console.log(logger.info('✅ Rotas de autenticação carregadas'));
 
 // Middleware de autenticação para rotas protegidas

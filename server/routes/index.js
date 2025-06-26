@@ -1,178 +1,348 @@
-// server/routes/index.js - Agregador central de todas as rotas
-import { Router } from 'express';
-import { authenticateToken } from '../middleware/auth.js';
-import { config } from '../config/environment.js';
+// server/routes/index.js - Sistema de rotas principal do MatchIt
+const express = require('express');
+const authMiddleware = require('../middleware/auth');
 
-// Importar todas as rotas modulares
-import authRoutes from './auth.js';
-import healthRoutes from './health.js';
-import profileRoutes from './profile.js';
-import matchRoutes from './matches.js';
-import productRoutes from './products.js';
-import subscriptionRoutes from './subscription.js';
-import statsRoutes from './stats.js';
-import chatRoutes from './chat.js';
+const router = express.Router();
 
-// Importar nova rota de style preferences
-import stylePreferencesRoutes from './stylePreferences.js';
-
-// Importar rota de recomendação se disponível
-let recommendationRoutes = null;
-if (config.features.enableRecommendations) {
-  try {
-    const { default: recRoutes } = await import('./recommendations.js');
-    recommendationRoutes = recRoutes;
-  } catch (error) {
-    console.log('⚠️ Rotas de recomendação não disponíveis:', error.message);
-  }
-}
-
-// Importar rotas de admin e styleAdjustment dinamicamente
-let adminRoutes = null;
-let styleAdjustmentRoutes = null;
-try {
-  const adminModule = await import('./admin.js');
-  adminRoutes = adminModule.default;
-  
-  const styleModule = await import('./styleAdjustment.js');
-  styleAdjustmentRoutes = styleModule.default;
-} catch (error) {
-  console.error('⚠️ Falha ao carregar rotas administrativas ou de ajuste de estilo:', error.message);
-}
-
-const router = Router();
+// Importar rotas
+const authRoutes = require('./auth');
 
 // =====================================================
 // ROTAS PÚBLICAS (sem autenticação)
 // =====================================================
 
-// Rotas de saúde e informações
-router.use('/', healthRoutes);
-
-// Rotas de autenticação
-router.use('/auth', authRoutes);
-
-// Rotas de produtos (públicas)
-router.use('/products', productRoutes);
-
-// =====================================================
-// ROTAS PRIVADAS (com autenticação obrigatória)
-// =====================================================
-
-// Middleware de autenticação para todas as rotas abaixo
-router.use(authenticateToken);
-
-// Rotas administrativas
-if (adminRoutes) {
-  router.use('/admin', adminRoutes);
-}
-
-// Rotas de Ajuste de Estilo
-if (styleAdjustmentRoutes) {
-  router.use('/style-adjustment', styleAdjustmentRoutes);
-}
-
-// ⭐ NOVA ROTA: Style Preferences direto em /api/style-preferences
-router.use('/style-preferences', stylePreferencesRoutes);
-
-// Rotas de perfil
-router.use('/profile', profileRoutes);
-
-// Rotas de matches
-router.use('/matches', matchRoutes);
-
-// Rotas de chat
-router.use('/matches', chatRoutes); // Para /api/matches/:matchId/messages
-
-// Rotas de estatísticas
-router.use('/user', statsRoutes);
-router.use('/analytics', statsRoutes);
-
-// Rotas de assinatura VIP
-router.use('/subscription', subscriptionRoutes);
-
-// =====================================================
-// ROTAS OPCIONAIS (dependem de features habilitadas)
-// =====================================================
-
-// Sistema de recomendação (se habilitado)
-if (config.features.enableRecommendations && recommendationRoutes) {
-  router.use('/recommendations', recommendationRoutes);
-  console.log('✅ Rotas de recomendação carregadas');
-}
-
-// =====================================================
-// ROTAS DE TESTE E DEBUG (apenas em desenvolvimento)
-// =====================================================
-
-if (config.nodeEnv === 'development') {
-  // Rota de teste para verificar autenticação
-  router.get('/test/auth', authenticateToken, (req, res) => {
+// Health check
+router.get('/health', async (req, res) => {
+  try {
+    // Testar conexão com banco
+    const { query } = require('../config/database');
+    await query('SELECT 1');
+    
     res.json({
-      message: 'Autenticação funcionando!',
-      user: req.user,
-      timestamp: new Date().toISOString()
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      database: 'connected',
+      version: '1.0.0'
     });
-  });
-  
-  // Rota de teste para verificar banco de dados
-  router.get('/test/database', async (req, res) => {
-    try {
-      const { pool } = await import('../config/database.js');
-      const result = await pool.query('SELECT NOW() as current_time, version() as db_version');
-      
-      res.json({
-        message: 'Banco de dados funcionando!',
-        current_time: result.rows[0].current_time,
-        db_version: result.rows[0].db_version,
-        timestamp: new Date().toISOString()
-      });
-    } catch (error) {
-      res.status(500).json({
-        message: 'Erro no banco de dados',
-        error: error.message
-      });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      timestamp: new Date().toISOString(),
+      database: 'disconnected',
+      error: error.message
+    });
+  }
+});
+
+// Info do sistema
+router.get('/info', (req, res) => {
+  res.json({
+    name: 'MatchIt API',
+    version: '1.0.0',
+    description: 'Sistema de recomendação inteligente',
+    endpoints: {
+      auth: [
+        'POST /api/auth/register',
+        'POST /api/auth/login',
+        'GET /api/auth/verify'
+      ],
+      profile: [
+        'GET /api/profile',
+        'PUT /api/profile',
+        'GET /api/profile/style-preferences',
+        'PUT /api/profile/style-preferences'
+      ],
+      emotional: [
+        'GET /api/profile/emotional',
+        'POST /api/profile/emotional/responses'
+      ]
     }
   });
-  
-  console.log('🔧 Rotas de desenvolvimento carregadas');
-}
+});
 
-// =====================================================
-// ROTA DE FALLBACK PARA FUNCIONALIDADES NÃO IMPLEMENTADAS
-// =====================================================
-
-router.use('/not-implemented', (req, res) => {
-  res.status(501).json({
-    error: 'Funcionalidade não implementada',
-    message: 'Esta funcionalidade está em desenvolvimento',
-    path: req.originalUrl,
-    method: req.method,
-    timestamp: new Date().toISOString()
+// Rota de teste público
+router.get('/test', (req, res) => {
+  res.json({
+    message: 'API está funcionando!',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
   });
 });
 
 // =====================================================
-// MIDDLEWARE DE LOG DE ROTAS CARREGADAS
+// ROTAS DE AUTENTICAÇÃO
+// =====================================================
+router.use('/auth', authRoutes);
+
+// =====================================================
+// MIDDLEWARE DE AUTENTICAÇÃO PARA ROTAS PROTEGIDAS
+// =====================================================
+router.use('/profile', authMiddleware);
+router.use('/recommendations', authMiddleware);
+router.use('/matches', authMiddleware);
+
+// =====================================================
+// ROTAS PROTEGIDAS (requerem autenticação)
 // =====================================================
 
-if (config.nodeEnv === 'development') {
-  console.log('📋 Rotas carregadas:');
-  console.log('  ✅ /api/health, /api/info, /api/ping');
-  console.log('  ✅ /api/auth/register, /api/auth/login');
-  console.log('  ✅ /api/profile, /api/profile/style-choices');
-  console.log('  ✅ /api/style-preferences (NEW!)');
-  console.log('  ✅ /api/matches, /api/matches/potential');
-  console.log('  ✅ /api/matches/:matchId/messages');
-  console.log('  ✅ /api/products, /api/products/recommended');
-  console.log('  ✅ /api/subscription');
-  console.log('  ✅ /api/user/stats, /api/analytics/styles');
-  
-  if (config.features.enableRecommendations && recommendationRoutes) {
-    console.log('  ✅ /api/recommendations, /api/recommendations/feedback');
+// Perfil básico
+router.get('/profile', async (req, res) => {
+  try {
+    const { query } = require('../config/database');
+    const result = await query(
+      'SELECT id, email, name, created_at FROM users WHERE id = $1',
+      [req.userId]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Perfil não encontrado'
+      });
+    }
+    
+    res.json({
+      success: true,
+      profile: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Erro ao buscar perfil:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro interno do servidor'
+    });
   }
+});
+
+// Atualizar perfil
+router.put('/profile', async (req, res) => {
+  try {
+    const { name, bio, age } = req.body;
+    const { query } = require('../config/database');
+    
+    const result = await query(
+      'UPDATE users SET name = COALESCE($1, name), updated_at = NOW() WHERE id = $2 RETURNING id, email, name',
+      [name, req.userId]
+    );
+    
+    res.json({
+      success: true,
+      message: 'Perfil atualizado',
+      profile: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Erro ao atualizar perfil:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro interno do servidor'
+    });
+  }
+});
+
+// =====================================================
+// PREFERÊNCIAS DE ESTILO (FASE 0)
+// =====================================================
+
+// GET preferências de estilo
+router.get('/profile/style-preferences', async (req, res) => {
+  try {
+    const { query } = require('../config/database');
+    
+    // Verificar se tabela existe
+    const tableExists = await query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'style_choices'
+      );
+    `);
+    
+    if (!tableExists.rows[0].exists) {
+      // Criar tabela se não existir
+      await query(`
+        CREATE TABLE style_choices (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+          category VARCHAR(50) NOT NULL,
+          question_id VARCHAR(100) NOT NULL,
+          selected_option VARCHAR(100) NOT NULL,
+          created_at TIMESTAMP DEFAULT NOW(),
+          updated_at TIMESTAMP DEFAULT NOW(),
+          UNIQUE(user_id, category, question_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_style_choices_user_id ON style_choices(user_id);
+      `);
+    }
+    
+    const result = await query(
+      'SELECT category, question_id as "questionId", selected_option as "selectedOption", created_at, updated_at FROM style_choices WHERE user_id = $1 ORDER BY created_at',
+      [req.userId]
+    );
+    
+    res.json({
+      success: true,
+      preferences: result.rows
+    });
+  } catch (error) {
+    console.error('Erro ao buscar preferências:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro interno do servidor'
+    });
+  }
+});
+
+// PUT preferência individual
+router.put('/profile/style-preferences', async (req, res) => {
+  try {
+    const { category, questionId, selectedOption } = req.body;
+    
+    if (!category || !questionId || !selectedOption) {
+      return res.status(400).json({
+        success: false,
+        error: 'category, questionId e selectedOption são obrigatórios'
+      });
+    }
+    
+    const { query } = require('../config/database');
+    
+    await query(`
+      INSERT INTO style_choices (user_id, category, question_id, selected_option)
+      VALUES ($1, $2, $3, $4)
+      ON CONFLICT (user_id, category, question_id) 
+      DO UPDATE SET 
+        selected_option = EXCLUDED.selected_option,
+        updated_at = NOW()
+    `, [req.userId, category, questionId, selectedOption]);
+    
+    res.json({
+      success: true,
+      message: 'Preferência salva com sucesso'
+    });
+  } catch (error) {
+    console.error('Erro ao salvar preferência:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro interno do servidor'
+    });
+  }
+});
+
+// POST preferências em lote
+router.post('/profile/style-preferences/batch', async (req, res) => {
+  try {
+    const { preferences } = req.body;
+    
+    if (!Array.isArray(preferences) || preferences.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Array de preferências é obrigatório'
+      });
+    }
+    
+    const { query } = require('../config/database');
+    
+    for (const pref of preferences) {
+      if (!pref.category || !pref.questionId || !pref.selectedOption) {
+        return res.status(400).json({
+          success: false,
+          error: 'Cada preferência deve ter category, questionId e selectedOption'
+        });
+      }
+      
+      await query(`
+        INSERT INTO style_choices (user_id, category, question_id, selected_option)
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT (user_id, category, question_id) 
+        DO UPDATE SET 
+          selected_option = EXCLUDED.selected_option,
+          updated_at = NOW()
+      `, [req.userId, pref.category, pref.questionId, pref.selectedOption]);
+    }
+    
+    res.json({
+      success: true,
+      message: `${preferences.length} preferências salvas com sucesso`
+    });
+  } catch (error) {
+    console.error('Erro ao salvar preferências em lote:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro interno do servidor'
+    });
+  }
+});
+
+// DELETE todas as preferências
+router.delete('/profile/style-preferences', async (req, res) => {
+  try {
+    const { query } = require('../config/database');
+    
+    await query('DELETE FROM style_choices WHERE user_id = $1', [req.userId]);
+    
+    res.json({
+      success: true,
+      message: 'Preferências removidas com sucesso'
+    });
+  } catch (error) {
+    console.error('Erro ao remover preferências:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro interno do servidor'
+    });
+  }
+});
+
+// =====================================================
+// SISTEMA EMOCIONAL (já implementado)
+// =====================================================
+
+// Manter rotas emocionais existentes se houver arquivos separados
+try {
+  const emotionalRoutes = require('./emotional-profile');
+  router.use('/profile/emotional', emotionalRoutes);
+} catch (error) {
+  console.log('Rotas emocionais não encontradas, usando implementação básica');
   
-  console.log('  🔧 /api/test/auth, /api/test/database (dev only)');
+  // Implementação básica do sistema emocional
+  router.get('/profile/emotional', (req, res) => {
+    res.json({
+      success: true,
+      message: 'Sistema emocional em desenvolvimento',
+      emotional_profile: null
+    });
+  });
 }
 
-export default router;
+// =====================================================
+// ROTA PARA ROTAS NÃO ENCONTRADAS
+// =====================================================
+router.use('*', (req, res) => {
+  // Listar rotas disponíveis
+  const availableRoutes = [
+    'GET /api/health',
+    'GET /api/info',
+    'GET /api/test',
+    'POST /api/auth/register',
+    'POST /api/auth/login',
+    'GET /api/auth/verify',
+    'GET /api/profile',
+    'PUT /api/profile',
+    'GET /api/profile/style-preferences',
+    'PUT /api/profile/style-preferences',
+    'POST /api/profile/style-preferences/batch',
+    'DELETE /api/profile/style-preferences',
+    'GET /api/profile/emotional'
+  ];
+  
+  res.status(404).json({
+    success: false,
+    error: 'Rota não encontrada',
+    code: 'ROUTE_NOT_FOUND',
+    path: req.originalUrl,
+    method: req.method,
+    availableRoutes
+  });
+});
+
+module.exports = router;

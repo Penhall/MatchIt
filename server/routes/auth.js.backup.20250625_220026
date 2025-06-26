@@ -1,4 +1,4 @@
-// server/routes/auth.js - CORRIGIDO para usar password_hash
+// server/routes/auth.js - Rotas de autenticação (ES Modules)
 import express from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
@@ -14,15 +14,12 @@ const generateToken = (userId) => {
   );
 };
 
-// POST /api/auth/register - CORRIGIDO para password_hash
+// POST /api/auth/register
 router.post('/register', async (req, res) => {
   try {
-    console.log('📝 Registro solicitado:', { email: req.body.email, name: req.body.name });
-    
     const { email, password, name } = req.body;
     
     if (!email || !password || !name) {
-      console.log('❌ Campos obrigatórios faltando');
       return res.status(400).json({
         success: false,
         error: 'Email, senha e nome são obrigatórios',
@@ -31,7 +28,6 @@ router.post('/register', async (req, res) => {
     }
     
     if (password.length < 6) {
-      console.log('❌ Senha muito fraca');
       return res.status(400).json({
         success: false,
         error: 'Senha deve ter pelo menos 6 caracteres',
@@ -40,11 +36,8 @@ router.post('/register', async (req, res) => {
     }
     
     // Verificar se email já existe
-    console.log('🔍 Verificando se email existe:', email);
     const existingUser = await query('SELECT id FROM users WHERE email = $1', [email]);
-    
     if (existingUser.rows.length > 0) {
-      console.log('❌ Email já existe');
       return res.status(400).json({
         success: false,
         error: 'Email já está em uso',
@@ -53,34 +46,15 @@ router.post('/register', async (req, res) => {
     }
     
     // Hash da senha
-    console.log('🔒 Gerando hash da senha...');
     const hashedPassword = await bcrypt.hash(password, 10);
     
-    // INSERIR USUÁRIO - USANDO password_hash (campo obrigatório)
-    console.log('💾 Inserindo usuário com password_hash...');
-    const insertQuery = `
-      INSERT INTO users (email, password_hash, name) 
-      VALUES ($1, $2, $3) 
-      RETURNING id, email, name
-    `;
-    
-    console.log('📝 Query final:', insertQuery);
-    console.log('📝 Parâmetros:', [email, '[SENHA_HASH]', name]);
-    
-    const result = await query(insertQuery, [email, hashedPassword, name]);
-    
-    if (result.rows.length === 0) {
-      console.log('❌ Falha ao inserir usuário');
-      return res.status(500).json({
-        success: false,
-        error: 'Falha ao criar usuário',
-        code: 'INSERT_FAILED'
-      });
-    }
+    // Inserir usuário
+    const result = await query(
+      'INSERT INTO users (email, password, name) VALUES ($1, $2, $3) RETURNING id, email, name',
+      [email, hashedPassword, name]
+    );
     
     const user = result.rows[0];
-    console.log('✅ Usuário criado com sucesso:', { id: user.id, email: user.email });
-    
     const token = generateToken(user.id);
     
     res.status(201).json({
@@ -95,21 +69,18 @@ router.post('/register', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('❌ Erro no registro:', error);
+    console.error('Erro no registro:', error);
     res.status(500).json({
       success: false,
       error: 'Erro interno do servidor',
-      code: 'INTERNAL_ERROR',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      code: 'INTERNAL_ERROR'
     });
   }
 });
 
-// POST /api/auth/login - CORRIGIDO para password_hash
+// POST /api/auth/login
 router.post('/login', async (req, res) => {
   try {
-    console.log('🔐 Login solicitado:', { email: req.body.email });
-    
     const { email, password } = req.body;
     
     if (!email || !password) {
@@ -120,18 +91,9 @@ router.post('/login', async (req, res) => {
       });
     }
     
-    // BUSCAR USUÁRIO - USANDO password_hash
-    console.log('🔍 Buscando usuário com password_hash...');
-    const selectQuery = `
-      SELECT id, email, name, password_hash 
-      FROM users 
-      WHERE email = $1
-    `;
-    
-    const result = await query(selectQuery, [email]);
+    const result = await query('SELECT id, email, name, password FROM users WHERE email = $1', [email]);
     
     if (result.rows.length === 0) {
-      console.log('❌ Usuário não encontrado');
       return res.status(401).json({
         success: false,
         error: 'Credenciais inválidas',
@@ -140,13 +102,9 @@ router.post('/login', async (req, res) => {
     }
     
     const user = result.rows[0];
-    console.log('🔍 Verificando senha...');
-    
-    // Comparar com password_hash
-    const isValidPassword = await bcrypt.compare(password, user.password_hash);
+    const isValidPassword = await bcrypt.compare(password, user.password);
     
     if (!isValidPassword) {
-      console.log('❌ Senha inválida');
       return res.status(401).json({
         success: false,
         error: 'Credenciais inválidas',
@@ -155,7 +113,6 @@ router.post('/login', async (req, res) => {
     }
     
     const token = generateToken(user.id);
-    console.log('✅ Login bem-sucedido');
     
     res.json({
       success: true,
@@ -169,17 +126,16 @@ router.post('/login', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('❌ Erro no login:', error);
+    console.error('Erro no login:', error);
     res.status(500).json({
       success: false,
       error: 'Erro interno do servidor',
-      code: 'INTERNAL_ERROR',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      code: 'INTERNAL_ERROR'
     });
   }
 });
 
-// GET /api/auth/me - Verificar token
+// GET /api/auth/me
 router.get('/me', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -217,22 +173,6 @@ router.get('/me', async (req, res) => {
       code: 'INVALID_TOKEN'
     });
   }
-});
-
-// GET /api/auth/test - Endpoint de teste
-router.get('/test', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Rotas de autenticação funcionando!',
-    timestamp: new Date().toISOString(),
-    database_field: 'password_hash (NOT NULL)',
-    endpoints: [
-      'POST /api/auth/register',
-      'POST /api/auth/login', 
-      'GET /api/auth/me',
-      'GET /api/auth/test'
-    ]
-  });
 });
 
 export default router;
