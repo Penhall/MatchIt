@@ -1,0 +1,526 @@
+# Dockerfile - Container principal da aplicação MatchIt
+FROM node:18-alpine AS base
+
+# Instalar dependências do sistema
+RUN apk add --no-cache \
+    postgresql-client \
+    curl \
+    bash \
+    && rm -rf /var/cache/apk/*
+
+# Configurar usuário não-root para segurança
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S matchit -u 1001
+
+# Definir diretório de trabalho
+WORKDIR /app
+
+# Copiar arquivos de dependências
+COPY package*.json ./
+COPY --chown=matchit:nodejs . .
+
+# Instalar dependências
+RUN npm ci --only=production && npm cache clean --force
+
+# Estágio de desenvolvimento
+FROM base AS development
+
+# Instalar dependências de desenvolvimento
+RUN npm ci && npm cache clean --force
+
+# Expor porta
+EXPOSE 3000
+
+# Usuário para desenvolvimento
+USER matchit
+
+# Comando para desenvolvimento (com nodemon)
+CMD ["npm", "run", "dev"]
+
+# Estágio de build para produção
+FROM base AS build
+
+# Instalar dependências de desenvolvimento para build
+RUN npm ci
+
+# Executar build (se necessário)
+RUN npm run build 2>/dev/null || echo "No build script defined"
+
+# Estágio de produção
+FROM node:18-alpine AS production
+
+# Instalar apenas dependências mínimas do sistema
+RUN apk add --no-cache \
+    postgresql-client \
+    curl \
+    && rm -rf /var/cache/apk/*
+
+# Criar usuário não-root
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S matchit -u 1001
+
+# Definir diretório de trabalho
+WORKDIR /app
+
+# Copiar arquivos necessários do estágio de build
+COPY --from=build --chown=matchit:nodejs /app/package*.json ./
+COPY --from=build --chown=matchit:nodejs /app/node_modules ./node_modules
+COPY --from=build --chown=matchit:nodejs /app/server ./server
+COPY --from=build --chown=matchit:nodejs /app/database ./database
+COPY --from=build --chown=matchit:nodejs /app/scripts ./scripts
+
+# Criar diretórios necessários
+RUN mkdir -p logs uploads/tournament-images uploads/profile-pictures \
+    && chown -R matchit:nodejs logs uploads
+
+# Configurar variáveis de ambiente para produção
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# Expor porta
+EXPOSE 3000
+
+# Verificação de saúde
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3000/api/health || exit 1
+
+# Usar usuário não-root
+USER matchit
+
+# Comando para produção
+CMD ["npm", "start"]
+
+# docker-compose.yml - Orquestração completa do sistema
+version: '3.8'
+
+services:
+  # Banco de dados PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    container_name: matchit_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-matchit_development}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/migrations:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    networks:
+      - matchit_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-matchit_development}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Cache Redis
+  redis:
+    image: redis:7-alpine
+    container_name: matchit_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis123}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - matchit_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Aplicação principal - Desenvolvimento
+  app_dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: matchit_app_dev
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-matchit_development}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      REDIS_URL: redis://default:${REDIS_PASSWORD:-redis123}@redis:6379
+      JWT_SECRET: ${JWT_SECRET:-dev_jwt_secret_change_in_production}
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - uploads_data:/app/uploads
+      - logs_data:/app/logs
+    ports:
+      - "3000:3000"
+    networks:
+      - matchit_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    profiles:
+      - development
+
+  # Aplicação principal - Produção
+  app_prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: matchit_app_prod
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-matchit_production}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_URL: redis://default:${REDIS_PASSWORD}@redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+    volumes:
+      - uploads_data:/app/uploads
+      - logs_data:/app/logs
+    ports:
+      - "3000:3000"
+    networks:
+      - matchit_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    profiles:
+      - production
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: matchit_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - uploads_data:/var/www/uploads:ro
+    networks:
+      - matchit_network
+    depends_on:
+      - app_prod
+    profiles:
+      - production
+
+  # Serviço de backup automático
+  backup:
+    image: postgres:15-alpine
+    container_name: matchit_backup
+    restart: "no"
+    environment:
+      PGPASSWORD: ${DB_PASSWORD:-postgres}
+    volumes:
+      - ./backups:/backups
+      - backup_scripts:/scripts
+    networks:
+      - matchit_network
+    depends_on:
+      - postgres
+    command: >
+      sh -c "
+        echo 'Iniciando backup do banco de dados...'
+        pg_dump -h postgres -U ${DB_USER:-postgres} -d ${DB_NAME:-matchit_development} > /backups/backup_$$(date +%Y%m%d_%H%M%S).sql
+        echo 'Backup concluído!'
+        find /backups -type f -name '*.sql' -mtime +7 -delete
+        echo 'Backups antigos removidos!'
+      "
+    profiles:
+      - backup
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  uploads_data:
+    driver: local
+  logs_data:
+    driver: local
+  backup_scripts:
+    driver: local
+
+networks:
+  matchit_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# docker-compose.override.yml - Configurações específicas para desenvolvimento
+version: '3.8'
+
+services:
+  app_dev:
+    environment:
+      # Configurações específicas para desenvolvimento
+      LOG_LEVEL: debug
+      ENABLE_CORS: true
+      RATE_LIMIT_ENABLED: false
+    volumes:
+      # Bind mount para desenvolvimento com hot reload
+      - .:/app
+      - /app/node_modules
+    command: npm run dev
+
+  # Serviço adicional para desenvolvimento - Adminer (gerenciador de BD)
+  adminer:
+    image: adminer
+    container_name: matchit_adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    networks:
+      - matchit_network
+    depends_on:
+      - postgres
+    profiles:
+      - development
+
+  # Serviço de monitoramento Redis - RedisInsight
+  redis_insight:
+    image: redislabs/redisinsight:latest
+    container_name: matchit_redis_insight
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    networks:
+      - matchit_network
+    depends_on:
+      - redis
+    profiles:
+      - development
+
+# .dockerignore - Arquivos a serem ignorados no build
+node_modules
+npm-debug.log
+.git
+.gitignore
+README.md
+.env
+.env.local
+.env.*.local
+coverage
+.coverage
+.nyc_output
+.cache
+.parcel-cache
+.next
+.nuxt
+dist
+.vscode
+.idea
+*.log
+logs/*.log
+uploads/*
+!uploads/.gitkeep
+backups/*
+!backups/.gitkeep
+.DS_Store
+Thumbs.db
+
+# scripts/docker-dev.sh - Script para desenvolvimento com Docker
+#!/bin/bash
+
+set -e
+
+echo "🐳 Iniciando ambiente de desenvolvimento MatchIt"
+
+# Verificar se Docker está rodando
+if ! docker info > /dev/null 2>&1; then
+    echo "❌ Docker não está rodando. Inicie o Docker primeiro."
+    exit 1
+fi
+
+# Verificar se arquivo .env existe
+if [ ! -f .env ]; then
+    echo "⚠️  Arquivo .env não encontrado. Criando configuração padrão..."
+    cat > .env << EOF
+# Configuração para desenvolvimento
+NODE_ENV=development
+PORT=3000
+
+# Banco de Dados
+DB_HOST=postgres
+DB_PORT=5432
+DB_NAME=matchit_development
+DB_USER=postgres
+DB_PASSWORD=postgres
+
+# Redis
+REDIS_PASSWORD=redis123
+
+# JWT
+JWT_SECRET=dev_jwt_secret_change_in_production
+JWT_EXPIRES_IN=7d
+
+# Outros
+LOG_LEVEL=debug
+EOF
+    echo "✅ Arquivo .env criado com configurações padrão"
+fi
+
+# Parar containers existentes
+echo "🛑 Parando containers existentes..."
+docker-compose --profile development down
+
+# Construir e iniciar serviços
+echo "🔨 Construindo e iniciando serviços..."
+docker-compose --profile development up --build -d
+
+# Aguardar serviços ficarem prontos
+echo "⏳ Aguardando serviços ficarem prontos..."
+sleep 10
+
+# Verificar status dos serviços
+echo "🔍 Verificando status dos serviços..."
+docker-compose --profile development ps
+
+# Executar migrações
+echo "📊 Executando migrações do banco de dados..."
+docker-compose --profile development exec app_dev npm run migrate || echo "⚠️  Migrações falharam ou já foram executadas"
+
+# Inserir dados iniciais
+echo "🌱 Inserindo dados iniciais..."
+docker-compose --profile development exec app_dev npm run seed || echo "⚠️  Seed falhou ou já foi executado"
+
+echo ""
+echo "🎉 Ambiente de desenvolvimento iniciado com sucesso!"
+echo ""
+echo "📍 URLs disponíveis:"
+echo "   • API: http://localhost:3000"
+echo "   • Health Check: http://localhost:3000/api/health"
+echo "   • Documentação: http://localhost:3000/api/docs"
+echo "   • Adminer (BD): http://localhost:8080"
+echo "   • Redis Insight: http://localhost:8001"
+echo ""
+echo "🔧 Comandos úteis:"
+echo "   • Logs da API: docker-compose --profile development logs -f app_dev"
+echo "   • Parar ambiente: docker-compose --profile development down"
+echo "   • Reiniciar API: docker-compose --profile development restart app_dev"
+echo ""
+
+# scripts/docker-prod.sh - Script para produção com Docker
+#!/bin/bash
+
+set -e
+
+echo "🚀 Iniciando ambiente de produção MatchIt"
+
+# Verificar variáveis obrigatórias
+required_vars=("DB_PASSWORD" "JWT_SECRET" "REDIS_PASSWORD")
+for var in "${required_vars[@]}"; do
+    if [ -z "${!var}" ]; then
+        echo "❌ Variável de ambiente obrigatória não definida: $var"
+        exit 1
+    fi
+done
+
+# Verificar se arquivo .env.production existe
+if [ ! -f .env.production ]; then
+    echo "❌ Arquivo .env.production não encontrado"
+    echo "Crie o arquivo com as configurações de produção"
+    exit 1
+fi
+
+# Carregar variáveis de produção
+set -a
+source .env.production
+set +a
+
+# Fazer backup antes do deploy
+echo "💾 Fazendo backup do banco de dados..."
+docker-compose --profile backup run --rm backup || echo "⚠️  Backup falhou"
+
+# Parar versão anterior
+echo "🛑 Parando versão anterior..."
+docker-compose --profile production down
+
+# Construir nova versão
+echo "🔨 Construindo nova versão..."
+docker-compose --profile production build --no-cache
+
+# Executar migrações
+echo "📊 Executando migrações..."
+docker-compose --profile production run --rm app_prod npm run migrate
+
+# Iniciar serviços
+echo "🚀 Iniciando serviços de produção..."
+docker-compose --profile production up -d
+
+# Verificar saúde dos serviços
+echo "🔍 Verificando saúde dos serviços..."
+sleep 30
+
+# Testar health check
+if curl -f http://localhost/api/health; then
+    echo "✅ Deploy realizado com sucesso!"
+else
+    echo "❌ Deploy falhou - serviços não estão respondendo"
+    docker-compose --profile production logs app_prod
+    exit 1
+fi
+
+echo ""
+echo "🎉 Ambiente de produção iniciado com sucesso!"
+echo "📍 API disponível em: http://localhost"
+
+# Makefile - Comandos úteis para Docker
+.PHONY: help dev prod build test clean backup logs
+
+help: ## Mostrar ajuda
+	@echo "Comandos disponíveis:"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+
+dev: ## Iniciar ambiente de desenvolvimento
+	@chmod +x scripts/docker-dev.sh
+	@./scripts/docker-dev.sh
+
+prod: ## Iniciar ambiente de produção
+	@chmod +x scripts/docker-prod.sh
+	@./scripts/docker-prod.sh
+
+build: ## Construir imagens Docker
+	@docker-compose build
+
+test: ## Executar testes
+	@docker-compose --profile development run --rm app_dev npm test
+
+clean: ## Limpar containers e volumes
+	@docker-compose --profile development down -v
+	@docker-compose --profile production down -v
+	@docker system prune -f
+
+backup: ## Fazer backup do banco
+	@docker-compose --profile backup run --rm backup
+
+logs: ## Mostrar logs da aplicação
+	@docker-compose --profile development logs -f app_dev
+
+logs-prod: ## Mostrar logs de produção
+	@docker-compose --profile production logs -f app_prod
+
+shell: ## Abrir shell na aplicação (dev)
+	@docker-compose --profile development exec app_dev sh
+
+db-shell: ## Abrir shell no PostgreSQL
+	@docker-compose --profile development exec postgres psql -U postgres -d matchit_development
