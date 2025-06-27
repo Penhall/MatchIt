@@ -1,13 +1,14 @@
-// server/services/analytics/scheduled-jobs.js
-
-const cron = require('node-cron');
-const { Pool } = require('pg');
-const EventEmitter = require('events');
-const AnalyticsEngine = require('./analytics-engine');
-const MetricsCalculator = require('./metrics-calculator');
-const ReportGenerator = require('./report-generator');
-const AnomalyDetector = require('./anomaly-detector');
-const { analyticsConfig } = require('../../config/analytics-config');
+// server/services/analytics/scheduled-jobs.js (ESM)
+import cron from 'node-cron';
+import pg from 'pg';
+const { Pool } = pg;
+import EventEmitter from 'events';
+import AnalyticsEngine from './analytics-engine.js';
+import MetricsCalculator from './metrics-calculator.js';
+import ReportGenerator from './report-generator.js';
+import AnomalyDetector from './anomaly-detector.js';
+import { analyticsConfig } from '../../config/analytics-config.js';
+import { pool } from '../../config/database.js'; // Importar pool diretamente
 
 /**
  * Scheduled Jobs - Sistema de automação e agendamento
@@ -17,7 +18,7 @@ class ScheduledJobs extends EventEmitter {
   constructor(config = {}) {
     super();
     
-    this.db = config.database || new Pool();
+    this.db = config.database || pool; // Usar pool importado diretamente
     
     // Inicializar serviços
     this.analyticsEngine = new AnalyticsEngine({ database: this.db });
@@ -938,5 +939,3 @@ class ScheduledJobs extends EventEmitter {
     }
   }
 }
-
-module.exports = ScheduledJobs;

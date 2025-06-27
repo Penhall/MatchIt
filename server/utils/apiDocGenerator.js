@@ -1,9 +1,13 @@
-// server/utils/apiDocGenerator.js - Gerador automático de documentação da API
-const fs = require('fs');
-const path = require('path');
+// server/utils/apiDocGenerator.js - Gerador automático de documentação da API (ESM)
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Estrutura da documentação da API
-const apiDocumentation = {
+export const apiDocumentation = {
   openapi: "3.0.0",
   info: {
     title: "MatchIt API",
@@ -197,9 +201,7 @@ const apiDocumentation = {
                 }
               }
             }
-          },
-          "400": { $ref: "#/components/responses/BadRequest" },
-          "409": { $ref: "#/components/responses/Conflict" }
+          }
         }
       }
     },
@@ -247,8 +249,7 @@ const apiDocumentation = {
                 }
               }
             }
-          },
-          "401": { $ref: "#/components/responses/Unauthorized" }
+          }
         }
       }
     },
@@ -282,8 +283,7 @@ const apiDocumentation = {
                 }
               }
             }
-          },
-          "401": { $ref: "#/components/responses/Unauthorized" }
+          }
         }
       },
       put: {
@@ -581,7 +581,7 @@ const apiDocumentation = {
 };
 
 // Função para gerar documentação HTML
-const generateHTMLDoc = () => {
+export const generateHTMLDoc = () => {
   const html = `
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -624,7 +624,7 @@ const generateHTMLDoc = () => {
 };
 
 // Função para salvar documentação em arquivos
-const saveDocumentation = () => {
+export const saveDocumentation = () => {
   const docsDir = path.join(__dirname, '../../docs/api');
   
   // Criar diretório se não existir
@@ -655,7 +655,7 @@ const saveDocumentation = () => {
 };
 
 // Função para gerar README da API
-const generateAPIReadme = () => {
+export const generateAPIReadme = () => {
   return `# MatchIt API Documentation
 
 ## Visão Geral
@@ -783,7 +783,7 @@ Para dúvidas ou suporte, entre em contato:
 };
 
 // Middleware para servir documentação
-const serveDocumentation = (req, res, next) => {
+export const serveDocumentation = (req, res, next) => {
   if (req.path === '/docs') {
     res.setHeader('Content-Type', 'text/html');
     return res.send(generateHTMLDoc());
@@ -795,12 +795,4 @@ const serveDocumentation = (req, res, next) => {
   }
   
   next();
-};
-
-module.exports = {
-  apiDocumentation,
-  generateHTMLDoc,
-  saveDocumentation,
-  generateAPIReadme,
-  serveDocumentation
 };

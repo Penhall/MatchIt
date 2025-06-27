@@ -1,10 +1,11 @@
-// server/middleware/securityMiddleware.js - Middleware avançado de segurança
-const rateLimit = require('express-rate-limit');
-const { body, validationResult } = require('express-validator');
-const crypto = require('crypto');
+// server/middleware/securityMiddleware.js - Middleware avançado de segurança (ESM)
+import rateLimit from 'express-rate-limit';
+import { body, validationResult } from 'express-validator';
+import crypto from 'crypto';
+import jwt from 'jsonwebtoken'; // Importar jwt no topo
 
 // Rate limiting configurável por endpoint
-const createRateLimit = (windowMs, max, message) => {
+export const createRateLimit = (windowMs, max, message) => {
   return rateLimit({
     windowMs,
     max,
@@ -23,32 +24,32 @@ const createRateLimit = (windowMs, max, message) => {
 };
 
 // Rate limits específicos
-const authLimiter = createRateLimit(
+export const authLimiter = createRateLimit(
   15 * 60 * 1000, // 15 minutos
   5, // 5 tentativas
   'Muitas tentativas de login. Tente novamente em 15 minutos.'
 );
 
-const tournamentLimiter = createRateLimit(
+export const tournamentLimiter = createRateLimit(
   60 * 1000, // 1 minuto
   10, // 10 torneios por minuto
   'Limite de torneios por minuto excedido.'
 );
 
-const uploadLimiter = createRateLimit(
+export const uploadLimiter = createRateLimit(
   60 * 60 * 1000, // 1 hora
   20, // 20 uploads por hora
   'Limite de uploads por hora excedido.'
 );
 
-const apiLimiter = createRateLimit(
+export const apiLimiter = createRateLimit(
   15 * 60 * 1000, // 15 minutos
   1000, // 1000 requests por IP
   'Limite de API excedido.'
 );
 
 // Validação de entrada sanitizada
-const sanitizeInput = (field, options = {}) => {
+export const sanitizeInput = (field, options = {}) => {
   const {
     minLength = 1,
     maxLength = 255,
@@ -90,7 +91,7 @@ const sanitizeInput = (field, options = {}) => {
 };
 
 // Validadores comuns
-const emailValidator = () => [
+export const emailValidator = () => [
   ...sanitizeInput('email', { maxLength: 100 }),
   body('email')
     .isEmail()
@@ -110,7 +111,7 @@ const emailValidator = () => [
     })
 ];
 
-const passwordValidator = () => [
+export const passwordValidator = () => [
   body('password')
     .isLength({ min: 6, max: 128 })
     .withMessage('Senha deve ter entre 6 e 128 caracteres'),
@@ -119,7 +120,7 @@ const passwordValidator = () => [
     .withMessage('Senha deve conter pelo menos: 1 letra minúscula, 1 maiúscula e 1 número')
 ];
 
-const nameValidator = () => sanitizeInput('name', {
+export const nameValidator = () => sanitizeInput('name', {
   minLength: 2,
   maxLength: 50,
   customValidator: (name) => {
@@ -131,7 +132,7 @@ const nameValidator = () => sanitizeInput('name', {
 });
 
 // Middleware de validação de resultado
-const handleValidationErrors = (req, res, next) => {
+export const handleValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
   
   if (!errors.isEmpty()) {
@@ -152,7 +153,7 @@ const handleValidationErrors = (req, res, next) => {
 };
 
 // Middleware de detecção de IP suspeito
-const suspiciousIPDetection = (req, res, next) => {
+export const suspiciousIPDetection = (req, res, next) => {
   const clientIP = req.ip || req.connection.remoteAddress;
   const userAgent = req.get('User-Agent') || '';
   
@@ -194,7 +195,7 @@ const suspiciousIPDetection = (req, res, next) => {
 };
 
 // Middleware de Content Security Policy
-const cspMiddleware = (req, res, next) => {
+export const cspMiddleware = (req, res, next) => {
   res.setHeader('Content-Security-Policy', [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline'",
@@ -211,7 +212,7 @@ const cspMiddleware = (req, res, next) => {
 };
 
 // Middleware de headers de segurança adicionais
-const securityHeaders = (req, res, next) => {
+export const securityHeaders = (req, res, next) => {
   // Prevenir clickjacking
   res.setHeader('X-Frame-Options', 'DENY');
   
@@ -236,7 +237,7 @@ const securityHeaders = (req, res, next) => {
 };
 
 // Middleware de logging de segurança
-const securityLogger = (req, res, next) => {
+export const securityLogger = (req, res, next) => {
   const startTime = Date.now();
   
   // Log original do Express
@@ -266,7 +267,7 @@ const securityLogger = (req, res, next) => {
 };
 
 // Middleware de verificação de token JWT avançado
-const advancedAuthMiddleware = (req, res, next) => {
+export const advancedAuthMiddleware = (req, res, next) => {
   const token = req.header('Authorization')?.replace('Bearer ', '');
   
   if (!token) {
@@ -277,7 +278,6 @@ const advancedAuthMiddleware = (req, res, next) => {
   }
   
   try {
-    const jwt = require('jsonwebtoken');
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
     // Verificar se token não foi emitido no futuro
@@ -309,7 +309,7 @@ const advancedAuthMiddleware = (req, res, next) => {
 };
 
 // Middleware de verificação de admin
-const adminMiddleware = (req, res, next) => {
+export const adminMiddleware = (req, res, next) => {
   if (!req.user?.isAdmin) {
     return res.status(403).json({
       success: false,
@@ -320,7 +320,7 @@ const adminMiddleware = (req, res, next) => {
 };
 
 // Middleware de CORS avançado
-const advancedCorsMiddleware = (req, res, next) => {
+export const advancedCorsMiddleware = (req, res, next) => {
   const allowedOrigins = [
     'http://localhost:3000',
     'http://localhost:8081',
@@ -347,7 +347,7 @@ const advancedCorsMiddleware = (req, res, next) => {
 };
 
 // Middleware de prevenção de ataques de timing
-const timingAttackPrevention = (req, res, next) => {
+export const timingAttackPrevention = (req, res, next) => {
   const startTime = process.hrtime();
   
   res.on('finish', () => {
@@ -361,32 +361,4 @@ const timingAttackPrevention = (req, res, next) => {
   });
   
   next();
-};
-
-module.exports = {
-  // Rate limiters
-  authLimiter,
-  tournamentLimiter,
-  uploadLimiter,
-  apiLimiter,
-  
-  // Validators
-  emailValidator,
-  passwordValidator,
-  nameValidator,
-  sanitizeInput,
-  handleValidationErrors,
-  
-  // Security middlewares
-  suspiciousIPDetection,
-  cspMiddleware,
-  securityHeaders,
-  securityLogger,
-  advancedAuthMiddleware,
-  adminMiddleware,
-  advancedCorsMiddleware,
-  timingAttackPrevention,
-  
-  // Utilities
-  createRateLimit
 };

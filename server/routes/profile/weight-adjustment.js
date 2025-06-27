@@ -1,11 +1,11 @@
-// server/routes/profile/weight-adjustment.js
-
-const express = require('express');
+// server/routes/profile/weight-adjustment.js (ESM)
+import express from 'express';
 const router = express.Router();
-const WeightAdjustmentService = require('../../services/recommendation/weight-adjustment-service');
-const FeedbackProcessor = require('../../services/recommendation/feedback-processor');
-const { authenticateToken } = require('../../middleware/auth');
-const { body, param, query, validationResult } = require('express-validator');
+import WeightAdjustmentService from '../../services/recommendation/weight-adjustment-service.js';
+import FeedbackProcessor from '../../services/recommendation/feedback-processor.js';
+import { authenticateToken } from '../../middleware/auth.js';
+import { body, param, query, validationResult } from 'express-validator';
+import { pool } from '../../config/database.js'; // Importar pool diretamente
 
 const weightAdjustmentService = new WeightAdjustmentService();
 const feedbackProcessor = new FeedbackProcessor();
@@ -171,8 +171,7 @@ router.put('/config',
   validateRequest,
   async (req, res) => {
     try {
-      const { Pool } = require('pg');
-      const db = new Pool();
+      const db = pool; // Usar o pool importado diretamente
       
       const updateFields = [];
       const updateValues = [];
@@ -297,8 +296,7 @@ router.get('/analytics',
       const period = req.query.period || 'daily';
       const days = parseInt(req.query.days) || 30;
       
-      const { Pool } = require('pg');
-      const db = new Pool();
+      const db = pool; // Usar o pool importado diretamente
       
       const query = `
         SELECT * FROM feedback_analytics 
@@ -418,8 +416,7 @@ router.post('/reset',
   authenticateToken,
   async (req, res) => {
     try {
-      const { Pool } = require('pg');
-      const db = new Pool();
+      const db = pool; // Usar o pool importado diretamente
       
       // Obter configuração atual
       const config = await weightAdjustmentService.getUserConfig(req.user.id);
@@ -475,8 +472,7 @@ router.get('/recommendations-effectiveness',
     try {
       const days = parseInt(req.query.days) || 7;
       
-      const { Pool } = require('pg');
-      const db = new Pool();
+      const db = pool; // Usar o pool importado diretamente
       
       const query = `
         SELECT 
@@ -519,4 +515,4 @@ router.get('/recommendations-effectiveness',
   }
 );
 
-module.exports = router;
+export default router;

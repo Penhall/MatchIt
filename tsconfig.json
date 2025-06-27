@@ -1,46 +1,24 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
-    "experimentalDecorators": true,
-    "useDefineForClassFields": false,
-    "module": "ESNext",
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "skipLibCheck": true,
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "isolatedModules": true,
-    "moduleDetection": "force",
-    "noEmit": true,
-    "allowJs": true,
-    "jsx": "react-jsx",
+    "target": "ES2022",
+    "module": "ES2022",
+    "outDir": "./dist",
+    "rootDir": "./server",
     "strict": true,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true,
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./src/*"],
-      "@context/*": ["./src/context/*"],
-      "@components/*": ["./src/components/*"],
-      "@services/*": ["./src/services/*"],
-      "@types/*": ["./src/types/*"],
-      "@utils/*": ["./src/utils/*"],
-      "@assets/*": ["./src/assets/*"],
-      "@db": ["./src/db"]
-    },
-    "typeRoots": ["./node_modules/@types", "./types"],
-    "resolveJsonModule": true
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "allowJs": true,
+    "checkJs": false // Desabilitar verificação de JS para evitar erros em arquivos JS puros
   },
   "include": [
-    "**/*.ts", 
-    "**/*.tsx", 
-    "**/*.js", 
-    "**/*.jsx"
+    "server/**/*.ts" // Incluir apenas arquivos .ts para compilação
   ],
   "exclude": [
     "node_modules",
     "dist",
-    "backup_*"
+    "server/**/*.js" // Excluir arquivos .js do diretório server para não serem tratados como TS
   ]
 }

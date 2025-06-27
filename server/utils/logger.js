@@ -1,8 +1,12 @@
-// server/utils/logger.js - Sistema avançado de logging
-const winston = require('winston');
-const DailyRotateFile = require('winston-daily-rotate-file');
-const path = require('path');
-const fs = require('fs');
+// server/utils/logger.js - Sistema avançado de logging (ESM)
+import winston from 'winston';
+import DailyRotateFile from 'winston-daily-rotate-file';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Criar diretório de logs se não existir
 const logsDir = path.join(__dirname, '../../logs');
@@ -86,7 +90,7 @@ const transports = [
 ];
 
 // Criar logger principal
-const logger = winston.createLogger({
+export const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
   format: logFormat,
   transports,
@@ -94,7 +98,7 @@ const logger = winston.createLogger({
 });
 
 // Logger específico para segurança
-const securityLogger = winston.createLogger({
+export const securityLogger = winston.createLogger({
   transports: [
     new winston.transports.Console({
       level: 'warn',
@@ -111,7 +115,7 @@ const securityLogger = winston.createLogger({
 });
 
 // Logger específico para analytics
-const analyticsLogger = winston.createLogger({
+export const analyticsLogger = winston.createLogger({
   transports: [
     new DailyRotateFile({
       filename: path.join(logsDir, 'analytics-%DATE%.log'),
@@ -124,7 +128,7 @@ const analyticsLogger = winston.createLogger({
 });
 
 // Funções de logging estruturado
-const logRequest = (req, res, responseTime) => {
+export const logRequest = (req, res, responseTime) => {
   const logData = {
     type: 'request',
     method: req.method,
@@ -144,7 +148,7 @@ const logRequest = (req, res, responseTime) => {
   }
 };
 
-const logError = (error, context = {}) => {
+export const logError = (error, context = {}) => {
   const logData = {
     type: 'error',
     message: error.message,
@@ -156,7 +160,7 @@ const logError = (error, context = {}) => {
   logger.error('Application Error', logData);
 };
 
-const logSecurity = (event, details = {}) => {
+export const logSecurity = (event, details = {}) => {
   const logData = {
     type: 'security',
     event,
@@ -167,7 +171,7 @@ const logSecurity = (event, details = {}) => {
   securityLogger.warn('Security Event', logData);
 };
 
-const logTournament = (event, data = {}) => {
+export const logTournament = (event, data = {}) => {
   const logData = {
     type: 'tournament',
     event,
@@ -178,7 +182,7 @@ const logTournament = (event, data = {}) => {
   analyticsLogger.info('Tournament Event', logData);
 };
 
-const logUserAction = (action, userId, data = {}) => {
+export const logUserAction = (action, userId, data = {}) => {
   const logData = {
     type: 'user_action',
     action,
@@ -190,7 +194,7 @@ const logUserAction = (action, userId, data = {}) => {
   analyticsLogger.info('User Action', logData);
 };
 
-const logPerformance = (operation, duration, metadata = {}) => {
+export const logPerformance = (operation, duration, metadata = {}) => {
   const logData = {
     type: 'performance',
     operation,
@@ -206,7 +210,7 @@ const logPerformance = (operation, duration, metadata = {}) => {
   }
 };
 
-const logDatabase = (query, duration, result = {}) => {
+export const logDatabase = (query, duration, result = {}) => {
   const logData = {
     type: 'database',
     query: query.replace(/\s+/g, ' ').trim(),
@@ -223,7 +227,7 @@ const logDatabase = (query, duration, result = {}) => {
 };
 
 // Middleware de logging de requisições
-const requestLogger = (req, res, next) => {
+export const requestLogger = (req, res, next) => {
   const startTime = Date.now();
 
   // Capturar dados originais
@@ -246,7 +250,7 @@ const requestLogger = (req, res, next) => {
 };
 
 // Middleware de captura de erros não tratados
-const errorLogger = (err, req, res, next) => {
+export const errorLogger = (err, req, res, next) => {
   logError(err, {
     method: req.method,
     path: req.path,
@@ -269,7 +273,7 @@ const errorLogger = (err, req, res, next) => {
 };
 
 // Sistema de métricas em tempo real
-class MetricsCollector {
+export class MetricsCollector {
   constructor() {
     this.metrics = {
       requests: {
@@ -379,7 +383,7 @@ class MetricsCollector {
 }
 
 // Instância global do coletor de métricas
-const metricsCollector = new MetricsCollector();
+export const metricsCollector = new MetricsCollector();
 
 // Agendar log de métricas periódico
 setInterval(() => {
@@ -388,7 +392,7 @@ setInterval(() => {
 }, 5 * 60 * 1000); // A cada 5 minutos
 
 // Sistema de alertas
-class AlertSystem {
+export class AlertSystem {
   constructor() {
     this.alerts = [];
     this.thresholds = {
@@ -464,26 +468,9 @@ class AlertSystem {
   }
 }
 
-const alertSystem = new AlertSystem();
+export const alertSystem = new AlertSystem();
 
 // Verificar alertas a cada minuto
 setInterval(() => {
   alertSystem.checkAlerts();
 }, 60 * 1000);
-
-module.exports = {
-  logger,
-  securityLogger,
-  analyticsLogger,
-  logRequest,
-  logError,
-  logSecurity,
-  logTournament,
-  logUserAction,
-  logPerformance,
-  logDatabase,
-  requestLogger,
-  errorLogger,
-  metricsCollector,
-  alertSystem
-};

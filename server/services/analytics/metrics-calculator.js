@@ -1,6 +1,6 @@
-// server/services/analytics/metrics-calculator.js
-
-const { Pool } = require('pg');
+// server/services/analytics/metrics-calculator.js (ESM)
+import pg from 'pg';
+const { Pool } = pg;
 
 /**
  * Metrics Calculator - Responsável por todos os cálculos de KPIs e métricas
@@ -419,7 +419,8 @@ class MetricsCalculator {
         COUNT(DISTINCT CASE WHEN ua.activity_week = uc.cohort_week THEN ua.user_id END) as week_0,
         COUNT(DISTINCT CASE WHEN ua.activity_week = uc.cohort_week + INTERVAL '1 week' THEN ua.user_id END) as week_1,
         COUNT(DISTINCT CASE WHEN ua.activity_week = uc.cohort_week + INTERVAL '2 weeks' THEN ua.user_id END) as week_2,
-        COUNT(DISTINCT CASE WHEN ua.activity_week = uc.cohort_week + INTERVAL '4 weeks' THEN ua.user_id END) as week_4
+        COUNT(DISTINCT CASE WHEN ua.activity_week = uc.cohort_week + INTERVAL '4 weeks' THEN ua.user_id END) as week_4,
+        COUNT(DISTINCT CASE WHEN ua.activity_week = uc.cohort_week + INTERVAL '8 weeks' THEN ua.user_id END) as week_8
       FROM user_cohorts uc
       LEFT JOIN user_activity ua ON uc.user_id = ua.user_id
       GROUP BY uc.cohort_week
@@ -436,7 +437,8 @@ class MetricsCalculator {
         week0: 100,
         week1: this.calculateRetentionRate(row.week_1, row.cohort_size),
         week2: this.calculateRetentionRate(row.week_2, row.cohort_size),
-        week4: this.calculateRetentionRate(row.week_4, row.cohort_size)
+        week4: this.calculateRetentionRate(row.week_4, row.cohort_size),
+        week8: this.calculateRetentionRate(row.week_8, row.cohort_size)
       }
     }));
   }
@@ -548,5 +550,3 @@ class MetricsCalculator {
     };
   }
 }
-
-module.exports = MetricsCalculator;

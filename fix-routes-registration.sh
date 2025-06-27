@@ -1,3 +1,13 @@
+#!/bin/bash
+# fix-routes-registration.sh - Correção do registro de rotas
+
+echo "🔧 CORRIGINDO REGISTRO DE ROTAS..."
+
+# Backup do app.js atual
+cp server/app.js "server/app.js.backup.$(date +%Y%m%d_%H%M%S)"
+
+# Criar novo app.js com registro de rotas corrigido
+cat > server/app.js << 'EOF'
 // server/app.js - Servidor principal MatchIt (ES Modules) - CORRIGIDO
 import express from 'express';
 import cors from 'cors';
@@ -152,3 +162,36 @@ app.listen(PORT, () => {
 });
 
 export default app;
+EOF
+
+echo "✅ server/app.js corrigido"
+
+# Verificar se os arquivos de rotas existem
+if [ ! -f "server/routes/profile.js" ]; then
+    echo "❌ server/routes/profile.js não encontrado!"
+    exit 1
+fi
+
+if [ ! -f "server/routes/tournament.js" ]; then
+    echo "❌ server/routes/tournament.js não encontrado!"
+    exit 1
+fi
+
+echo ""
+echo "================================================================"
+echo " CORREÇÃO DE ROTAS CONCLUÍDA"
+echo "================================================================"
+echo ""
+echo "✅ Problema corrigido:"
+echo "   • Imports dinâmicos substituídos por imports estáticos"
+echo "   • Rotas registradas diretamente no app"
+echo "   • Logs melhorados para debug"
+echo ""
+echo "🚀 Para testar:"
+echo "   1. Pare o servidor atual (Ctrl+C)"
+echo "   2. Execute: npm run server"
+echo "   3. Teste: curl http://localhost:3000/api/test"
+echo "   4. Teste: curl http://localhost:3000/api/tournament/categories"
+echo ""
+echo "💡 Agora as rotas devem funcionar corretamente!"
+echo ""

@@ -1,33 +1,14 @@
-// server/routes/auth.js - Sistema de Autenticação Básico para MatchIt
-const express = require('express');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const { body, validationResult } = require('express-validator');
+// server/routes/auth.js - Sistema de Autenticação Básico para MatchIt (ESM)
+import express from 'express';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import { body, validationResult } from 'express-validator';
+import { pool } from '../config/database.js'; // Importar pool diretamente
 
 const router = express.Router();
 
 // Simular conexão com banco (substituir pela sua conexão real)
-let db;
-try {
-  const { pool } = require('../config/database');
-  db = pool;
-} catch (error) {
-  console.warn('⚠️ Database pool não encontrado, usando fallback');
-  // Fallback simples para teste
-  db = {
-    query: async (text, params) => {
-      console.log('🔧 Simulando query:', text, params);
-      if (text.includes('SELECT') && text.includes('email')) {
-        // Simular usuário existente para teste
-        return { rows: [{ id: 1, email: 'test@test.com', password: '$2b$10$...' }] };
-      }
-      if (text.includes('INSERT')) {
-        return { rows: [{ id: Date.now(), email: params[1] }] };
-      }
-      return { rows: [] };
-    }
-  };
-}
+let db = pool; // Usar o pool importado diretamente
 
 // Middleware de validação
 const validateRegister = [
@@ -254,4 +235,4 @@ router.post('/logout', (req, res) => {
 });
 
 // IMPORTANTE: Exportar o router corretamente
-module.exports = router;
+export default router;

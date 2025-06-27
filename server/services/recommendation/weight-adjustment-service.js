@@ -1,7 +1,9 @@
-// server/services/recommendation/weight-adjustment-service.js
+// server/services/recommendation/weight-adjustment-service.js (ESM)
+import pg from 'pg';
+const { Pool } = pg;
+import { pool } from '../../config/database.js'; // Importar pool diretamente
 
-const { Pool } = require('pg');
-const db = new Pool();
+const db = pool; // Usar o pool importado diretamente
 
 class WeightAdjustmentService {
   constructor() {
@@ -529,5 +531,3 @@ class WeightAdjustmentService {
     return result.rows[0];
   }
 }
-
-module.exports = WeightAdjustmentService;

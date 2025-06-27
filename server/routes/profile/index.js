@@ -1,12 +1,15 @@
-// server/routes/profile/index.js
-
-const express = require('express');
+// server/routes/profile/index.js (ESM)
+import express from 'express';
 const router = express.Router();
+import pg from 'pg';
+const { Pool } = pg;
 
 // Importar rotas específicas
-const stylePreferencesRoutes = require('./style-preferences');
-const emotionalProfileRoutes = require('./emotional-profile');
-const weightAdjustmentRoutes = require('./weight-adjustment');
+import stylePreferencesRoutes from './style-preferences.js';
+import emotionalProfileRoutes from './emotional-profile.js';
+import weightAdjustmentRoutes from './weight-adjustment.js';
+import { authenticateToken } from '../../middleware/auth.js';
+import { pool } from '../../config/database.js'; // Importar pool diretamente
 
 // Registrar rotas com seus respectivos caminhos
 router.use('/style-preferences', stylePreferencesRoutes);
@@ -22,8 +25,7 @@ router.use((req, res, next) => {
 // Rota de status geral do sistema de perfil
 router.get('/status', async (req, res) => {
   try {
-    const { Pool } = require('pg');
-    const db = new Pool();
+    const db = pool; // Usar o pool importado diretamente
     
     // Verificar status de todas as tabelas relacionadas ao perfil
     const statusChecks = await Promise.allSettled([
@@ -75,10 +77,9 @@ router.get('/status', async (req, res) => {
 });
 
 // Rota para obter resumo completo do perfil do usuário
-router.get('/summary', require('../../middleware/auth').authenticateToken, async (req, res) => {
+router.get('/summary', authenticateToken, async (req, res) => {
   try {
-    const { Pool } = require('pg');
-    const db = new Pool();
+    const db = pool; // Usar o pool importado diretamente
     const userId = req.user.id;
 
     // Buscar dados de todos os módulos do perfil
@@ -179,10 +180,9 @@ function calculateProfileCompletion(modules) {
 }
 
 // Rota para reset completo do perfil (cuidado!)
-router.post('/reset', require('../../middleware/auth').authenticateToken, async (req, res) => {
+router.post('/reset', authenticateToken, async (req, res) => {
   try {
-    const { Pool } = require('pg');
-    const db = new Pool();
+    const db = pool; // Usar o pool importado diretamente
     const userId = req.user.id;
     const { confirmReset } = req.body;
 
@@ -263,4 +263,4 @@ router.use((error, req, res, next) => {
   });
 });
 
-module.exports = router;
+export default router;

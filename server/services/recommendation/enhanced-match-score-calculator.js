@@ -21,7 +21,7 @@ export class EnhancedMatchScoreCalculator {
   // PESOS DO ALGORITMO HÍBRIDO (FASE 1)
   // ==============================================
 
-  static readonly DEFAULT_WEIGHTS = {
+  static DEFAULT_WEIGHTS = { // Removido 'readonly'
     // Pesos atualizados com dimensão emocional
     styleCompatibility: 0.20,      // 20% - Compatibilidade de estilo (reduzido)
     emotionalCompatibility: 0.25,  // 25% - Compatibilidade emocional (NOVO)
@@ -555,13 +555,13 @@ export class EnhancedMatchScoreCalculator {
   calculateDistance(lat1, lng1, lat2, lng2) {
     const R = 6371; // Raio da Terra em km
     const dLat = this.toRadians(lat2 - lat1);
-    const dLng = this.toRadians(lng2 - lng1);
+    const dLon = this.toRadians(lng2 - lng1);
     
-    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
               Math.cos(this.toRadians(lat1)) * Math.cos(this.toRadians(lat2)) *
-              Math.sin(dLng / 2) * Math.sin(dLng / 2);
+              Math.sin(dLon/2) * Math.sin(dLon/2);
     
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     return R * c;
   }
 

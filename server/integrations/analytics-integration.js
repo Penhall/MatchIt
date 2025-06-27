@@ -1,13 +1,21 @@
-// server/integrations/analytics-integration.js
+// server/integrations/analytics-integration.js (ESM)
+import express from 'express';
+import pg from 'pg';
+const { Pool } = pg;
+import fs from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const express = require('express');
-const { Pool } = require('pg');
-const AnalyticsEngine = require('../services/analytics/analytics-engine');
-const MetricsCalculator = require('../services/analytics/metrics-calculator');
-const ReportGenerator = require('../services/analytics/report-generator');
-const AnomalyDetector = require('../services/analytics/anomaly-detector');
-const ScheduledJobs = require('../services/analytics/scheduled-jobs');
-const { analyticsConfig, validateConfig } = require('../config/analytics-config');
+import AnalyticsEngine from '../services/analytics/analytics-engine.js';
+import MetricsCalculator from '../services/analytics/metrics-calculator.js';
+import ReportGenerator from '../services/analytics/report-generator.js';
+import AnomalyDetector from '../services/analytics/anomaly-detector.js';
+import ScheduledJobs from '../services/analytics/scheduled-jobs.js';
+import { analyticsConfig, validateConfig } from '../config/analytics-config.js';
+import analyticsRoutes from '../routes/analytics/index.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
  * Analytics Integration - Integração com sistema existente do MatchIt
@@ -103,10 +111,6 @@ class AnalyticsIntegration {
 
       if (tablesCheck.rows.length < 3) {
         console.log('[AnalyticsIntegration] Analytics tables not found, creating schema...');
-        
-        // Em produção, seria melhor usar migrations separadas
-        const fs = require('fs').promises;
-        const path = require('path');
         
         try {
           const schemaSQL = await fs.readFile(
@@ -244,7 +248,6 @@ class AnalyticsIntegration {
     console.log('[AnalyticsIntegration] Setting up API routes...');
 
     // Importar e registrar rotas de analytics
-    const analyticsRoutes = require('../routes/analytics');
     this.app.use('/api/analytics', analyticsRoutes);
 
     // Adicionar endpoint de status da integração
@@ -608,14 +611,14 @@ class AnalyticsIntegration {
 /**
  * Factory function para facilitar integração
  */
-function createAnalyticsIntegration(app, database = null) {
+export function createAnalyticsIntegration(app, database = null) {
   return new AnalyticsIntegration(app, database);
 }
 
 /**
  * Middleware para tracking automático de usuários
  */
-function createUserTrackingMiddleware(analyticsIntegration) {
+export function createUserTrackingMiddleware(analyticsIntegration) {
   return (req, res, next) => {
     // Adicionar método helper para tracking no request
     req.trackEvent = async (eventData) => {
@@ -633,7 +636,7 @@ function createUserTrackingMiddleware(analyticsIntegration) {
 /**
  * Decorator para tracking automático de funções
  */
-function trackFunction(analyticsIntegration, eventName) {
+export function trackFunction(analyticsIntegration, eventName) {
   return function(target, propertyName, descriptor) {
     const method = descriptor.value;
 
@@ -669,9 +672,4 @@ function trackFunction(analyticsIntegration, eventName) {
   };
 }
 
-module.exports = {
-  AnalyticsIntegration,
-  createAnalyticsIntegration,
-  createUserTrackingMiddleware,
-  trackFunction
-};
+export { AnalyticsIntegration };

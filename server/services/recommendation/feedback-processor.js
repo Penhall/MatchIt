@@ -1,10 +1,11 @@
-// server/services/recommendation/feedback-processor.js
+// server/services/recommendation/feedback-processor.js (ESM)
+import pg from 'pg';
+const { Pool } = pg;
+import { v4 as uuidv4 } from 'uuid';
+import WeightAdjustmentService from './weight-adjustment-service.js';
+import { pool } from '../../config/database.js'; // Importar pool diretamente
 
-const { Pool } = require('pg');
-const { v4: uuidv4 } = require('uuid');
-const WeightAdjustmentService = require('./weight-adjustment-service');
-
-const db = new Pool();
+const db = pool; // Usar o pool importado diretamente
 
 class FeedbackProcessor {
   constructor() {
@@ -514,5 +515,3 @@ class FeedbackProcessor {
     // Implementar atualização de métricas de aprendizado
   }
 }
-
-module.exports = FeedbackProcessor;

@@ -177,7 +177,7 @@ export class SubscriptionService {
 
   async updateUserVipStatus(client, userId, isVip) {
     // Atualizar status VIP no style_data
-    const currentProfile = await client.query(
+    const currentProfile = await pool.query( // Usar pool diretamente
       'SELECT style_data FROM user_profiles WHERE user_id = $1',
       [userId]
     );
@@ -189,7 +189,7 @@ export class SubscriptionService {
     
     styleData.is_vip = isVip;
     
-    await client.query(
+    await pool.query( // Usar pool diretamente
       'UPDATE user_profiles SET style_data = $1 WHERE user_id = $2',
       [JSON.stringify(styleData), userId]
     );

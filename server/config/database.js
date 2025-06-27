@@ -1,5 +1,6 @@
-// server/config/database.js - Configuração do PostgreSQL
-const { Pool } = require('pg');
+// server/config/database.js - Configuração do PostgreSQL (ESM)
+import pg from 'pg';
+const { Pool } = pg;
 
 // Configurações do banco de dados
 const dbConfig = {
@@ -22,7 +23,7 @@ console.log('🗄️ Configuração do banco:', {
 });
 
 // Criar pool de conexões
-const pool = new Pool(dbConfig);
+export const pool = new Pool(dbConfig); // Exportar pool diretamente
 
 // Event listeners para o pool
 pool.on('connect', () => {
@@ -38,7 +39,7 @@ pool.on('remove', () => {
 });
 
 // Função para testar conexão
-const testConnection = async () => {
+export const testConnection = async () => {
   try {
     const client = await pool.connect();
     const result = await client.query('SELECT NOW()');
@@ -55,7 +56,7 @@ const testConnection = async () => {
 };
 
 // Função para executar queries com log
-const query = async (text, params) => {
+export const query = async (text, params) => {
   const start = Date.now();
   try {
     const result = await pool.query(text, params);
@@ -81,7 +82,7 @@ const query = async (text, params) => {
 };
 
 // Função para executar transações
-const transaction = async (callback) => {
+export const transaction = async (callback) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -97,7 +98,7 @@ const transaction = async (callback) => {
 };
 
 // Função para verificar se tabelas existem
-const checkTables = async () => {
+export const checkTables = async () => {
   try {
     const result = await query(`
       SELECT table_name 
@@ -129,7 +130,7 @@ const checkTables = async () => {
 };
 
 // Função para criar tabela de usuários básica se não existir
-const ensureUsersTable = async () => {
+export const ensureUsersTable = async () => {
   try {
     await query(`
       CREATE TABLE IF NOT EXISTS users (
@@ -156,7 +157,7 @@ const ensureUsersTable = async () => {
 };
 
 // Inicialização automática
-const init = async () => {
+export const init = async () => {
   console.log('🔄 Inicializando conexão com banco de dados...');
   
   const connected = await testConnection();
@@ -168,9 +169,8 @@ const init = async () => {
   return connected;
 };
 
-// Exportar funcionalidades
-module.exports = {
-  pool,
+// Exportar funcionalidades (remover pool da exportação padrão)
+export default {
   query,
   transaction,
   testConnection,

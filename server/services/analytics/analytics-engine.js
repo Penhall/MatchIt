@@ -1,9 +1,9 @@
-// server/services/analytics/analytics-engine.js
-
-const { Pool } = require('pg');
-const EventEmitter = require('events');
-const crypto = require('crypto');
-const { v4: uuidv4 } = require('uuid');
+// server/services/analytics/analytics-engine.js (ESM)
+import pg from 'pg';
+const { Pool } = pg;
+import EventEmitter from 'events';
+import crypto from 'crypto';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Analytics Engine - Processamento central de eventos e métricas
@@ -668,5 +668,3 @@ class AnalyticsEngine extends EventEmitter {
     }
   }
 }
-
-module.exports = AnalyticsEngine;

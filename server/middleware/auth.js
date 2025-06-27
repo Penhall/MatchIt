@@ -1,10 +1,10 @@
-// server/middleware/auth.js - Middleware de Autenticação JWT
-const jwt = require('jsonwebtoken');
+// server/middleware/auth.js - Middleware de Autenticação JWT (ESM)
+import jwt from 'jsonwebtoken';
 
 /**
  * Middleware para verificar token JWT
  */
-const authenticateToken = (req, res, next) => {
+export const authenticateToken = (req, res, next) => {
   // Obter token do header Authorization
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
@@ -40,7 +40,7 @@ const authenticateToken = (req, res, next) => {
  * Middleware para autenticação opcional
  * (não falha se não houver token, mas adiciona user se houver)
  */
-const optionalAuth = (req, res, next) => {
+export const optionalAuth = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
@@ -64,7 +64,7 @@ const optionalAuth = (req, res, next) => {
 /**
  * Middleware para verificar se usuário é admin
  */
-const requireAdmin = async (req, res, next) => {
+export const requireAdmin = async (req, res, next) => {
   try {
     if (!req.user) {
       return res.status(401).json({
@@ -98,7 +98,7 @@ const requireAdmin = async (req, res, next) => {
 /**
  * Middleware para rate limiting por usuário
  */
-const userRateLimit = (maxRequests = 100, windowMs = 15 * 60 * 1000) => {
+export const userRateLimit = (maxRequests = 100, windowMs = 15 * 60 * 1000) => {
   const requests = new Map();
 
   return (req, res, next) => {
@@ -132,19 +132,11 @@ const userRateLimit = (maxRequests = 100, windowMs = 15 * 60 * 1000) => {
 /**
  * Middleware para log de ações do usuário
  */
-const logUserAction = (action) => {
+export const logUserAction = (action) => {
   return (req, res, next) => {
     if (req.user) {
       console.log(`👤 User ${req.user.userId} - ${action} - ${req.method} ${req.path}`);
     }
     next();
   };
-};
-
-module.exports = {
-  authenticateToken,
-  optionalAuth,
-  requireAdmin,
-  userRateLimit,
-  logUserAction
 };

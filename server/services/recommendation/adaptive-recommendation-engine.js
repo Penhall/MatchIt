@@ -1,11 +1,12 @@
-// server/services/recommendation/adaptive-recommendation-engine.js
+// server/services/recommendation/adaptive-recommendation-engine.js (ESM)
+import pg from 'pg';
+const { Pool } = pg;
+import WeightAdjustmentService from './weight-adjustment-service.js';
+import FeedbackProcessor from './feedback-processor.js';
+import EnhancedMatchScoreCalculator from './enhanced-match-score-calculator.js';
+import { pool } from '../../config/database.js'; // Importar pool diretamente
 
-const { Pool } = require('pg');
-const WeightAdjustmentService = require('./weight-adjustment-service');
-const FeedbackProcessor = require('./feedback-processor');
-const EnhancedMatchScoreCalculator = require('./enhanced-match-score-calculator');
-
-const db = new Pool();
+const db = pool; // Usar o pool importado diretamente
 
 class AdaptiveRecommendationEngine {
   constructor() {
@@ -221,8 +222,8 @@ class AdaptiveRecommendationEngine {
   async calculateMoodAdjustment(userId) {
     try {
       const query = `
-        SELECT current_state 
-        FROM emotional_profiles 
+        SELECT emotional_profile 
+        FROM user_profiles 
         WHERE user_id = $1 
         ORDER BY updated_at DESC 
         LIMIT 1
@@ -230,41 +231,41 @@ class AdaptiveRecommendationEngine {
       
       const result = await db.query(query, [userId]);
       
-      if (result.rows.length === 0) {
+      if (result.rows.length === 0 || !result.rows[0].emotional_profile) {
         return { hasData: false, weights: {} };
       }
 
-      const mood = result.rows[0].current_state;
+      const mood = result.rows[0].emotional_profile.currentMoodProfile;
       const adjustment = {};
 
       // Ajustar pesos baseado no estado emocional
-      if (mood.happiness > 0.7) {
+      if (mood.currentMood === 'joy' || mood.currentMood === 'excitement') {
         // Humor positivo - mais aberto a variedade
         adjustment.humor = 0.15;
         adjustment.creativity = 0.1;
         adjustment.values = -0.05;
-      } else if (mood.happiness < 0.3) {
+      } else if (mood.currentMood === 'melancholy') {
         // Humor baixo - focar em compatibilidade emocional
         adjustment.emotionalIntelligence = 0.2;
         adjustment.values = 0.1;
         adjustment.appearance = -0.1;
       }
 
-      if (mood.energy > 0.7) {
+      if (mood.energyLevel > 70) {
         // Alta energia - mais interesse em atividades
         adjustment.lifestyle = 0.1;
         adjustment.interests = 0.1;
-      } else if (mood.energy < 0.3) {
+      } else if (mood.energyLevel < 30) {
         // Baixa energia - preferir compatibilidade tranquila
         adjustment.communication = 0.1;
         adjustment.personality = 0.1;
       }
 
-      if (mood.social > 0.7) {
+      if (mood.socialDesire > 70) {
         // Sociável - focar em comunicação
         adjustment.communication = 0.15;
         adjustment.personality = 0.1;
-      } else if (mood.social < 0.3) {
+      } else if (mood.socialDesire < 30) {
         // Menos sociável - focar em compatibilidade básica
         adjustment.values = 0.1;
         adjustment.goals = 0.1;
@@ -435,7 +436,7 @@ class AdaptiveRecommendationEngine {
         WHERE timestamp > NOW() - INTERVAL '1 hour'
       `;
       
-      const result = await db.query(query);
+      const result = await db.query(query, [userId]);
       const activeUsers = result.rows;
 
       for (const user of activeUsers) {
@@ -644,5 +645,3 @@ class AdaptiveRecommendationEngine {
     // Implementar salvamento de tendências
   }
 }
-
-module.exports = AdaptiveRecommendationEngine;

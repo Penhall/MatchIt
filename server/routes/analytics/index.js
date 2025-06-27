@@ -1,11 +1,10 @@
-// server/routes/analytics/index.js
-
-const express = require('express');
+// server/routes/analytics/index.js (ESM)
+import express from 'express';
 const router = express.Router();
-const { body, query, param, validationResult } = require('express-validator');
-const AnalyticsEngine = require('../../services/analytics/analytics-engine');
-const MetricsCalculator = require('../../services/analytics/metrics-calculator');
-const { authenticateToken, requireRole } = require('../../middleware/auth');
+import { body, query, param, validationResult } from 'express-validator';
+import AnalyticsEngine from '../../services/analytics/analytics-engine.js';
+import MetricsCalculator from '../../services/analytics/metrics-calculator.js';
+import { authenticateToken, requireAdmin } from '../../middleware/auth.js'; // Usando requireAdmin como exemplo de role
 
 // Inicializar serviços
 const analyticsEngine = new AnalyticsEngine();
@@ -183,7 +182,7 @@ router.get('/kpis',
  * Obtém métricas de negócio detalhadas
  */
 router.get('/metrics/business',
-  requireRole(['admin', 'manager']),
+  requireAdmin, // Usando requireAdmin como exemplo de role
   [
     query('date').optional().isISO8601().withMessage('Invalid date format'),
     query('period').optional().isIn(['daily', 'weekly', 'monthly']).withMessage('Invalid period')
@@ -225,7 +224,7 @@ router.get('/metrics/business',
  * Obtém métricas técnicas
  */
 router.get('/metrics/technical',
-  requireRole(['admin', 'developer']),
+  requireAdmin, // Usando requireAdmin como exemplo de role
   [
     query('date').optional().isISO8601().withMessage('Invalid date format'),
     query('period').optional().isIn(['daily', 'weekly', 'monthly']).withMessage('Invalid period')
@@ -267,7 +266,7 @@ router.get('/metrics/technical',
  * Obtém métricas de produto
  */
 router.get('/metrics/product',
-  requireRole(['admin', 'manager', 'product']),
+  requireAdmin, // Usando requireAdmin como exemplo de role
   [
     query('date').optional().isISO8601().withMessage('Invalid date format'),
     query('period').optional().isIn(['daily', 'weekly', 'monthly']).withMessage('Invalid period')
@@ -313,7 +312,7 @@ router.get('/metrics/product',
  * Dashboard executivo com KPIs principais
  */
 router.get('/dashboard/executive',
-  requireRole(['admin', 'manager', 'executive']),
+  requireAdmin, // Usando requireAdmin como exemplo de role
   [
     query('timeRange').optional().isIn(['7d', '30d', '90d']).withMessage('Invalid time range')
   ],
@@ -478,7 +477,7 @@ router.get('/dashboard/realtime',
  * Relatório resumido
  */
 router.get('/reports/summary',
-  requireRole(['admin', 'manager']),
+  requireAdmin, // Usando requireAdmin como exemplo de role
   [
     query('startDate').isISO8601().withMessage('Start date required'),
     query('endDate').isISO8601().withMessage('End date required'),
@@ -534,7 +533,7 @@ router.get('/reports/summary',
  * Status do sistema de analytics
  */
 router.get('/system/status',
-  requireRole(['admin', 'developer']),
+  requireAdmin, // Usando requireAdmin como exemplo de role
   async (req, res) => {
     try {
       const systemMetrics = analyticsEngine.getSystemMetrics();
@@ -565,7 +564,7 @@ router.get('/system/status',
  * Limpa dados antigos
  */
 router.post('/system/cleanup',
-  requireRole(['admin']),
+  requireAdmin, // Usando requireAdmin como exemplo de role
   async (req, res) => {
     try {
       const result = await analyticsEngine.cleanup();
@@ -592,7 +591,7 @@ router.post('/system/cleanup',
  * Força recálculo de métricas
  */
 router.post('/system/recalculate',
-  requireRole(['admin']),
+  requireAdmin, // Usando requireAdmin como exemplo de role
   [
     body('date').optional().isISO8601().withMessage('Invalid date format'),
     body('categories').optional().isArray().withMessage('Categories must be array')
@@ -642,4 +641,4 @@ router.use((error, req, res, next) => {
   });
 });
 
-module.exports = router;
+export default router;

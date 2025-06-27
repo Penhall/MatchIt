@@ -1,8 +1,9 @@
-// server/utils/monitoringDashboard.js - Sistema de monitoramento em tempo real
-const WebSocket = require('ws');
-const { EventEmitter } = require('events');
-const os = require('os');
-const { performance } = require('perf_hooks');
+// server/utils/monitoringDashboard.js - Sistema de monitoramento em tempo real (ESM)
+import WebSocket from 'ws';
+import { EventEmitter } from 'events';
+import os from 'os';
+import { performance } from 'perf_hooks';
+import fs from 'fs'; // Importar fs para statSync
 
 class MonitoringDashboard extends EventEmitter {
   constructor() {
@@ -114,7 +115,7 @@ class MonitoringDashboard extends EventEmitter {
     let totalTick = 0;
 
     cpus.forEach(cpu => {
-      for (type in cpu.times) {
+      for (const type in cpu.times) { // Alterado de 'type' para 'const type'
         totalTick += cpu.times[type];
       }
       totalIdle += cpu.times.idle;
@@ -125,7 +126,7 @@ class MonitoringDashboard extends EventEmitter {
 
   getDiskUsage() {
     try {
-      const stats = require('fs').statSync('.');
+      const stats = fs.statSync('.'); // Usar fs.statSync
       return {
         free: stats.free || 0,
         used: stats.used || 0,
@@ -783,7 +784,7 @@ class MonitoringDashboard extends EventEmitter {
             }
             
             const alertDiv = document.createElement('div');
-            alertDiv.className = 'alert alert-' + alert.severity;
+            alertDiv.className = 'alert-' + alert.severity;
             alertDiv.innerHTML = 
                 '<strong>' + new Date(alert.timestamp).toLocaleTimeString() + '</strong> - ' + 
                 alert.message;
@@ -864,4 +865,4 @@ class MonitoringDashboard extends EventEmitter {
   }
 }
 
-module.exports = MonitoringDashboard;
+export default MonitoringDashboard;

@@ -1,5 +1,5 @@
-// server/services/profileService.js - Serviço completo de perfil com integração ao banco
-const { pool } = require('../config/database');
+// server/services/profileService.js - Serviço completo de perfil com integração ao banco (ESM)
+import { pool } from '../config/database.js';
 
 class ProfileService {
     
@@ -383,4 +383,4 @@ class ProfileService {
     }
 }
 
-module.exports = new ProfileService();
+export default ProfileService;

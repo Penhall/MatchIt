@@ -1,7 +1,7 @@
-// server/services/analytics/anomaly-detector.js
-
-const { Pool } = require('pg');
-const EventEmitter = require('events');
+// server/services/analytics/anomaly-detector.js (ESM)
+import pg from 'pg';
+const { Pool } = pg;
+import EventEmitter from 'events';
 
 /**
  * Anomaly Detector - Sistema de detecção de anomalias
@@ -299,7 +299,7 @@ class AnomalyDetector extends EventEmitter {
       return {
         type: 'trend',
         isAnomaly,
-        confidence: isAnomaly ? Math.min(deviationPercentage / trendThreshold, 1) : 0,
+        confidence: isAnomaly ? Math.min(zScore / this.config.zScoreThreshold, 1) : 0, // Corrigido: usar zScore ou similar para confiança
         details: {
           movingAverage: movingAverage.toFixed(3),
           expectedValue: expectedValue.toFixed(3),
@@ -873,5 +873,3 @@ class AnomalyDetector extends EventEmitter {
     }
   }
 }
-
-module.exports = AnomalyDetector;

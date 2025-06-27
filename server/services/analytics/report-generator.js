@@ -1,10 +1,10 @@
-// server/services/analytics/report-generator.js
-
-const { Pool } = require('pg');
-const fs = require('fs').promises;
-const path = require('path');
-const nodemailer = require('nodemailer');
-const MetricsCalculator = require('./metrics-calculator');
+// server/services/analytics/report-generator.js (ESM)
+import pg from 'pg';
+const { Pool } = pg;
+import fs from 'fs/promises';
+import path from 'path';
+import nodemailer from 'nodemailer';
+import MetricsCalculator from './metrics-calculator.js';
 
 /**
  * Report Generator - Geração automática de relatórios
@@ -52,7 +52,7 @@ class ReportGenerator {
     }
 
     try {
-      this.emailTransporter = nodemailer.createTransporter({
+      this.emailTransporter = nodemailer.createTransport({
         host: this.config.emailHost,
         port: this.config.emailPort,
         secure: this.config.emailPort === 465,
@@ -457,7 +457,7 @@ class ReportGenerator {
   }
 
   /**
-   * Distribui relatório por email
+   * Distribuir relatório por email
    * @private
    */
   async distributeReport(report, recipients) {
@@ -626,4 +626,4 @@ class ReportGenerator {
   generateEmailAttachments() { return Promise.resolve([]); }
 }
 
-module.exports = ReportGenerator;
+export default ReportGenerator;
