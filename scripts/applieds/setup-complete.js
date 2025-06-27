@@ -1,7 +1,7 @@
 // scripts/setup-complete.js - Setup Automático Completo do MatchIt
-const fs = require('fs');
-const path = require('path');
-const { execSync } = require('child_process');
+import fs from 'fs';
+import path from 'path';
+import { execSync  } from 'child_process';
 
 // Cores para output no console
 const colors = {
@@ -156,7 +156,7 @@ const testDatabase = async () => {
     // Carregar variáveis de ambiente
     require('dotenv').config();
     
-    const { Client } = require('pg');
+    import { Client  } from 'pg';
     const client = new Client({
       host: process.env.DB_HOST || 'localhost',
       port: parseInt(process.env.DB_PORT) || 5432,
@@ -184,7 +184,7 @@ const createBasicTables = async () => {
   
   try {
     require('dotenv').config();
-    const { Client } = require('pg');
+    import { Client  } from 'pg';
     const client = new Client({
       host: process.env.DB_HOST || 'localhost',
       port: parseInt(process.env.DB_PORT) || 5432,
@@ -245,7 +245,7 @@ const testServer = () => {
     
     try {
       // Tentar iniciar servidor brevemente
-      const { spawn } = require('child_process');
+      import { spawn  } from 'child_process';
       const serverProcess = spawn('node', ['server/app.js'], {
         env: { ...process.env, PORT: '3000' }
       });
@@ -372,4 +372,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { main };
+export default { main };

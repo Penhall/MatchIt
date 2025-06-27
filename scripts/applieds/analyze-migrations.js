@@ -1,8 +1,8 @@
 // scripts/analyze-migrations.js - Analisador Completo de Migrações MatchIt
 require('dotenv').config();
-const fs = require('fs');
-const path = require('path');
-const { Client } = require('pg');
+import fs from 'fs';
+import path from 'path';
+import { Client  } from 'pg';
 
 const colors = {
   red: '\x1b[31m',
@@ -417,4 +417,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { main, analyzeMigrationFiles, checkExecutedMigrations };
+export default { main, analyzeMigrationFiles, checkExecutedMigrations };

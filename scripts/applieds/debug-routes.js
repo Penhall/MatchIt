@@ -1,6 +1,6 @@
 // scripts/debug-routes.js - Diagnóstico de Rotas
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
 console.log('🔍 DIAGNÓSTICO DE ROTAS - MATCHIT');
 console.log('================================\n');
@@ -115,7 +115,7 @@ if (workingRoutes === routeTests.length) {
   console.log('\n❌ PROBLEMAS ENCONTRADOS NOS ARQUIVOS DE ROTA');
   console.log('💡 Soluções sugeridas:');
   console.log('   1. Verifique se todos os arquivos foram criados corretamente');
-  console.log('   2. Certifique-se de que cada arquivo termina com: module.exports = router;');
+  console.log('   2. Certifique-se de que cada arquivo termina com: export default router;');
   console.log('   3. Verifique se não há erros de sintaxe nos arquivos');
   console.log('   4. Use os artifacts fornecidos para recriar os arquivos problemáticos\n');
 }

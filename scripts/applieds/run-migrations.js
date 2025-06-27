@@ -1,9 +1,9 @@
 // scripts/run-migrations.js - Executor de Migrações MatchIt
 require('dotenv').config();
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
-const { Client } = require('pg');
+import fs from 'fs';
+import path from 'path';
+import crypto from 'crypto';
+import { Client  } from 'pg';
 
 const colors = {
   red: '\x1b[31m',
@@ -285,7 +285,7 @@ const runPendingMigrations = async (client, migrations, executedMigrations) => {
         break;
       }
       
-      const readline = require('readline').createInterface({
+      import readline from 'readline';.createInterface({
         input: process.stdin,
         output: process.stdout
       });
@@ -484,7 +484,7 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { 
+export default { 
   main, 
   loadAvailableMigrations, 
   executeMigration, 

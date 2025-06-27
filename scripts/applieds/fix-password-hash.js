@@ -1,7 +1,7 @@
 // scripts/fix-password-hash.js - Correção do Problema de Hash da Senha
 require('dotenv').config();
-const { Client } = require('pg');
-const bcrypt = require('bcrypt');
+import { Client  } from 'pg';
+import bcrypt from 'bcrypt';
 
 const colors = {
   red: '\x1b[31m',

@@ -1,8 +1,8 @@
 // scripts/organize-migrations.js - Organizador de Migrações MatchIt
 require('dotenv').config();
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
+import fs from 'fs';
+import path from 'path';
+import crypto from 'crypto';
 
 const colors = {
   red: '\x1b[31m',
@@ -388,7 +388,7 @@ const main = async () => {
     
     // 5. Confirmar ação
     console.log('\n');
-    const readline = require('readline').createInterface({
+    import readline from 'readline';.createInterface({
       input: process.stdin,
       output: process.stdout
     });
@@ -441,4 +441,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { main, classifyMigration, createDirectoryStructure };
+export default { main, classifyMigration, createDirectoryStructure };

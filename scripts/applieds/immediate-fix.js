@@ -1,8 +1,8 @@
 // scripts/immediate-fix.js - Correção Imediata Completa do MatchIt
 require('dotenv').config();
-const fs = require('fs');
-const path = require('path');
-const { Client } = require('pg');
+import fs from 'fs';
+import path from 'path';
+import { Client  } from 'pg';
 
 const colors = {
   red: '\x1b[31m',
@@ -226,7 +226,7 @@ const fixBasicIssues = async (client, dbState) => {
     if (parseInt(userCheck.rows[0].count) === 0) {
       log('🔨 Criando usuário de teste...', 'yellow');
       
-      const bcrypt = require('bcrypt');
+      import bcrypt from 'bcrypt';
       const hashedPassword = await bcrypt.hash('test123', 10);
       
       await client.query(`
@@ -370,4 +370,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { main };
+export default { main };

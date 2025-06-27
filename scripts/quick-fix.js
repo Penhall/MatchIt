@@ -1,5 +1,5 @@
 // quick-fix.js - Correção rápida para Windows MatchIt
-const fs = require('fs');
+import fs from 'fs';
 
 console.log('🚀 CORREÇÃO RÁPIDA WINDOWS - MATCHIT\n');
 
