@@ -1,25 +1,40 @@
-// server/routes/tournament.js - Rotas de Torneio (ES Modules)
+// server/routes/tournament.js - Rotas do sistema de torneios
 import express from 'express';
-import tournamentEngine from '../services/TournamentEngine.js';
-import { optionalAuth } from '../middleware/authMiddleware.js';
+import { TournamentEngine } from '../services/TournamentEngine.js';
+import { pool } from '../config/database.js';
 
 const router = express.Router();
+const tournamentEngine = new TournamentEngine();
 
-console.log('🏆 Carregando rotas de torneio (ES Modules)...');
+// Middleware de auth simplificado
+const authMiddleware = (req, res, next) => {
+    req.user = { 
+        id: parseInt(req.headers['user-id']) || 1
+    };
+    next();
+};
 
-/**
- * GET /api/tournament/categories
- * Listar categorias disponíveis
- */
-router.get('/categories', (req, res) => {
+// GET /api/tournament/categories
+router.get('/categories', async (req, res) => {
     try {
-        const categories = tournamentEngine.getCategories();
+        const categoriesQuery = `
+            SELECT 
+                category,
+                COUNT(*) as total_images,
+                COUNT(CASE WHEN approved = true THEN 1 END) as approved_images
+            FROM tournament_images 
+            WHERE active = true
+            GROUP BY category
+            HAVING COUNT(CASE WHEN approved = true THEN 1 END) >= 8
+            ORDER BY category
+        `;
+        
+        const result = await pool.query(categoriesQuery);
         
         res.json({
             success: true,
-            data: categories,
-            count: categories.length,
-            timestamp: new Date().toISOString()
+            categories: result.rows,
+            total: result.rows.length
         });
         
     } catch (error) {
@@ -31,164 +46,110 @@ router.get('/categories', (req, res) => {
     }
 });
 
-/**
- * POST /api/tournament/start
- * Iniciar novo torneio
- */
-router.post('/start', optionalAuth, async (req, res) => {
+// POST /api/tournament/start
+router.post('/start', authMiddleware, async (req, res) => {
     try {
-        const userId = req.user?.userId || req.user?.id;
-        const { category } = req.body;
-        
-        console.log(`🎮 Iniciando torneio - userId: ${userId}, categoria: ${category}`);
+        const { category, tournamentSize = 16 } = req.body;
+        const userId = req.user.id;
         
         if (!category) {
             return res.status(400).json({
                 success: false,
-                error: 'Categoria é obrigatória',
-                code: 'MISSING_CATEGORY'
+                error: 'Categoria é obrigatória'
             });
         }
-        
-        const tournament = await tournamentEngine.startTournament(userId, category);
+
+        const tournamentData = await tournamentEngine.startTournament(userId, category, tournamentSize);
         
         res.json({
             success: true,
-            message: 'Torneio iniciado com sucesso',
-            data: tournament,
-            timestamp: new Date().toISOString()
+            data: tournamentData
         });
         
     } catch (error) {
         console.error('❌ Erro ao iniciar torneio:', error);
         res.status(500).json({
             success: false,
-            error: error.message || 'Erro ao iniciar torneio',
-            code: 'START_TOURNAMENT_ERROR'
+            error: error.message
         });
     }
 });
 
-/**
- * POST /api/tournament/choice
- * Processar escolha do usuário
- */
-router.post('/choice', optionalAuth, async (req, res) => {
+// GET /api/tournament/active/:category
+router.get('/active/:category', authMiddleware, async (req, res) => {
     try {
-        const { tournamentId, winnerId, loserId } = req.body;
+        const { category } = req.params;
+        const userId = req.user.id;
+
+        const activeSession = await tournamentEngine.getActiveSession(userId, category);
         
-        console.log(`⚔️ Processando escolha - torneio: ${tournamentId}`);
-        
-        if (!tournamentId || !winnerId || !loserId) {
-            return res.status(400).json({
-                success: false,
-                error: 'tournamentId, winnerId e loserId são obrigatórios',
-                code: 'MISSING_REQUIRED_FIELDS'
+        if (!activeSession) {
+            return res.json({
+                success: true,
+                data: null,
+                message: 'Nenhuma sessão ativa'
             });
         }
+
+        // Buscar confronto atual
+        let currentMatchup = null;
+        if (activeSession.current_matchup && activeSession.current_matchup.length === 2) {
+            const imageA = await tournamentEngine.getImageById(activeSession.current_matchup[0]);
+            const imageB = await tournamentEngine.getImageById(activeSession.current_matchup[1]);
+            
+            currentMatchup = {
+                sessionId: activeSession.id,
+                roundNumber: activeSession.current_round,
+                imageA,
+                imageB
+            };
+        }
+
+        res.json({
+            success: true,
+            data: {
+                sessionId: activeSession.id,
+                category: activeSession.category,
+                currentMatchup,
+                progress: tournamentEngine.calculateProgress(activeSession)
+            }
+        });
         
-        const result = await tournamentEngine.processChoice(tournamentId, winnerId, loserId);
+    } catch (error) {
+        console.error('❌ Erro ao buscar sessão ativa:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro ao buscar sessão ativa'
+        });
+    }
+});
+
+// POST /api/tournament/choice
+router.post('/choice', authMiddleware, async (req, res) => {
+    try {
+        const { sessionId, winnerId, responseTime } = req.body;
+
+        if (!sessionId || !winnerId) {
+            return res.status(400).json({
+                success: false,
+                error: 'sessionId e winnerId são obrigatórios'
+            });
+        }
+
+        const result = await tournamentEngine.processChoice(sessionId, winnerId, responseTime);
         
         res.json({
             success: true,
-            data: result,
-            timestamp: new Date().toISOString()
+            data: result
         });
         
     } catch (error) {
         console.error('❌ Erro ao processar escolha:', error);
         res.status(500).json({
             success: false,
-            error: error.message || 'Erro ao processar escolha',
-            code: 'PROCESS_CHOICE_ERROR'
+            error: error.message
         });
     }
 });
-
-/**
- * GET /api/tournament/:tournamentId
- * Buscar dados do torneio
- */
-router.get('/:tournamentId', optionalAuth, (req, res) => {
-    try {
-        const { tournamentId } = req.params;
-        const tournament = tournamentEngine.getTournament(tournamentId);
-        
-        if (!tournament) {
-            return res.status(404).json({
-                success: false,
-                error: 'Torneio não encontrado',
-                code: 'TOURNAMENT_NOT_FOUND'
-            });
-        }
-        
-        res.json({
-            success: true,
-            data: {
-                id: tournament.id,
-                category: tournament.category,
-                status: tournament.status,
-                round: tournament.currentRound,
-                currentMatch: tournament.matches[0] || null,
-                remainingMatches: tournament.matches.length,
-                results: tournament.results,
-                progress: {
-                    totalRounds: tournament.maxRounds,
-                    currentRound: tournament.currentRound,
-                    completedMatches: tournament.results.length
-                }
-            },
-            timestamp: new Date().toISOString()
-        });
-        
-    } catch (error) {
-        console.error('❌ Erro ao buscar torneio:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Erro ao buscar torneio',
-            code: 'GET_TOURNAMENT_ERROR'
-        });
-    }
-});
-
-/**
- * GET /api/tournament/:tournamentId/status
- * Status simplificado do torneio
- */
-router.get('/:tournamentId/status', (req, res) => {
-    try {
-        const { tournamentId } = req.params;
-        const tournament = tournamentEngine.getTournament(tournamentId);
-        
-        if (!tournament) {
-            return res.status(404).json({
-                success: false,
-                error: 'Torneio não encontrado'
-            });
-        }
-        
-        res.json({
-            success: true,
-            data: {
-                id: tournament.id,
-                status: tournament.status,
-                category: tournament.category,
-                round: tournament.currentRound,
-                hasCurrentMatch: !!tournament.matches[0],
-                isCompleted: tournament.status === 'completed',
-                winner: tournament.winner || null
-            }
-        });
-        
-    } catch (error) {
-        console.error('❌ Erro ao buscar status do torneio:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Erro ao buscar status do torneio'
-        });
-    }
-});
-
-console.log('✅ Rotas de torneio carregadas (ES Modules)');
 
 export default router;

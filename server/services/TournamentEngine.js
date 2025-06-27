@@ -1,291 +1,303 @@
-// server/services/TournamentEngine.js - Motor de Torneios MatchIt (ES Modules)
+// server/services/TournamentEngine.js - Motor Principal do Sistema de Torneios MatchIt
+import { pool } from '../config/database.js';
 
-class TournamentEngine {
+/**
+ * TournamentEngine - Motor principal para gerenciamento de torneios 2x2
+ */
+export class TournamentEngine {
+    
     constructor() {
-        this.activeTournaments = new Map();
+        this.activeSessions = new Map();
         this.categories = [
-            'colors', 'styles', 'accessories', 'shoes', 'patterns'
+            'cores', 'estilos', 'calcados', 'acessorios', 'texturas',
+            'roupas_casuais', 'roupas_formais', 'roupas_festa', 'joias', 'bolsas'
         ];
-        
-        console.log('🏆 TournamentEngine inicializado (ES Modules)');
     }
-    
-    /**
-     * Iniciar novo torneio para usuário
-     */
-    async startTournament(userId, category) {
+
+    async startTournament(userId, category, tournamentSize = 16) {
+        const client = await pool.connect();
+        
         try {
-            console.log(`🎮 Iniciando torneio para usuário ${userId}, categoria: ${category}`);
+            await client.query('BEGIN');
             
-            const tournamentId = `tournament_${userId}_${category}_${Date.now()}`;
-            
-            // Buscar imagens da categoria (mock por enquanto)
-            const images = await this.getImagesForCategory(category);
-            
-            if (images.length < 4) {
-                throw new Error(`Insuficientes imagens para categoria ${category}`);
+            // Verificar sessão ativa existente
+            const existingSession = await this.getActiveSession(userId, category);
+            if (existingSession) {
+                await client.query('ROLLBACK');
+                return {
+                    sessionId: existingSession.id,
+                    resumed: true,
+                    currentMatchup: existingSession.current_matchup ? {
+                        imageA: await this.getImageById(existingSession.current_matchup[0]),
+                        imageB: await this.getImageById(existingSession.current_matchup[1])
+                    } : null,
+                    progress: this.calculateProgress(existingSession),
+                    round: existingSession.current_round,
+                    status: existingSession.status
+                };
             }
+
+            // Buscar imagens aprovadas
+            const imagesQuery = `
+                SELECT id, image_url, thumbnail_url, title, description, tags
+                FROM tournament_images 
+                WHERE category = $1 AND active = true AND approved = true
+                ORDER BY RANDOM()
+                LIMIT $2
+            `;
+            const imagesResult = await client.query(imagesQuery, [category, tournamentSize]);
             
-            const tournament = {
-                id: tournamentId,
-                userId,
-                category,
-                images: images.slice(0, 16), // 16 imagens para torneio
-                currentRound: 1,
-                maxRounds: 4, // 16 -> 8 -> 4 -> 2 -> 1
-                matches: this.generateFirstRoundMatches(images.slice(0, 16)),
-                results: [],
-                status: 'active',
-                createdAt: new Date(),
-                updatedAt: new Date()
-            };
+            if (imagesResult.rows.length < tournamentSize) {
+                throw new Error(`Insuficientes imagens para categoria ${category}. Necessário: ${tournamentSize}, Disponível: ${imagesResult.rows.length}`);
+            }
+
+            // Criar sessão
+            const sessionId = `tournament_${userId}_${category}_${Date.now()}`;
+            const imageIds = imagesResult.rows.map(img => img.id);
+            const totalRounds = Math.log2(tournamentSize);
+
+            const insertSessionQuery = `
+                INSERT INTO tournament_sessions (
+                    id, user_id, category, status, current_round, total_rounds,
+                    remaining_images, eliminated_images, tournament_size,
+                    started_at, last_activity
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                RETURNING *
+            `;
             
-            this.activeTournaments.set(tournamentId, tournament);
-            
+            await client.query(insertSessionQuery, [
+                sessionId, userId, category, 'active', 1, totalRounds,
+                imageIds, [], tournamentSize, new Date(), new Date()
+            ]);
+
+            // Gerar primeiro confronto
+            const firstMatchup = await this.generateNextMatchup(client, sessionId);
+            await client.query('COMMIT');
+
+            console.log(`✅ Torneio iniciado: ${sessionId}`);
+
             return {
-                tournamentId,
-                category,
-                currentMatch: tournament.matches[0],
-                totalMatches: tournament.matches.length,
-                round: tournament.currentRound
+                sessionId: sessionId,
+                resumed: false,
+                currentMatchup: firstMatchup,
+                progress: { current: 0, total: tournamentSize - 1, percentage: 0 },
+                round: 1,
+                status: 'active'
             };
-            
+
         } catch (error) {
+            await client.query('ROLLBACK');
             console.error('❌ Erro ao iniciar torneio:', error);
-            throw error;
+            throw new Error(`Falha ao iniciar torneio: ${error.message}`);
+        } finally {
+            client.release();
         }
     }
-    
-    /**
-     * Processar escolha do usuário
-     */
-    async processChoice(tournamentId, winnerId, loserId) {
+
+    async generateNextMatchup(client, sessionId) {
         try {
-            const tournament = this.activeTournaments.get(tournamentId);
+            const sessionQuery = `SELECT * FROM tournament_sessions WHERE id = $1`;
+            const sessionResult = await client.query(sessionQuery, [sessionId]);
             
-            if (!tournament) {
-                throw new Error('Torneio não encontrado');
+            if (sessionResult.rows.length === 0) {
+                throw new Error('Sessão não encontrada');
             }
-            
-            console.log(`🔄 Processando escolha: vencedor ${winnerId}, perdedor ${loserId}`);
-            
-            // Registrar resultado
-            tournament.results.push({
-                winnerId,
-                loserId,
-                round: tournament.currentRound,
-                timestamp: new Date()
-            });
-            
-            // Remover match atual
-            tournament.matches.shift();
-            
-            // Verificar se round terminou
-            if (tournament.matches.length === 0) {
-                return await this.advanceToNextRound(tournament);
+
+            const session = sessionResult.rows[0];
+
+            if (session.remaining_images.length <= 1) {
+                return await this.finalizeTournament(client, sessionId);
             }
-            
-            // Retornar próximo match
+
+            const imageA_id = session.remaining_images[0];
+            const imageB_id = session.remaining_images[1];
+
+            const imageA = await this.getImageById(imageA_id);
+            const imageB = await this.getImageById(imageB_id);
+
+            const updateSessionQuery = `
+                UPDATE tournament_sessions 
+                SET current_matchup = $1, matchup_start_time = NOW(), last_activity = NOW()
+                WHERE id = $2
+            `;
+            await client.query(updateSessionQuery, [[imageA_id, imageB_id], sessionId]);
+
             return {
-                tournamentId,
-                currentMatch: tournament.matches[0],
-                remainingMatches: tournament.matches.length,
-                round: tournament.currentRound
+                sessionId,
+                roundNumber: session.current_round,
+                imageA,
+                imageB,
+                startTime: new Date()
             };
-            
+
         } catch (error) {
-            console.error('❌ Erro ao processar escolha:', error);
-            throw error;
+            console.error('❌ Erro ao gerar confronto:', error);
+            throw new Error(`Falha ao gerar confronto: ${error.message}`);
         }
     }
-    
-    /**
-     * Avançar para próximo round
-     */
-    async advanceToNextRound(tournament) {
-        console.log(`⬆️ Avançando para round ${tournament.currentRound + 1}`);
-        
-        // Buscar vencedores do round atual
-        const currentRoundWinners = tournament.results
-            .filter(r => r.round === tournament.currentRound)
-            .map(r => r.winnerId);
-        
-        if (currentRoundWinners.length === 1) {
-            // Torneio finalizado!
-            tournament.status = 'completed';
-            tournament.winner = currentRoundWinners[0];
-            tournament.completedAt = new Date();
+
+    async processChoice(sessionId, winnerId, responseTime = null) {
+        const client = await pool.connect();
+
+        try {
+            await client.query('BEGIN');
+
+            const sessionQuery = `SELECT * FROM tournament_sessions WHERE id = $1`;
+            const sessionResult = await client.query(sessionQuery, [sessionId]);
             
-            console.log(`🏆 Torneio concluído! Vencedor: ${tournament.winner}`);
+            if (sessionResult.rows.length === 0) {
+                throw new Error('Sessão não encontrada');
+            }
+
+            const session = sessionResult.rows[0];
+            const [imageA_id, imageB_id] = session.current_matchup;
+            const loserId = winnerId === imageA_id ? imageB_id : imageA_id;
+
+            // Registrar escolha
+            const choiceQuery = `
+                INSERT INTO tournament_choices (
+                    session_id, round_number, matchup_sequence, option_a_id, 
+                    option_b_id, winner_id, loser_id, response_time_ms,
+                    is_speed_bonus, choice_made_at
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+            `;
             
+            const isSpeedBonus = responseTime && responseTime < 3000;
+            const matchupSequence = Math.floor((session.tournament_size - session.remaining_images.length) / 2) + 1;
+
+            await client.query(choiceQuery, [
+                sessionId, session.current_round, matchupSequence,
+                imageA_id, imageB_id, winnerId, loserId,
+                responseTime, isSpeedBonus
+            ]);
+
+            // Atualizar arrays
+            const newRemaining = session.remaining_images.filter(id => id !== loserId);
+            const newEliminated = [...session.eliminated_images, loserId];
+            const newRound = newRemaining.length === session.remaining_images.length / 2 ? 
+                session.current_round + 1 : session.current_round;
+
+            const updateSessionQuery = `
+                UPDATE tournament_sessions 
+                SET remaining_images = $1, eliminated_images = $2, 
+                    current_round = $3, current_matchup = NULL, 
+                    last_activity = NOW()
+                WHERE id = $4
+            `;
+            
+            await client.query(updateSessionQuery, [
+                newRemaining, newEliminated, newRound, sessionId
+            ]);
+
+            // Verificar se terminou
+            if (newRemaining.length === 1) {
+                const result = await this.finalizeTournament(client, sessionId, newRemaining[0]);
+                await client.query('COMMIT');
+                return result;
+            }
+
+            // Próximo confronto
+            const nextMatchup = await this.generateNextMatchup(client, sessionId);
+            await client.query('COMMIT');
+
             return {
-                tournamentId: tournament.id,
-                status: 'completed',
-                winner: tournament.winner,
-                category: tournament.category,
-                totalRounds: tournament.currentRound,
-                results: tournament.results
+                success: true,
+                nextMatchup,
+                progress: this.calculateProgress({
+                    tournament_size: session.tournament_size,
+                    remaining_images: newRemaining
+                }),
+                round: newRound,
+                isComplete: false
             };
+
+        } catch (error) {
+            await client.query('ROLLBACK');
+            console.error('❌ Erro ao processar escolha:', error);
+            throw new Error(`Falha ao processar escolha: ${error.message}`);
+        } finally {
+            client.release();
         }
-        
-        // Gerar matches para próximo round
-        tournament.currentRound++;
-        tournament.matches = this.generateRoundMatches(currentRoundWinners);
-        tournament.updatedAt = new Date();
-        
-        return {
-            tournamentId: tournament.id,
-            currentMatch: tournament.matches[0],
-            totalMatches: tournament.matches.length,
-            round: tournament.currentRound
-        };
     }
-    
-    /**
-     * Gerar matches do primeiro round
-     */
-    generateFirstRoundMatches(images) {
-        const matches = [];
-        
-        for (let i = 0; i < images.length; i += 2) {
-            if (i + 1 < images.length) {
-                matches.push({
-                    id: `match_${i / 2 + 1}`,
-                    image1: images[i],
-                    image2: images[i + 1]
-                });
-            }
+
+    async finalizeTournament(client, sessionId, championId) {
+        try {
+            const sessionQuery = `SELECT * FROM tournament_sessions WHERE id = $1`;
+            const sessionResult = await client.query(sessionQuery, [sessionId]);
+            const session = sessionResult.rows[0];
+
+            const champion = await this.getImageById(championId);
+
+            // Salvar resultado
+            const insertResultQuery = `
+                INSERT INTO tournament_results (
+                    session_id, user_id, category, champion_id,
+                    total_choices_made, rounds_completed, completion_rate,
+                    completed_at
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+            `;
+
+            await client.query(insertResultQuery, [
+                sessionId, session.user_id, session.category, championId,
+                15, session.current_round, 100
+            ]);
+
+            // Atualizar sessão
+            await client.query(`
+                UPDATE tournament_sessions 
+                SET status = 'completed', completed_at = NOW() 
+                WHERE id = $1
+            `, [sessionId]);
+
+            console.log(`🏆 Torneio finalizado: ${champion.title}`);
+
+            return {
+                success: true,
+                isComplete: true,
+                champion
+            };
+
+        } catch (error) {
+            console.error('❌ Erro ao finalizar torneio:', error);
+            throw new Error(`Falha ao finalizar torneio: ${error.message}`);
         }
-        
-        return matches;
     }
-    
-    /**
-     * Gerar matches de rounds subsequentes
-     */
-    generateRoundMatches(winners) {
-        const matches = [];
-        
-        for (let i = 0; i < winners.length; i += 2) {
-            if (i + 1 < winners.length) {
-                matches.push({
-                    id: `match_${i / 2 + 1}`,
-                    image1: this.getImageById(winners[i]),
-                    image2: this.getImageById(winners[i + 1])
-                });
-            }
+
+    async getActiveSession(userId, category) {
+        try {
+            const query = `
+                SELECT * FROM tournament_sessions 
+                WHERE user_id = $1 AND category = $2 AND status = 'active'
+                ORDER BY started_at DESC
+                LIMIT 1
+            `;
+            const result = await pool.query(query, [userId, category]);
+            return result.rows[0] || null;
+        } catch (error) {
+            console.error('❌ Erro ao buscar sessão ativa:', error);
+            return null;
         }
-        
-        return matches;
     }
-    
-    /**
-     * Buscar imagens para categoria (mock)
-     */
-    async getImagesForCategory(category) {
-        // Mock de imagens - em produção viria do banco de dados
-        const mockImages = [];
-        
-        for (let i = 1; i <= 20; i++) {
-            mockImages.push({
-                id: `${category}_img_${i}`,
-                url: `/api/images/${category}/image_${i}.jpg`,
-                category,
-                alt: `${category} image ${i}`,
-                approved: true
-            });
+
+    async getImageById(imageId) {
+        try {
+            const query = `SELECT * FROM tournament_images WHERE id = $1`;
+            const result = await pool.query(query, [imageId]);
+            return result.rows[0];
+        } catch (error) {
+            console.error('❌ Erro ao buscar imagem:', error);
+            return null;
         }
+    }
+
+    calculateProgress(session) {
+        const total = session.tournament_size - 1;
+        const completed = session.tournament_size - session.remaining_images.length;
+        const percentage = Math.round((completed / total) * 100);
         
-        return mockImages;
-    }
-    
-    /**
-     * Buscar imagem por ID
-     */
-    getImageById(imageId) {
-        // Em produção, buscar no banco de dados
-        const [category, , number] = imageId.split('_');
-        
-        return {
-            id: imageId,
-            url: `/api/images/${category}/image_${number}.jpg`,
-            category,
-            alt: `${category} image ${number}`,
-            approved: true
-        };
-    }
-    
-    /**
-     * Buscar torneio ativo
-     */
-    getTournament(tournamentId) {
-        return this.activeTournaments.get(tournamentId);
-    }
-    
-    /**
-     * Listar categorias disponíveis
-     */
-    getCategories() {
-        return this.categories.map(category => ({
-            id: category,
-            name: this.getCategoryDisplayName(category),
-            description: this.getCategoryDescription(category),
-            imageCount: 20 // Mock
-        }));
-    }
-    
-    /**
-     * Nome de exibição da categoria
-     */
-    getCategoryDisplayName(category) {
-        const names = {
-            colors: 'Cores',
-            styles: 'Estilos',
-            accessories: 'Acessórios',
-            shoes: 'Calçados',
-            patterns: 'Padrões'
-        };
-        
-        return names[category] || category;
-    }
-    
-    /**
-     * Descrição da categoria
-     */
-    getCategoryDescription(category) {
-        const descriptions = {
-            colors: 'Escolha suas cores favoritas',
-            styles: 'Defina seu estilo pessoal',
-            accessories: 'Acessórios que combinam com você',
-            shoes: 'Encontre o calçado ideal',
-            patterns: 'Padrões que refletem sua personalidade'
-        };
-        
-        return descriptions[category] || 'Categoria de preferências';
-    }
-    
-    /**
-     * Limpar torneios antigos
-     */
-    cleanOldTournaments() {
-        const now = new Date();
-        const maxAge = 24 * 60 * 60 * 1000; // 24 horas
-        
-        for (const [tournamentId, tournament] of this.activeTournaments) {
-            if (now - tournament.updatedAt > maxAge) {
-                this.activeTournaments.delete(tournamentId);
-                console.log(`🧹 Torneio antigo removido: ${tournamentId}`);
-            }
-        }
+        return { current: completed, total, percentage };
     }
 }
 
-// Instância singleton
-const tournamentEngine = new TournamentEngine();
-
-// Limpeza periódica (a cada hora)
-setInterval(() => {
-    tournamentEngine.cleanOldTournaments();
-}, 60 * 60 * 1000);
-
-export default tournamentEngine;
+console.log('✅ TournamentEngine carregado');
+export default TournamentEngine;
