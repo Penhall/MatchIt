@@ -5,8 +5,8 @@ import ReactDOM from 'react-dom';
 import fs from 'node:fs/promises';
 
 // Importar componentes como strings para evitar problemas de compilação
-const FloatingLabelInput = (await import('./components/common/FloatingLabelInput.js')).default;
-const BrandHeader = (await import('./components/common/BrandHeader.js')).default;
+const FloatingLabelInput = (await import('../components/common/FloatingLabelInput.js')).default;
+const BrandHeader = (await import('../components/common/BrandHeader.js')).default;
 
 async function testComponent(component, name) {
   const dom = new JSDOM('<!DOCTYPE html><html><body><div id="root"></div></body></html>');
