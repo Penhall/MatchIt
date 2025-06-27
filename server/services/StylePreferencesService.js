@@ -1,193 +1,233 @@
-// server/services/StylePreferencesService.js - Serviço de preferências de estilo (Fase 0)
+// server/services/StylePreferencesService.js - Serviço de preferências de estilo (ES Modules)
 import { query } from '../config/database.js';
 
 class StylePreferencesService {
     
     /**
-     * Buscar todas as preferências de um usuário
+     * Buscar preferências de estilo do usuário por categoria
      */
-    async getUserPreferences(userId) {
+    async getStylePreferences(userId, category = null) {
         try {
-            console.log(`📋 Buscando preferências para usuário: ${userId}`);
+            let queryText;
+            let params;
             
-            const result = await query(
-                'SELECT * FROM style_preferences WHERE user_id = $1 ORDER BY category, question_id',
-                [userId]
-            );
+            if (category) {
+                queryText = `
+                    SELECT * FROM user_style_preferences 
+                    WHERE user_id = $1 AND category = $2
+                    ORDER BY last_updated DESC
+                `;
+                params = [userId, category];
+            } else {
+                queryText = `
+                    SELECT * FROM user_style_preferences 
+                    WHERE user_id = $1
+                    ORDER BY category, last_updated DESC
+                `;
+                params = [userId];
+            }
             
-            // Organizar por categoria
+            const result = await query(queryText, params);
+            
+            // Transformar resultado em formato amigável
             const preferences = {};
             result.rows.forEach(row => {
-                if (!preferences[row.category]) {
-                    preferences[row.category] = {};
-                }
-                preferences[row.category][row.question_id] = {
-                    selectedOption: row.selected_option,
-                    preferenceStrength: parseFloat(row.preference_strength),
-                    updatedAt: row.updated_at
+                preferences[row.category] = {
+                    data: row.preference_data,
+                    confidence: row.confidence_score,
+                    lastUpdated: row.last_updated
                 };
             });
             
-            console.log(`✅ Encontradas ${result.rows.length} preferências em ${Object.keys(preferences).length} categorias`);
             return preferences;
             
         } catch (error) {
-            console.error('❌ Erro ao buscar preferências:', error);
-            throw error;
+            console.error('Erro ao buscar preferências:', error);
+            throw new Error('Falha ao buscar preferências de estilo');
         }
     }
     
     /**
-     * Atualizar preferência específica
+     * Salvar/atualizar preferências de estilo
      */
-    async updatePreference(userId, category, questionId, selectedOption, preferenceStrength = 1.0) {
+    async saveStylePreferences(userId, category, preferenceData, confidenceScore = 0.8) {
         try {
-            console.log(`💾 Atualizando preferência: ${userId} -> ${category}/${questionId} = ${selectedOption}`);
-            
-            const result = await query(`
-                INSERT INTO style_preferences (user_id, category, question_id, selected_option, preference_strength, updated_at)
-                VALUES ($1, $2, $3, $4, $5, NOW())
-                ON CONFLICT (user_id, category, question_id)
+            const queryText = `
+                INSERT INTO user_style_preferences (user_id, category, preference_data, confidence_score, last_updated)
+                VALUES ($1, $2, $3, $4, NOW())
+                ON CONFLICT (user_id, category) 
                 DO UPDATE SET 
-                    selected_option = EXCLUDED.selected_option,
-                    preference_strength = EXCLUDED.preference_strength,
-                    updated_at = NOW()
+                    preference_data = $3,
+                    confidence_score = $4,
+                    last_updated = NOW()
                 RETURNING *
-            `, [userId, category, questionId, selectedOption, preferenceStrength]);
+            `;
             
-            console.log(`✅ Preferência atualizada: ID ${result.rows[0].id}`);
+            const params = [userId, category, JSON.stringify(preferenceData), confidenceScore];
+            const result = await query(queryText, params);
+            
             return result.rows[0];
             
         } catch (error) {
-            console.error('❌ Erro ao atualizar preferência:', error);
-            throw error;
+            console.error('Erro ao salvar preferências:', error);
+            throw new Error('Falha ao salvar preferências de estilo');
         }
     }
     
     /**
-     * Atualizar múltiplas preferências de uma vez
+     * Salvar escolha individual de estilo
      */
-    async updateMultiplePreferences(userId, preferences) {
+    async saveStyleChoice(userId, category, questionId, selectedOption, responseTime = null, confidence = 3) {
         try {
-            console.log(`💾 Atualizando ${Object.keys(preferences).length} categorias para usuário: ${userId}`);
+            const queryText = `
+                INSERT INTO style_choices (
+                    user_id, category, question_id, selected_option, 
+                    response_time_ms, confidence_level, created_at
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, NOW())
+                ON CONFLICT (user_id, category, question_id)
+                DO UPDATE SET 
+                    selected_option = $4,
+                    response_time_ms = $5,
+                    confidence_level = $6,
+                    created_at = NOW()
+                RETURNING *
+            `;
             
-            const updatedPreferences = [];
+            const params = [userId, category, questionId, selectedOption, responseTime, confidence];
+            const result = await query(queryText, params);
             
-            for (const [category, categoryPrefs] of Object.entries(preferences)) {
-                for (const [questionId, data] of Object.entries(categoryPrefs)) {
-                    const selectedOption = typeof data === 'string' ? data : data.selectedOption;
-                    const preferenceStrength = typeof data === 'object' ? data.preferenceStrength || 1.0 : 1.0;
-                    
-                    const result = await this.updatePreference(userId, category, questionId, selectedOption, preferenceStrength);
-                    updatedPreferences.push(result);
-                }
-            }
-            
-            console.log(`✅ ${updatedPreferences.length} preferências atualizadas com sucesso`);
-            return updatedPreferences;
+            return result.rows[0];
             
         } catch (error) {
-            console.error('❌ Erro ao atualizar múltiplas preferências:', error);
-            throw error;
+            console.error('Erro ao salvar escolha:', error);
+            throw new Error('Falha ao salvar escolha de estilo');
         }
     }
     
     /**
-     * Obter estatísticas de completude do perfil
+     * Buscar estatísticas de completude do perfil
      */
     async getCompletionStats(userId) {
         try {
-            console.log(`📊 Calculando estatísticas para usuário: ${userId}`);
+            // Buscar contadores por categoria
+            const choicesQuery = `
+                SELECT 
+                    category,
+                    COUNT(*) as answered_questions,
+                    AVG(confidence_level) as avg_confidence
+                FROM style_choices 
+                WHERE user_id = $1 
+                GROUP BY category
+            `;
             
-            // Buscar todas as preferências do usuário
-            const result = await query(
-                'SELECT category, COUNT(*) as count FROM style_preferences WHERE user_id = $1 GROUP BY category',
-                [userId]
-            );
+            const preferencesQuery = `
+                SELECT 
+                    category,
+                    confidence_score,
+                    last_updated
+                FROM user_style_preferences 
+                WHERE user_id = $1
+            `;
             
-            // Categorias esperadas (pode ser configurável)
-            const expectedCategories = ['colors', 'styles', 'accessories', 'shoes', 'patterns'];
-            const expectedQuestionsPerCategory = 5; // média
-            
-            const completedCategories = result.rows.length;
-            const totalExpectedQuestions = expectedCategories.length * expectedQuestionsPerCategory;
-            const totalAnsweredQuestions = result.rows.reduce((sum, row) => sum + parseInt(row.count), 0);
-            
-            const completionPercentage = Math.round((totalAnsweredQuestions / totalExpectedQuestions) * 100);
+            const [choicesResult, preferencesResult] = await Promise.all([
+                query(choicesQuery, [userId]),
+                query(preferencesQuery, [userId])
+            ]);
             
             const stats = {
-                totalCategories: expectedCategories.length,
-                completedCategories,
-                totalExpectedQuestions,
-                totalAnsweredQuestions,
-                completionPercentage: Math.min(completionPercentage, 100),
-                categoriesDetail: result.rows.reduce((acc, row) => {
-                    acc[row.category] = parseInt(row.count);
-                    return acc;
-                }, {})
+                totalCategories: 5, // cores, estilos, acessórios, calçados, padrões
+                completedCategories: preferencesResult.rows.length,
+                totalAnsweredQuestions: choicesResult.rows.reduce((sum, row) => sum + row.answered_questions, 0),
+                categoriesProgress: {},
+                overallConfidence: 0,
+                lastActivity: null
             };
             
-            console.log(`📊 Estatísticas calculadas: ${completionPercentage}% completo`);
-            return stats;
-            
-        } catch (error) {
-            console.error('❌ Erro ao calcular estatísticas:', error);
-            throw error;
-        }
-    }
-    
-    /**
-     * Remover todas as preferências de um usuário
-     */
-    async clearUserPreferences(userId) {
-        try {
-            console.log(`🗑️  Removendo todas as preferências do usuário: ${userId}`);
-            
-            const result = await query(
-                'DELETE FROM style_preferences WHERE user_id = $1',
-                [userId]
-            );
-            
-            console.log(`✅ ${result.rowCount} preferências removidas`);
-            return { deletedCount: result.rowCount };
-            
-        } catch (error) {
-            console.error('❌ Erro ao remover preferências:', error);
-            throw error;
-        }
-    }
-    
-    /**
-     * Buscar preferências por categoria
-     */
-    async getPreferencesByCategory(userId, category) {
-        try {
-            console.log(`📋 Buscando preferências da categoria '${category}' para usuário: ${userId}`);
-            
-            const result = await query(
-                'SELECT * FROM style_preferences WHERE user_id = $1 AND category = $2 ORDER BY question_id',
-                [userId, category]
-            );
-            
-            const preferences = {};
-            result.rows.forEach(row => {
-                preferences[row.question_id] = {
-                    selectedOption: row.selected_option,
-                    preferenceStrength: parseFloat(row.preference_strength),
-                    updatedAt: row.updated_at
+            // Processar progresso por categoria
+            const categories = ['colors', 'styles', 'accessories', 'shoes', 'patterns'];
+            categories.forEach(category => {
+                const choiceData = choicesResult.rows.find(row => row.category === category);
+                const prefData = preferencesResult.rows.find(row => row.category === category);
+                
+                stats.categoriesProgress[category] = {
+                    answeredQuestions: choiceData?.answered_questions || 0,
+                    confidence: prefData?.confidence_score || 0,
+                    lastUpdated: prefData?.last_updated || null,
+                    isCompleted: !!prefData
                 };
             });
             
-            console.log(`✅ Encontradas ${result.rows.length} preferências na categoria '${category}'`);
-            return preferences;
+            // Calcular porcentagem de completude
+            stats.completionPercentage = Math.round((stats.completedCategories / stats.totalCategories) * 100);
+            
+            // Calcular confiança geral
+            if (preferencesResult.rows.length > 0) {
+                stats.overallConfidence = preferencesResult.rows.reduce(
+                    (sum, row) => sum + row.confidence_score, 0
+                ) / preferencesResult.rows.length;
+            }
+            
+            // Última atividade
+            const lastActivityQuery = `
+                SELECT MAX(created_at) as last_activity 
+                FROM style_choices 
+                WHERE user_id = $1
+            `;
+            const lastActivityResult = await query(lastActivityQuery, [userId]);
+            stats.lastActivity = lastActivityResult.rows[0]?.last_activity;
+            
+            return stats;
             
         } catch (error) {
-            console.error(`❌ Erro ao buscar preferências da categoria '${category}':`, error);
-            throw error;
+            console.error('Erro ao buscar estatísticas:', error);
+            throw new Error('Falha ao calcular estatísticas de completude');
+        }
+    }
+    
+    /**
+     * Limpar todas as preferências do usuário
+     */
+    async clearAllPreferences(userId) {
+        try {
+            await query('BEGIN');
+            
+            // Deletar preferências
+            await query('DELETE FROM user_style_preferences WHERE user_id = $1', [userId]);
+            
+            // Deletar escolhas
+            await query('DELETE FROM style_choices WHERE user_id = $1', [userId]);
+            
+            await query('COMMIT');
+            
+            return { success: true, message: 'Preferências removidas com sucesso' };
+            
+        } catch (error) {
+            await query('ROLLBACK');
+            console.error('Erro ao limpar preferências:', error);
+            throw new Error('Falha ao limpar preferências');
+        }
+    }
+    
+    /**
+     * Buscar escolhas de uma categoria específica
+     */
+    async getStyleChoices(userId, category) {
+        try {
+            const queryText = `
+                SELECT * FROM style_choices 
+                WHERE user_id = $1 AND category = $2
+                ORDER BY created_at DESC
+            `;
+            
+            const result = await query(queryText, [userId, category]);
+            return result.rows;
+            
+        } catch (error) {
+            console.error('Erro ao buscar escolhas:', error);
+            throw new Error('Falha ao buscar escolhas de estilo');
         }
     }
 }
 
-// Exportar instância singleton
-const stylePreferencesService = new StylePreferencesService();
-export default stylePreferencesService;
+export default new StylePreferencesService();
