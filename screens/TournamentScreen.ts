@@ -12,14 +12,15 @@ import {
   Dimensions,
   Vibration,
   BackHandler,
-  StatusBar
+  StatusBar,
+  PanResponder
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../hooks/useAuth';
-import { useApi } from '../hooks/useApi';
+import { useTournament } from '../hooks/useTournament';
 import * as Haptics from 'expo-haptics';
 
 // =====================================================
@@ -77,6 +78,19 @@ const CARD_WIDTH = (width - 60) / 2;
 const CARD_HEIGHT = CARD_WIDTH * 1.3;
 const VS_SIZE = 80;
 
+const CATEGORY_COLORS = {
+  'cores': '#FF6B6B',
+  'estilos': '#4ECDC4',
+  'calcados': '#45B7D1',
+  'acessorios': '#96CEB4',
+  'texturas': '#FECA57',
+  'roupas_casuais': '#FF9FF3',
+  'roupas_formais': '#54A0FF',
+  'roupas_festa': '#5F27CD',
+  'joias': '#FFD700',
+  'bolsas': '#FF6348'
+};
+
 // =====================================================
 // MAIN COMPONENT
 // =====================================================
@@ -85,28 +99,21 @@ export const TournamentScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { user } = useAuth();
-  const api = useApi();
+  const { processChoice, getCurrentMatchup, cancelSession } = useTournament();
 
-  // Route parameters
+  // Route params
   const { category } = route.params as { category: string };
 
   // Core states
   const [session, setSession] = useState<TournamentSession | null>(null);
   const [currentMatchup, setCurrentMatchup] = useState<TournamentMatchup | null>(null);
   const [loading, setLoading] = useState(true);
-  const [choosing, setChoosing] = useState(false);
-  const [gameStarted, setGameStarted] = useState(false);
+  const [processingChoice, setProcessingChoice] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Animation states
-  const [fadeAnim] = useState(new Animated.Value(0));
-  const [scaleAnimA] = useState(new Animated.Value(1));
-  const [scaleAnimB] = useState(new Animated.Value(1));
-  const [progressAnim] = useState(new Animated.Value(0));
-  const [vsAnim] = useState(new Animated.Value(1));
-  const [slideAnim] = useState(new Animated.Value(0));
-
-  // Game states
-  const [choiceStartTime, setChoiceStartTime] = useState<number>(0);
+  // UI states
+  const [showVS, setShowVS] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<number | null>(null);
   const [stats, setStats] = useState<TournamentStats>({
     totalChoices: 0,
     averageResponseTime: 0,
@@ -115,42 +122,27 @@ export const TournamentScreen: React.FC = () => {
     confidenceAverage: 0
   });
 
-  // Visual feedback states
-  const [lastChoice, setLastChoice] = useState<{ 
-    winner: 'A' | 'B'; 
-    responseTime: number; 
-    isFast: boolean;
-  } | null>(null);
-  const [showFeedback, setShowFeedback] = useState(false);
-  const [choiceAnimation, setChoiceAnimation] = useState<'A' | 'B' | null>(null);
+  // Animation states
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnimA = useRef(new Animated.Value(1)).current;
+  const scaleAnimB = useRef(new Animated.Value(1)).current;
+  const vsOpacity = useRef(new Animated.Value(0)).current;
+  const progressAnim = useRef(new Animated.Value(0)).current;
+  const shakeAnim = useRef(new Animated.Value(0)).current;
 
-  // Refs
-  const choiceTimerRef = useRef<number | null>(null);
-  const feedbackTimeoutRef = useRef<number | null>(null);
+  // Timers
+  const startTime = useRef<number>(0);
+  const choiceTimer = useRef<NodeJS.Timeout | null>(null);
 
   // =====================================================
-  // LIFECYCLE AND NAVIGATION
+  // LIFECYCLE EFFECTS
   // =====================================================
 
-  useEffect(() => {
-    initializeTournament();
-    return () => {
-      if (choiceTimerRef.current) clearTimeout(choiceTimerRef.current);
-      if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (currentMatchup && !choiceStartTime) {
-      setChoiceStartTime(Date.now());
-      startMatchupAnimation();
-    }
-  }, [currentMatchup]);
-
+  // Handle back button
   useFocusEffect(
     useCallback(() => {
       const onBackPress = () => {
-        if (gameStarted && session?.status === 'active') {
+        if (session && session.status === 'active') {
           Alert.alert(
             'Sair do Torneio',
             'Tem certeza que deseja sair? Seu progresso será perdido.',
@@ -159,10 +151,7 @@ export const TournamentScreen: React.FC = () => {
               { 
                 text: 'Sair', 
                 style: 'destructive',
-                onPress: () => {
-                  pauseTournament();
-                  navigation.goBack();
-                }
+                onPress: handleExitTournament
               }
             ]
           );
@@ -171,260 +160,320 @@ export const TournamentScreen: React.FC = () => {
         return false;
       };
 
-      BackHandler.addEventListener('hardwareBackPress', onBackPress);
-      return () => BackHandler.removeEventListener('hardwareBackPress', onBackPress);
-    }, [gameStarted, session])
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => subscription.remove();
+    }, [session])
   );
 
+  // Initialize tournament
+  useEffect(() => {
+    initializeTournament();
+  }, [category]);
+
+  // Show VS animation when matchup changes
+  useEffect(() => {
+    if (currentMatchup && !loading) {
+      showVSAnimation();
+    }
+  }, [currentMatchup, loading]);
+
+  // Update progress animation
+  useEffect(() => {
+    if (session) {
+      const progress = (session.choicesMade / session.totalChoices) * 100;
+      Animated.timing(progressAnim, {
+        toValue: progress,
+        duration: 500,
+        useNativeDriver: false,
+      }).start();
+    }
+  }, [session]);
+
   // =====================================================
-  // TOURNAMENT LOGIC
+  // INITIALIZATION
   // =====================================================
 
   const initializeTournament = async () => {
     try {
       setLoading(true);
+      setError(null);
+
+      // Start or resume tournament
+      const result = await startTournament(category);
       
-      // Check for existing session
-      const existingSession = await api.get(`/tournament/active/${category}`);
-      
-      if (existingSession?.data) {
-        // Resume existing tournament
-        setSession(existingSession.data);
-        setGameStarted(true);
-        await loadCurrentMatchup(existingSession.data.id);
-        setStats(prev => ({
-          ...prev,
-          totalChoices: existingSession.data.choicesMade || 0
-        }));
-      } else {
-        // Start new tournament
-        await startNewTournament();
+      if (result.session) {
+        setSession(result.session);
+        setCurrentMatchup(result.matchup);
+        
+        if (result.matchup) {
+          startTime.current = Date.now();
+        }
+
+        // Show entrance animation
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }).start();
+
+        if (result.resumed) {
+          showResumedMessage();
+        }
       }
-    } catch (error) {
-      console.error('Failed to initialize tournament:', error);
+
+    } catch (err: any) {
+      console.error('❌ Erro ao inicializar torneio:', err);
+      setError(err.message || 'Erro ao carregar torneio');
+      
       Alert.alert(
         'Erro',
-        'Não foi possível inicializar o torneio. Tente novamente.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
+        err.message || 'Não foi possível carregar o torneio. Tente novamente.',
+        [
+          { text: 'Voltar', onPress: () => navigation.goBack() }
+        ]
       );
     } finally {
       setLoading(false);
     }
   };
 
-  const startNewTournament = async () => {
-    try {
-      const response = await api.post('/tournament/start', {
+  const startTournament = async (category: string) => {
+    // Mock implementation - replace with actual API call
+    const mockResult = {
+      session: {
+        id: `tournament_${user?.id}_${category}_${Date.now()}`,
+        userId: user?.id || 1,
         category,
-        tournamentSize: 16
-      });
+        status: 'active' as const,
+        currentRound: 1,
+        totalRounds: 4,
+        remainingImages: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+        tournamentSize: 16,
+        progressPercentage: 0,
+        choicesMade: 0,
+        totalChoices: 15
+      },
+      matchup: {
+        sessionId: `tournament_${user?.id}_${category}_${Date.now()}`,
+        roundNumber: 1,
+        matchupSequence: 1,
+        imageA: {
+          id: 1,
+          category,
+          imageUrl: 'https://picsum.photos/300/400?random=1',
+          title: 'Estilo A',
+          description: 'Descrição do estilo A',
+          tags: ['casual', 'moderno']
+        },
+        imageB: {
+          id: 2,
+          category,
+          imageUrl: 'https://picsum.photos/300/400?random=2',
+          title: 'Estilo B',
+          description: 'Descrição do estilo B',
+          tags: ['formal', 'elegante']
+        },
+        startTime: new Date().toISOString()
+      },
+      resumed: false
+    };
 
-      if (response?.data) {
-        setSession(response.data.session);
-        setCurrentMatchup(response.data.firstMatchup);
-        setGameStarted(true);
-        
-        // Start enter animation
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }).start();
-      }
-    } catch (error) {
-      throw new Error('Failed to start tournament');
-    }
-  };
-
-  const loadCurrentMatchup = async (sessionId: string) => {
-    try {
-      const response = await api.get(`/tournament/matchup/${sessionId}`);
-      if (response?.data) {
-        setCurrentMatchup(response.data);
-      }
-    } catch (error) {
-      console.error('Failed to load matchup:', error);
-    }
-  };
-
-  const pauseTournament = async () => {
-    if (!session) return;
-
-    try {
-      await api.put(`/tournament/pause/${session.id}`);
-    } catch (error) {
-      console.error('Failed to pause tournament:', error);
-    }
+    return mockResult;
   };
 
   // =====================================================
-  // CHOICE HANDLING
+  // CHOICE PROCESSING
   // =====================================================
 
-  const makeChoice = async (winnerId: number, winnerSide: 'A' | 'B') => {
-    if (!currentMatchup || !session || choosing) return;
+  const handleImageChoice = async (winnerId: number, loserId: number) => {
+    if (processingChoice || !currentMatchup || !session) return;
 
     try {
-      setChoosing(true);
-      setChoiceAnimation(winnerSide);
+      setProcessingChoice(true);
+      setSelectedImage(winnerId);
 
-      const responseTime = Date.now() - choiceStartTime;
-      const isFast = responseTime < 3000;
-      const confidence = isFast ? 5 : responseTime < 5000 ? 4 : 3;
+      // Calculate response time
+      const responseTime = Date.now() - startTime.current;
+      
+      // Haptic feedback
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
       // Visual feedback
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      playChoiceAnimation(winnerId);
+
+      // Process choice
+      const result = await processChoice(
+        session.id,
+        winnerId,
+        loserId,
+        responseTime
+      );
+
+      // Update stats
+      updateStats(responseTime);
+
+      // Handle result
+      if (result.finished) {
+        // Tournament finished
+        setTimeout(() => {
+          navigation.replace('TournamentResult', {
+            result: result.result,
+            category,
+            stats
+          });
+        }, 1500);
+      } else {
+        // Continue to next matchup
+        setTimeout(() => {
+          setCurrentMatchup(result.nextMatchup);
+          setSelectedImage(null);
+          startTime.current = Date.now();
+          
+          // Update session state
+          if (session) {
+            setSession({
+              ...session,
+              choicesMade: session.choicesMade + 1,
+              progressPercentage: ((session.choicesMade + 1) / session.totalChoices) * 100
+            });
+          }
+        }, 1000);
+      }
+
+    } catch (err: any) {
+      console.error('❌ Erro ao processar escolha:', err);
+      setError(err.message);
       
-      // Scale animation for chosen card
-      const scaleAnim = winnerSide === 'A' ? scaleAnimA : scaleAnimB;
+      // Shake animation for error
       Animated.sequence([
-        Animated.timing(scaleAnim, {
-          toValue: 1.1,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scaleAnim, {
-          toValue: 1,
-          duration: 150,
-          useNativeDriver: true,
-        })
+        Animated.timing(shakeAnim, { toValue: 10, duration: 100, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: -10, duration: 100, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: 10, duration: 100, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: 0, duration: 100, useNativeDriver: true }),
       ]).start();
 
-      // API call
-      const response = await api.post('/tournament/choice', {
-        sessionId: session.id,
-        winnerId,
-        responseTimeMs: responseTime,
-        confidence
-      });
-
-      if (response?.data) {
-        const { nextMatchup, tournamentComplete, result } = response.data;
-
-        // Update stats
-        const newStats = {
-          ...stats,
-          totalChoices: stats.totalChoices + 1,
-          averageResponseTime: ((stats.averageResponseTime * stats.totalChoices) + responseTime) / (stats.totalChoices + 1),
-          streak: isFast ? stats.streak + 1 : 0,
-          fastChoices: isFast ? stats.fastChoices + 1 : stats.fastChoices,
-          confidenceAverage: ((stats.confidenceAverage * stats.totalChoices) + confidence) / (stats.totalChoices + 1)
-        };
-        setStats(newStats);
-
-        // Update progress
-        const newProgress = response.data.progressPercentage || 0;
-        Animated.timing(progressAnim, {
-          toValue: newProgress / 100,
-          duration: 500,
-          useNativeDriver: false,
-        }).start();
-
-        // Show feedback
-        setLastChoice({ winner: winnerSide, responseTime, isFast });
-        setShowFeedback(true);
-
-        if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current);
-        feedbackTimeoutRef.current = setTimeout(() => {
-          setShowFeedback(false);
-          setChoiceAnimation(null);
-        }, 1500);
-
-        if (tournamentComplete) {
-          // Tournament finished
-          setTimeout(() => {
-            navigation.navigate('TournamentResult', {
-              result,
-              category,
-              stats: newStats
-            });
-          }, 2000);
-        } else if (nextMatchup) {
-          // Next matchup
-          setTimeout(() => {
-            setCurrentMatchup(nextMatchup);
-            setChoiceStartTime(0);
-            setSession(prev => prev ? {
-              ...prev,
-              progressPercentage: newProgress,
-              choicesMade: stats.totalChoices + 1
-            } : null);
-          }, 1500);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to process choice:', error);
-      Alert.alert('Erro', 'Não foi possível processar sua escolha. Tente novamente.');
+      Alert.alert('Erro', err.message || 'Erro ao processar escolha');
     } finally {
-      setChoosing(false);
+      setProcessingChoice(false);
     }
+  };
+
+  const updateStats = (responseTime: number) => {
+    setStats(prev => {
+      const newTotal = prev.totalChoices + 1;
+      const newAverage = ((prev.averageResponseTime * prev.totalChoices) + responseTime) / newTotal;
+      const isFast = responseTime < 3000;
+      
+      return {
+        totalChoices: newTotal,
+        averageResponseTime: newAverage,
+        streak: isFast ? prev.streak + 1 : 0,
+        fastChoices: isFast ? prev.fastChoices + 1 : prev.fastChoices,
+        confidenceAverage: (prev.confidenceAverage + (isFast ? 100 : 60)) / 2
+      };
+    });
   };
 
   // =====================================================
   // ANIMATIONS
   // =====================================================
 
-  const startMatchupAnimation = () => {
-    // Reset animations
-    fadeAnim.setValue(0);
-    slideAnim.setValue(50);
-    vsAnim.setValue(0.5);
-
-    // Entrance animation
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
+  const showVSAnimation = () => {
+    setShowVS(true);
+    
+    Animated.sequence([
+      Animated.timing(vsOpacity, {
         toValue: 1,
-        duration: 600,
+        duration: 300,
         useNativeDriver: true,
       }),
-      Animated.timing(slideAnim, {
+      Animated.delay(800),
+      Animated.timing(vsOpacity, {
         toValue: 0,
-        duration: 600,
+        duration: 300,
         useNativeDriver: true,
-      }),
-      Animated.spring(vsAnim, {
-        toValue: 1,
-        tension: 100,
-        friction: 8,
+      })
+    ]).start(() => {
+      setShowVS(false);
+    });
+  };
+
+  const playChoiceAnimation = (winnerId: number) => {
+    const winnerAnim = winnerId === currentMatchup?.imageA.id ? scaleAnimA : scaleAnimB;
+    const loserAnim = winnerId === currentMatchup?.imageA.id ? scaleAnimB : scaleAnimA;
+
+    // Winner grows, loser shrinks
+    Animated.parallel([
+      Animated.sequence([
+        Animated.timing(winnerAnim, {
+          toValue: 1.1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(winnerAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        })
+      ]),
+      Animated.timing(loserAnim, {
+        toValue: 0.8,
+        duration: 400,
         useNativeDriver: true,
       })
     ]).start();
+  };
 
-    // VS pulse animation
-    const pulseVS = () => {
-      Animated.sequence([
-        Animated.timing(vsAnim, {
-          toValue: 1.1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(vsAnim, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        })
-      ]).start(() => {
-        if (currentMatchup && !choosing) {
-          pulseVS();
-        }
-      });
-    };
-
-    setTimeout(pulseVS, 1000);
+  const showResumedMessage = () => {
+    Alert.alert(
+      'Torneio Retomado',
+      'Continuando de onde você parou!',
+      [{ text: 'OK' }]
+    );
   };
 
   // =====================================================
-  // RENDER METHODS
+  // HANDLERS
+  // =====================================================
+
+  const handleExitTournament = async () => {
+    try {
+      if (session) {
+        await cancelSession(session.id);
+      }
+      navigation.goBack();
+    } catch (err) {
+      console.error('❌ Erro ao cancelar sessão:', err);
+      navigation.goBack();
+    }
+  };
+
+  const handlePause = () => {
+    Alert.alert(
+      'Pausar Torneio',
+      'Você pode retomar este torneio mais tarde.',
+      [
+        { text: 'Continuar', style: 'cancel' },
+        { 
+          text: 'Pausar', 
+          onPress: () => navigation.goBack()
+        }
+      ]
+    );
+  };
+
+  // =====================================================
+  // RENDER HELPERS
   // =====================================================
 
   const renderProgressBar = () => (
     <View style={styles.progressContainer}>
       <View style={styles.progressInfo}>
         <Text style={styles.progressText}>
-          Rodada {session?.currentRound} de {session?.totalRounds}
+          Progresso: {session?.choicesMade || 0} / {session?.totalChoices || 0}
         </Text>
-        <Text style={styles.progressSubtext}>
-          {stats.totalChoices} de {session?.totalChoices} escolhas
+        <Text style={styles.roundText}>
+          Rodada {session?.currentRound || 1} de {session?.totalRounds || 4}
         </Text>
       </View>
       <View style={styles.progressBarContainer}>
@@ -433,158 +482,169 @@ export const TournamentScreen: React.FC = () => {
             styles.progressBar,
             {
               width: progressAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: ['0%', '100%']
-              })
+                inputRange: [0, 100],
+                outputRange: ['0%', '100%'],
+                extrapolate: 'clamp'
+              }),
+              backgroundColor: CATEGORY_COLORS[category] || '#667eea'
             }
           ]}
         />
       </View>
-      <Text style={styles.progressPercentage}>
-        {Math.round((session?.progressPercentage || 0))}%
-      </Text>
     </View>
   );
 
-  const renderStats = () => (
-    <View style={styles.statsContainer}>
-      <View style={styles.statItem}>
-        <Ionicons name="flash" size={16} color="#FFD700" />
-        <Text style={styles.statText}>Streak: {stats.streak}</Text>
-      </View>
-      <View style={styles.statItem}>
-        <Ionicons name="time" size={16} color="#4A90E2" />
-        <Text style={styles.statText}>
-          {(stats.averageResponseTime / 1000).toFixed(1)}s
-        </Text>
-      </View>
-      <View style={styles.statItem}>
-        <Ionicons name="star" size={16} color="#FF6B6B" />
-        <Text style={styles.statText}>
-          {stats.confidenceAverage.toFixed(1)}
-        </Text>
-      </View>
-    </View>
-  );
-
-  const renderImageCard = (image: TournamentImage, side: 'A' | 'B') => {
-    const scaleAnim = side === 'A' ? scaleAnimA : scaleAnimB;
-    const isChoiceAnimation = choiceAnimation === side;
+  const renderImageCard = (image: TournamentImage, position: 'left' | 'right') => {
+    const isSelected = selectedImage === image.id;
+    const isDisabled = processingChoice && !isSelected;
+    const scaleAnim = position === 'left' ? scaleAnimA : scaleAnimB;
 
     return (
-      <Animated.View
+      <Animated.View 
         style={[
-          styles.imageCardContainer,
+          styles.imageCard,
           {
             transform: [
               { scale: scaleAnim },
-              { translateY: slideAnim }
-            ],
-            opacity: fadeAnim
+              { translateX: shakeAnim }
+            ]
           }
         ]}
       >
         <TouchableOpacity
           style={[
-            styles.imageCard,
-            isChoiceAnimation && styles.chosenCard
+            styles.imageButton,
+            isSelected && styles.selectedImageButton,
+            isDisabled && styles.disabledImageButton
           ]}
-          onPress={() => makeChoice(image.id, side)}
-          disabled={choosing}
-          activeOpacity={0.95}
+          onPress={() => {
+            if (!processingChoice) {
+              const winnerId = image.id;
+              const loserId = position === 'left' 
+                ? currentMatchup?.imageB.id 
+                : currentMatchup?.imageA.id;
+              
+              if (loserId) {
+                handleImageChoice(winnerId, loserId);
+              }
+            }
+          }}
+          disabled={processingChoice}
+          activeOpacity={0.8}
         >
-          <View style={styles.imageContainer}>
-            <Image
-              source={{ uri: image.thumbnailUrl || image.imageUrl }}
-              style={styles.cardImage}
-              resizeMode="cover"
-            />
-            {isChoiceAnimation && (
-              <View style={styles.choiceOverlay}>
-                <Ionicons name="checkmark-circle" size={40} color="#4CAF50" />
-              </View>
-            )}
-          </View>
+          <Image 
+            source={{ uri: image.thumbnailUrl || image.imageUrl }}
+            style={styles.cardImage}
+            resizeMode="cover"
+          />
           
+          {/* Overlay gradient */}
+          <LinearGradient
+            colors={['transparent', 'rgba(0,0,0,0.7)']}
+            style={styles.cardOverlay}
+          />
+          
+          {/* Image info */}
           <View style={styles.cardInfo}>
             <Text style={styles.cardTitle} numberOfLines={2}>
               {image.title}
             </Text>
-            {image.description && (
-              <Text style={styles.cardDescription} numberOfLines={2}>
-                {image.description}
-              </Text>
-            )}
-            {image.winRate && (
-              <View style={styles.winRateContainer}>
-                <Ionicons name="trophy" size={12} color="#FFD700" />
-                <Text style={styles.winRateText}>
-                  {image.winRate.toFixed(0)}% vitórias
-                </Text>
+            {image.tags && image.tags.length > 0 && (
+              <View style={styles.tagsContainer}>
+                {image.tags.slice(0, 2).map((tag, index) => (
+                  <View key={index} style={styles.tag}>
+                    <Text style={styles.tagText}>{tag}</Text>
+                  </View>
+                ))}
               </View>
             )}
           </View>
+
+          {/* Selection indicator */}
+          {isSelected && (
+            <View style={styles.selectionIndicator}>
+              <Ionicons name="checkmark-circle" size={40} color="#00FF88" />
+            </View>
+          )}
+
+          {/* Loading overlay */}
+          {processingChoice && isSelected && (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="large" color="#fff" />
+            </View>
+          )}
         </TouchableOpacity>
       </Animated.View>
     );
   };
 
-  const renderVersusElement = () => (
-    <Animated.View
+  const renderVSIndicator = () => (
+    <Animated.View 
       style={[
         styles.vsContainer,
         {
-          transform: [{ scale: vsAnim }],
-          opacity: fadeAnim
+          opacity: vsOpacity,
+          transform: [{
+            scale: vsOpacity.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0.5, 1],
+              extrapolate: 'clamp'
+            })
+          }]
         }
       ]}
     >
       <LinearGradient
-        colors={['#FF6B6B', '#FF8E53']}
-        style={styles.vsCircle}
+        colors={['#FF6B6B', '#FF8E8E']}
+        style={styles.vsGradient}
       >
         <Text style={styles.vsText}>VS</Text>
       </LinearGradient>
     </Animated.View>
   );
 
-  const renderFeedback = () => {
-    if (!showFeedback || !lastChoice) return null;
-
-    return (
-      <Animated.View
-        style={[
-          styles.feedbackContainer,
-          {
-            opacity: fadeAnim,
-            transform: [{ scale: vsAnim }]
-          }
-        ]}
+  const renderHeader = () => (
+    <View style={styles.header}>
+      <TouchableOpacity 
+        style={styles.headerButton}
+        onPress={handleExitTournament}
       >
-        <View style={[
-          styles.feedbackCard,
-          lastChoice.isFast && styles.fastChoiceFeedback
-        ]}>
-          <Ionicons 
-            name={lastChoice.isFast ? "flash" : "checkmark"} 
-            size={24} 
-            color={lastChoice.isFast ? "#FFD700" : "#4CAF50"} 
-          />
-          <Text style={styles.feedbackText}>
-            {lastChoice.isFast ? "Escolha Rápida!" : "Boa Escolha!"}
-          </Text>
-          <Text style={styles.feedbackTime}>
-            {(lastChoice.responseTime / 1000).toFixed(1)}s
-          </Text>
-        </View>
-      </Animated.View>
-    );
-  };
+        <Ionicons name="arrow-back" size={24} color="#fff" />
+      </TouchableOpacity>
+      
+      <View style={styles.headerCenter}>
+        <Text style={styles.headerTitle}>
+          {CATEGORY_COLORS[category] && (
+            <View style={[styles.categoryDot, { backgroundColor: CATEGORY_COLORS[category] }]} />
+          )}
+          {category.charAt(0).toUpperCase() + category.slice(1)}
+        </Text>
+        <Text style={styles.headerSubtitle}>Torneio de Estilo</Text>
+      </View>
 
-  const renderLoading = () => (
-    <View style={styles.loadingContainer}>
-      <ActivityIndicator size="large" color="#FF6B6B" />
-      <Text style={styles.loadingText}>Preparando torneio...</Text>
+      <TouchableOpacity 
+        style={styles.headerButton}
+        onPress={handlePause}
+      >
+        <Ionicons name="pause" size={24} color="#fff" />
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderStats = () => (
+    <View style={styles.statsContainer}>
+      <View style={styles.statItem}>
+        <Text style={styles.statValue}>{Math.round(stats.averageResponseTime / 1000)}s</Text>
+        <Text style={styles.statLabel}>Tempo Médio</Text>
+      </View>
+      <View style={styles.statItem}>
+        <Text style={styles.statValue}>{stats.streak}</Text>
+        <Text style={styles.statLabel}>Sequência</Text>
+      </View>
+      <View style={styles.statItem}>
+        <Text style={styles.statValue}>{Math.round(stats.confidenceAverage)}%</Text>
+        <Text style={styles.statLabel}>Confiança</Text>
+      </View>
     </View>
   );
 
@@ -595,112 +655,79 @@ export const TournamentScreen: React.FC = () => {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#667eea" />
-        {renderLoading()}
+        <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+        <LinearGradient
+          colors={['#667eea', '#764ba2']}
+          style={styles.gradient}
+        >
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#fff" />
+            <Text style={styles.loadingText}>Preparando torneio...</Text>
+          </View>
+        </LinearGradient>
       </SafeAreaView>
     );
   }
 
-  if (!currentMatchup || !session) {
+  if (error && !currentMatchup) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#667eea" />
-        <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle" size={48} color="#FF6B6B" />
-          <Text style={styles.errorText}>
-            Erro ao carregar o torneio
-          </Text>
-          <TouchableOpacity
-            style={styles.retryButton}
-            onPress={initializeTournament}
-          >
-            <Text style={styles.retryButtonText}>Tentar Novamente</Text>
-          </TouchableOpacity>
-        </View>
+        <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+        <LinearGradient
+          colors={['#667eea', '#764ba2']}
+          style={styles.gradient}
+        >
+          <View style={styles.errorContainer}>
+            <Ionicons name="alert-circle" size={64} color="#FF6B6B" />
+            <Text style={styles.errorTitle}>Ops! Algo deu errado</Text>
+            <Text style={styles.errorMessage}>{error}</Text>
+            <TouchableOpacity 
+              style={styles.retryButton}
+              onPress={initializeTournament}
+            >
+              <Text style={styles.retryButtonText}>Tentar Novamente</Text>
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
       </SafeAreaView>
     );
   }
 
   return (
-    <LinearGradient
-      colors={['#667eea', '#764ba2']}
-      style={styles.container}
-    >
-      <StatusBar barStyle="light-content" backgroundColor="#667eea" />
-      <SafeAreaView style={styles.container}>
-        
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => {
-              if (gameStarted) {
-                Alert.alert(
-                  'Sair do Torneio',
-                  'Tem certeza que deseja sair? Seu progresso será perdido.',
-                  [
-                    { text: 'Continuar', style: 'cancel' },
-                    { 
-                      text: 'Sair', 
-                      style: 'destructive',
-                      onPress: () => {
-                        pauseTournament();
-                        navigation.goBack();
-                      }
-                    }
-                  ]
-                );
-              } else {
-                navigation.goBack();
-              }
-            }}
-          >
-            <Ionicons name="arrow-back" size={24} color="white" />
-          </TouchableOpacity>
-          
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>
-              Torneio: {category.charAt(0).toUpperCase() + category.slice(1)}
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      
+      <LinearGradient
+        colors={['#667eea', '#764ba2']}
+        style={styles.gradient}
+      >
+        <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
+          {renderHeader()}
+          {renderProgressBar()}
+          {renderStats()}
+
+          {/* Main battle area */}
+          <View style={styles.battleArea}>
+            {currentMatchup && (
+              <>
+                {renderImageCard(currentMatchup.imageA, 'left')}
+                
+                {showVS && renderVSIndicator()}
+                
+                {renderImageCard(currentMatchup.imageB, 'right')}
+              </>
+            )}
+          </View>
+
+          {/* Instructions */}
+          <View style={styles.instructionsContainer}>
+            <Text style={styles.instructionsText}>
+              Toque na imagem que mais combina com seu estilo
             </Text>
           </View>
-          
-          <TouchableOpacity style={styles.pauseButton} onPress={pauseTournament}>
-            <Ionicons name="pause" size={24} color="white" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Progress Bar */}
-        {renderProgressBar()}
-
-        {/* Stats */}
-        {renderStats()}
-
-        {/* Main Battle Area */}
-        <View style={styles.battleArea}>
-          <View style={styles.cardsContainer}>
-            {/* Image A */}
-            {renderImageCard(currentMatchup.imageA, 'A')}
-
-            {/* VS Element */}
-            {renderVersusElement()}
-
-            {/* Image B */}
-            {renderImageCard(currentMatchup.imageB, 'B')}
-          </View>
-        </View>
-
-        {/* Feedback */}
-        {renderFeedback()}
-
-        {/* Instructions */}
-        <View style={styles.instructionsContainer}>
-          <Text style={styles.instructionsText}>
-            Toque na imagem que mais combina com seu estilo
-          </Text>
-        </View>
-
-      </SafeAreaView>
-    </LinearGradient>
+        </Animated.View>
+      </LinearGradient>
+    </SafeAreaView>
   );
 };
 
@@ -712,264 +739,276 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  gradient: {
+    flex: 1,
+  },
+  content: {
+    flex: 1,
+  },
+  
+  // Header styles
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 15,
     marginTop: 10,
   },
-  backButton: {
-    padding: 8,
+  headerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerCenter: {
     flex: 1,
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
-    color: 'white',
+    color: '#fff',
   },
-  pauseButton: {
-    padding: 8,
+  headerSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 2,
   },
+  categoryDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+
+  // Progress styles
   progressContainer: {
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    marginHorizontal: 20,
-    borderRadius: 12,
-    marginBottom: 16,
+    marginBottom: 20,
   },
   progressInfo: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: 8,
   },
   progressText: {
-    fontSize: 16,
+    fontSize: 14,
+    color: '#fff',
     fontWeight: '600',
-    color: 'white',
   },
-  progressSubtext: {
-    fontSize: 12,
+  roundText: {
+    fontSize: 14,
     color: 'rgba(255,255,255,0.8)',
   },
   progressBarContainer: {
     height: 6,
     backgroundColor: 'rgba(255,255,255,0.3)',
     borderRadius: 3,
-    marginBottom: 8,
+    overflow: 'hidden',
   },
   progressBar: {
     height: '100%',
-    backgroundColor: '#4CAF50',
     borderRadius: 3,
   },
-  progressPercentage: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: 'white',
-    textAlign: 'center',
-  },
+
+  // Stats styles
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 12,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    marginHorizontal: 20,
-    borderRadius: 12,
-    marginBottom: 20,
+    marginBottom: 30,
   },
   statItem: {
-    flexDirection: 'row',
     alignItems: 'center',
   },
-  statText: {
-    marginLeft: 4,
-    fontSize: 14,
-    fontWeight: '600',
-    color: 'white',
+  statValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#fff',
   },
+  statLabel: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 2,
+  },
+
+  // Battle area styles
   battleArea: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  cardsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    width: '100%',
+    paddingHorizontal: 20,
+    position: 'relative',
   },
-  imageCardContainer: {
-    width: CARD_WIDTH,
-  },
+  
+  // Image card styles
   imageCard: {
-    backgroundColor: 'white',
-    borderRadius: 16,
+    width: CARD_WIDTH,
+    height: CARD_HEIGHT,
+  },
+  imageButton: {
+    flex: 1,
+    borderRadius: 15,
     overflow: 'hidden',
+    backgroundColor: '#fff',
     elevation: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
   },
-  chosenCard: {
+  selectedImageButton: {
     borderWidth: 3,
-    borderColor: '#4CAF50',
+    borderColor: '#00FF88',
   },
-  imageContainer: {
-    position: 'relative',
+  disabledImageButton: {
+    opacity: 0.6,
   },
   cardImage: {
     width: '100%',
-    height: CARD_HEIGHT,
+    height: '70%',
   },
-  choiceOverlay: {
+  cardOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '50%',
+  },
+  cardInfo: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 15,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#fff',
+    marginBottom: 8,
+  },
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  tag: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginRight: 6,
+    marginBottom: 4,
+  },
+  tagText: {
+    fontSize: 12,
+    color: '#fff',
+    fontWeight: '500',
+  },
+  selectionIndicator: {
+    position: 'absolute',
+    top: 15,
+    right: 15,
+  },
+  loadingOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(76, 175, 80, 0.3)',
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
   },
-  cardInfo: {
-    padding: 12,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
-  },
-  cardDescription: {
-    fontSize: 12,
-    color: '#666',
-    lineHeight: 16,
-    marginBottom: 6,
-  },
-  winRateContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  winRateText: {
-    marginLeft: 4,
-    fontSize: 10,
-    color: '#888',
-    fontWeight: '500',
-  },
+
+  // VS indicator styles
   vsContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginHorizontal: 10,
-  },
-  vsCircle: {
+    position: 'absolute',
+    left: '50%',
+    top: '50%',
+    marginLeft: -VS_SIZE / 2,
+    marginTop: -VS_SIZE / 2,
     width: VS_SIZE,
     height: VS_SIZE,
+    zIndex: 10,
+  },
+  vsGradient: {
+    flex: 1,
     borderRadius: VS_SIZE / 2,
-    justifyContent: 'center',
     alignItems: 'center',
-    elevation: 6,
+    justifyContent: 'center',
+    elevation: 10,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 6,
+    shadowRadius: 8,
   },
   vsText: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
+    fontWeight: '900',
+    color: '#fff',
   },
-  feedbackContainer: {
-    position: 'absolute',
-    top: height / 2 - 50,
-    left: 20,
-    right: 20,
-    alignItems: 'center',
-    zIndex: 1000,
-  },
-  feedbackCard: {
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 25,
-    flexDirection: 'row',
-    alignItems: 'center',
-    elevation: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-  },
-  fastChoiceFeedback: {
-    backgroundColor: 'rgba(255, 215, 0, 0.95)',
-  },
-  feedbackText: {
-    marginLeft: 8,
-    marginRight: 8,
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-  },
-  feedbackTime: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
-  },
+
+  // Instructions styles
   instructionsContainer: {
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 30,
     alignItems: 'center',
   },
   instructionsText: {
-    fontSize: 14,
+    fontSize: 16,
     color: 'rgba(255,255,255,0.9)',
     textAlign: 'center',
     fontWeight: '500',
   },
+
+  // Loading styles
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: 'white',
+    fontSize: 18,
+    color: '#fff',
+    marginTop: 20,
     fontWeight: '500',
   },
+
+  // Error styles
   errorContainer: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    justifyContent: 'center',
+    paddingHorizontal: 40,
   },
-  errorText: {
-    fontSize: 18,
-    color: 'white',
+  errorTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#fff',
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  errorMessage: {
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.8)',
     textAlign: 'center',
-    marginTop: 16,
-    marginBottom: 24,
+    marginBottom: 30,
   },
   retryButton: {
-    backgroundColor: '#FF6B6B',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
+    backgroundColor: '#fff',
+    paddingHorizontal: 30,
+    paddingVertical: 15,
+    borderRadius: 25,
   },
   retryButtonText: {
-    color: 'white',
     fontSize: 16,
     fontWeight: '600',
+    color: '#667eea',
   },
 });
 
