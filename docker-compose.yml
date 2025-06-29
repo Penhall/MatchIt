@@ -132,6 +132,25 @@ services:
     profiles:
       - dev
 
+  dev-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend.dev
+    restart: unless-stopped
+    depends_on:
+      dev-backend:
+        condition: service_started # ou service_healthy se tiver healthcheck
+    ports:
+      - "5173:5173"
+    networks:
+      - matchit-network
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: npm run dev
+    profiles:
+      - dev
+
 volumes:
   postgres_data:
     driver: local

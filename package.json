@@ -7,6 +7,7 @@
   "scripts": {
     "start": "node server/app.js",
     "dev": "nodemon server/app.js",
+    "dev:frontend": "vite",
     "migrate": "psql -d matchit_db -f database/migrations/003_complete_tournament_schema.sql",
     "seed": "psql -d matchit_db -f database/seeds/002_tournament_sample_data.sql",
     "setup": "npm run migrate && npm run seed",
