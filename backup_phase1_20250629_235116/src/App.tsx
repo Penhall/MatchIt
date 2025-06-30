@@ -1,6 +1,5 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import LoginScreen from './screens/LoginScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import StyleAdjustmentScreen from './screens/StyleAdjustmentScreen';
@@ -9,7 +8,7 @@ import ChatScreen from './screens/ChatScreen';
 import VendorScreen from './screens/VendorScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import BottomNavbar from './components/navigation/BottomNavbar';
-import { useAuth } from './hooks/useAuth';
+import { useAuth } from './context/AuthContext';
 import { APP_ROUTES } from './constants';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -22,11 +21,10 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
 const App: React.FC = () => {
   const { isAuthenticated } = useAuth();
-  const { i18n } = useTranslation();
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-dark-bg p-2 sm:p-4">
-      <div className="w-full max-w-[420px] h-[850px] bg-black rounded-[36px] shadow-2xl shadow-neon-blue/30 overflow-hidden border-2 border-neon-blue/30 flex flex-col relative holographic-overlay">
+      <div className="w-full max-w-[420px] h-[850px] bg-black rounded-[36px] shadow-2xl shadow-neon-blue/30 overflow-hidden border-2 border-neon-blue/30 flex flex-col relative">
         <main className="flex-grow overflow-y-auto">
           <Routes>
             <Route path={APP_ROUTES.LOGIN} element={<LoginScreen />} />
