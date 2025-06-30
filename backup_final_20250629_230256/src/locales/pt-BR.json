@@ -1,0 +1,54 @@
+{
+  "login": {
+    "title": "MatchIt",
+    "subtitle": "Conecte-se através de estilo e emoção",
+    "email": "Endereço de Email",
+    "password": "Senha",
+    "confirmPassword": "Confirmar Senha",
+    "signUp": "Cadastrar",
+    "logIn": "Entrar",
+    "alreadyHaveAccount": "Já tem uma conta? Entrar",
+    "noAccount": "Não tem uma conta? Cadastrar",
+    "continueWith": "Ou continue com",
+    "authError": "Erro na autenticação. Verifique suas credenciais.",
+    "invalidCredentials": "Email ou senha incorretos.",
+    "emailExists": "Este email já está cadastrado.",
+    "passwordMismatch": "As senhas não coincidem.",
+    "weakPassword": "A senha deve ter pelo menos 6 caracteres.",
+    "invalidEmail": "Email inválido.",
+    "networkError": "Erro de conexão. Tente novamente.",
+    "registrationSuccess": "Cadastro realizado com sucesso!",
+    "loginSuccess": "Login realizado com sucesso!",
+    "requiredFields": "Todos os campos são obrigatórios.",
+    "serverError": "Erro no servidor. Tente novamente mais tarde.",
+    "unknownError": "Erro desconhecido. Tente novamente.",
+    "emailRequired": "Email é obrigatório.",
+    "passwordRequired": "Senha é obrigatória.",
+    "nameRequired": "Nome é obrigatório.",
+    "loading": "Carregando...",
+    "pleaseWait": "Por favor, aguarde...",
+    "tryAgain": "Tentar novamente"
+  },
+  "profile": {
+    "edit": {
+      "displayName": "Nome de Exibição"
+    }
+  },
+  "errors": {
+    "general": "Algo deu errado. Tente novamente.",
+    "network": "Erro de conexão. Verifique sua internet.",
+    "server": "Erro no servidor. Tente novamente mais tarde.",
+    "validation": "Dados inválidos. Verifique os campos.",
+    "unauthorized": "Acesso negado. Faça login novamente.",
+    "forbidden": "Você não tem permissão para esta ação.",
+    "notFound": "Item não encontrado.",
+    "timeout": "Operação expirou. Tente novamente."
+  },
+  "common": {
+    "ok": "OK",
+    "cancel": "Cancelar",
+    "loading": "Carregando...",
+    "error": "Erro",
+    "success": "Sucesso!"
+  }
+}

@@ -1,35 +1,42 @@
-import React from 'react';
+import React, { ButtonHTMLAttributes } from 'react';
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'outline';
   size?: 'sm' | 'md' | 'lg';
-  glowEffect?: string;
-  className?: string;
+  glowEffect?: 'blue' | 'green' | 'orange';
 }
 
-const Button: React.FC<ButtonProps> = ({
-  variant = 'primary',
-  size = 'md',
+const Button: React.FC<ButtonProps> = ({ 
+  children, 
+  variant = 'primary', 
+  size = 'md', 
   glowEffect,
   className = '',
-  children,
-  ...props
+  ...props 
 }) => {
-  const baseClasses = 'rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2';
+  const baseClasses = 'font-semibold rounded-xl transition-all duration-200 active:scale-95';
+  
   const variantClasses = {
-    primary: 'bg-neon-blue text-white hover:bg-neon-blue/90',
-    secondary: 'bg-gray-800 text-white hover:bg-gray-700',
-    outline: 'border border-gray-600 text-gray-200 hover:bg-gray-800/50'
+    primary: 'bg-neon-blue text-black hover:shadow-glow-blue',
+    secondary: 'bg-neon-green text-black hover:shadow-glow-green',
+    outline: 'border-2 border-neon-blue text-neon-blue hover:bg-neon-blue hover:text-black'
   };
+  
   const sizeClasses = {
     sm: 'px-3 py-1.5 text-sm',
-    md: 'px-4 py-2 text-base',
-    lg: 'px-6 py-3 text-lg'
+    md: 'px-6 py-2.5 text-base',
+    lg: 'px-8 py-3 text-lg'
   };
+  
+  const glowClasses = glowEffect ? {
+    blue: 'hover:shadow-glow-blue',
+    green: 'hover:shadow-glow-green', 
+    orange: 'hover:shadow-glow-orange'
+  }[glowEffect] : '';
 
   return (
     <button
-      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${glowClasses} ${className}`}
       {...props}
     >
       {children}

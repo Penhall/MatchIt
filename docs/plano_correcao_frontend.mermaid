@@ -1,0 +1,45 @@
+graph TD
+    A[🚨 Problema Identificado] --> B[📋 Diagnóstico Completo]
+    
+    B --> C{Arquivos Conflitantes?}
+    C -->|Sim| D[🗑️ Remover src/main.jsx]
+    C -->|Não| E[📊 Verificar Cache]
+    
+    D --> F[📝 Renomear App.jsx → StatusPage.jsx]
+    F --> G[🧹 Limpar Cache Vite]
+    
+    E --> G
+    G --> H[💻 rm -rf node_modules/.vite]
+    H --> I[💻 rm -rf .vite/]
+    
+    I --> J[🔍 Verificar src/main.tsx]
+    J --> K{Import correto?}
+    K -->|Não| L[✏️ Corrigir: import App from './App']
+    K -->|Sim| M[⚙️ Atualizar vite.config.ts]
+    
+    L --> M
+    M --> N[📝 Priorizar extensões: .tsx, .ts, .jsx, .js]
+    N --> O[🔧 Verificar index.html]
+    
+    O --> P{Aponta para main.tsx?}
+    P -->|Não| Q[✏️ Corrigir script src='/src/main.tsx']
+    P -->|Sim| R[🚀 npm run dev --force]
+    
+    Q --> R
+    R --> S[⏳ Aguardar rebuild]
+    S --> T{Login carrega?}
+    
+    T -->|Sim| U[✅ PROBLEMA RESOLVIDO]
+    T -->|Não| V[🔍 Debug logs do Vite]
+    
+    V --> W[📋 Verificar Network DevTools]
+    W --> X[🔄 Tentar rebuild completo]
+    X --> Y[💻 npm clean install]
+    Y --> Z{Ainda com problema?}
+    
+    Z -->|Sim| AA[🆘 Considerar recriar projeto]
+    Z -->|Não| U
+    
+    style A fill:#ff6b6b
+    style U fill:#51cf66
+    style AA fill:#ffa726

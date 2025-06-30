@@ -1,11 +1,9 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import './i18n';
 import App from './App';
-import { HashRouter } from 'react-router-dom';
+import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import { ThemeProvider } from './context/ThemeContext';
-import './global.d.ts'; // Ensure global types are recognized, though typically not imported directly
+import './index.css';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -15,12 +13,10 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <HashRouter>
+    <BrowserRouter>
       <AuthProvider>
-        <ThemeProvider>
-          <App />
-        </ThemeProvider>
+        <App />
       </AuthProvider>
-    </HashRouter>
+    </BrowserRouter>
   </React.StrictMode>
 );

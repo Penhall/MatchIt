@@ -1,9 +1,49 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MatchIt - Teste</title>
+    <title>MatchIt App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'dark-bg': '#10101a',
+              'dark-card': '#181824',
+              'dark-input': '#202030',
+              'neon-blue': '#00FFFF',
+              'neon-green': '#39FF14',
+              'neon-orange': '#FF8C00',
+            },
+            boxShadow: {
+              'neon-blue': '0 0 15px #00FFFF, 0 0 5px #00FFFF inset',
+              'neon-green': '0 0 15px #39FF14, 0 0 5px #39FF14 inset',
+              'neon-orange': '0 0 15px #FF8C00, 0 0 5px #FF8C00 inset',
+              'glow-blue': '0 0 20px rgba(0, 255, 255, 0.7)',
+              'glow-green': '0 0 20px rgba(57, 255, 20, 0.7)',
+              'glow-orange': '0 0 20px rgba(255, 140, 0, 0.7)',
+            },
+            animation: {
+              fadeIn: 'fadeIn 0.5s ease-in-out',
+              pulseGlow: 'pulseGlow 1.5s infinite ease-in-out',
+            },
+            keyframes: {
+              fadeIn: {
+                '0%': { opacity: '0', transform: 'translateY(10px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' },
+              },
+              pulseGlow: {
+                '0%, 100%': { filter: 'drop-shadow(0 0 2px currentColor)' },
+                '50%': { filter: 'drop-shadow(0 0 8px currentColor) drop-shadow(0 0 10px currentColor)' },
+              }
+            }
+          },
+        },
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
