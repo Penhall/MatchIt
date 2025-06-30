@@ -1,4 +1,4 @@
-// server/app.js - Aplicação principal MatchIt COMPLETA
+// server/app.js - Aplicação principal MatchIt com sistema de torneios
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -6,8 +6,7 @@ import rateLimit from 'express-rate-limit';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// Importar TODAS as rotas
-import authRoutes from './routes/auth.js';
+// Importar rotas
 import profileRoutes from './routes/profile.js';
 import tournamentRoutes from './routes/tournament.js';
 
@@ -65,7 +64,7 @@ app.get('/api/health', (req, res) => {
         success: true,
         message: 'MatchIt API funcionando',
         timestamp: new Date().toISOString(),
-        version: '1.2.0-complete'
+        version: '1.1.0-tournaments'
     });
 });
 
@@ -75,35 +74,24 @@ app.get('/api/info', (req, res) => {
         success: true,
         data: {
             name: 'MatchIt API',
-            version: '1.2.0-complete',
+            version: '1.1.0',
             features: [
-                'Sistema de autenticação JWT completo',
-                'Sistema de perfis funcionais',
+                'Sistema de perfis',
                 'Preferências de estilo',
-                'Torneios 2x2 funcionais',
+                'Torneios 2x2',
                 'Sistema de resultados',
                 'Admin panel'
             ],
             endpoints: {
-                auth: '/api/auth/* (register, login, me)',
-                profile: '/api/profile/* (get, style-preferences)',
-                tournaments: '/api/tournament/* (categories, images, start, choice)'
+                profile: '/api/profile/*',
+                tournaments: '/api/tournament/*'
             }
         }
     });
 });
 
-// ========================================================================
-// ROTAS PRINCIPAIS - TODAS REGISTRADAS
-// ========================================================================
-
-// 🔐 ROTAS DE AUTENTICAÇÃO
-app.use('/api/auth', authRoutes);
-
-// 👤 ROTAS DE PERFIL  
+// Rotas principais
 app.use('/api/profile', profileRoutes);
-
-// 🏆 ROTAS DE TORNEIO
 app.use('/api/tournament', tournamentRoutes);
 
 // ========================================================================
@@ -130,45 +118,23 @@ app.use('*', (req, res) => {
         availableEndpoints: [
             'GET /api/health',
             'GET /api/info',
-            'POST /api/auth/register',
-            'POST /api/auth/login',
-            'GET /api/auth/me',
-            'GET /api/profile',
-            'GET /api/profile/style-preferences',
-            'PUT /api/profile/style-preferences',
-            'GET /api/tournament/categories',
-            'GET /api/tournament/images',
             'POST /api/tournament/start',
-            'POST /api/tournament/choice'
+            'POST /api/tournament/choice',
+            'GET /api/tournament/categories'
         ]
     });
 });
 
 // ========================================================================
 // INICIALIZAÇÃO
-// ========================================================================
+//# ========================================================================
 
 app.listen(PORT, () => {
-    console.log('\n🚀 MatchIt API COMPLETA iniciada com sucesso!');
+    console.log('\n🚀 MatchIt API iniciada com sucesso!');
     console.log(`📡 Servidor rodando em: http://localhost:${PORT}`);
+    console.log(`🏆 Sistema de torneios: ATIVO`);
+    console.log(`📊 Admin panel: http://localhost:${PORT}/api/tournament/admin/images`);
     console.log(`💚 Health check: http://localhost:${PORT}/api/health\n`);
-    
-    console.log('📋 TODAS as rotas disponíveis:');
-    console.log('🔐 AUTENTICAÇÃO:');
-    console.log('   POST /api/auth/register - Registrar usuário');
-    console.log('   POST /api/auth/login - Login');
-    console.log('   GET /api/auth/me - Dados do usuário logado\n');
-    
-    console.log('👤 PERFIL:');
-    console.log('   GET /api/profile - Buscar perfil');
-    console.log('   GET /api/profile/style-preferences - Buscar preferências');
-    console.log('   PUT /api/profile/style-preferences - Atualizar preferências\n');
-    
-    console.log('🏆 TORNEIOS:');
-    console.log('   GET /api/tournament/categories - Listar categorias');
-    console.log('   GET /api/tournament/images - Listar imagens');
-    console.log('   POST /api/tournament/start - Iniciar torneio');
-    console.log('   POST /api/tournament/choice - Registrar escolha\n');
 });
 
 export default app;

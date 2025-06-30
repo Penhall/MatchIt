@@ -1,12 +1,13 @@
-// server/routes/auth.js - Sistema de Autenticação com Middleware para MatchIt
+// server/routes/auth.js - Sistema de Autenticação Corrigido para MatchIt (ESM)
 import express from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
 import { pool } from '../config/database.js';
-import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
+
+// Usar pool do banco diretamente
 const db = pool;
 
 // Middleware de validação
@@ -21,12 +22,10 @@ const validateLogin = [
   body('password').notEmpty().withMessage('Senha é obrigatória'),
 ];
 
-// Função para gerar JWT - MESMO SECRET USADO NO MIDDLEWARE
+// Função para gerar JWT
 const generateToken = (userId) => {
-  const secret = process.env.JWT_SECRET; // Removido o valor padrão hardcoded
-  console.log('🔑 JWT_SECRET (generateToken):', secret); // Adicionado para depuração
-  console.log('ℹ️ userId para JWT:', userId, 'Tipo:', typeof userId); // Adicionado para depuração
-  return jwt.sign({ id: userId }, secret, { expiresIn: '7d' }); // Alterado payload para { id: userId }
+  const secret = process.env.JWT_SECRET || 'matchit-secret-development-2025';
+  return jwt.sign({ userId }, secret, { expiresIn: '7d' });
 };
 
 // Função para hash da senha
@@ -76,10 +75,10 @@ router.post('/register', validateRegister, async (req, res) => {
     // Hash da senha
     const hashedPassword = await hashPassword(password);
 
-    // Criar usuário
+    // Criar usuário - USANDO COLUNA CORRETA: password_hash
     const result = await db.query(
-      `INSERT INTO users (email, password_hash, name, created_at, is_active) 
-       VALUES ($1, $2, $3, NOW(), true) 
+      `INSERT INTO users (email, password_hash, name, created_at) 
+       VALUES ($1, $2, $3, NOW()) 
        RETURNING id, email, name, created_at`,
       [email, hashedPassword, name]
     );
@@ -133,7 +132,7 @@ router.post('/login', validateLogin, async (req, res) => {
 
     const { email, password } = req.body;
 
-    // Buscar usuário
+    // Buscar usuário - USANDO COLUNA CORRETA: password_hash
     const result = await db.query(
       `SELECT id, email, password_hash, name FROM users WHERE email = $1`,
       [email]
@@ -148,7 +147,7 @@ router.post('/login', validateLogin, async (req, res) => {
 
     const user = result.rows[0];
 
-    // Verificar senha
+    // Verificar senha - USANDO COLUNA CORRETA
     const isValidPassword = await verifyPassword(password, user.password_hash);
     if (!isValidPassword) {
       return res.status(401).json({
@@ -185,15 +184,20 @@ router.post('/login', validateLogin, async (req, res) => {
 
 /**
  * GET /api/auth/me
- * Obter dados do usuário logado - COM MIDDLEWARE DE AUTENTICAÇÃO
+ * Obter dados do usuário logado
  */
-router.get('/me', authenticateToken, async (req, res) => {
+router.get('/me', async (req, res) => {
   try {
-    console.log('👤 Solicitação /me para usuário:', req.user.email);
-    
-    // req.user já foi validado pelo middleware
+    // Middleware de autenticação deve adicionar req.user
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Token inválido'
+      });
+    }
+
     const result = await db.query(
-      'SELECT id, email, name, created_at, is_active FROM users WHERE id = $1',
+      'SELECT id, email, name, created_at FROM users WHERE id = $1',
       [req.user.userId]
     );
 
@@ -204,17 +208,9 @@ router.get('/me', authenticateToken, async (req, res) => {
       });
     }
 
-    const user = result.rows[0];
-
     res.json({
       success: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        created_at: user.created_at,
-        is_active: user.is_active
-      }
+      user: result.rows[0]
     });
 
   } catch (error) {
@@ -231,6 +227,7 @@ router.get('/me', authenticateToken, async (req, res) => {
  * Logout (para compatibilidade com frontend)
  */
 router.post('/logout', (req, res) => {
+  // Com JWT, logout é feito no frontend removendo o token
   res.json({
     success: true,
     message: 'Logout realizado com sucesso'

@@ -1,11 +1,12 @@
-// server/middleware/auth.js - Middleware corrigido para aceitar id/userId
+// server/middleware/auth.js - Middleware de autenticação funcional para MatchIt
 import jwt from 'jsonwebtoken';
 import { pool } from '../config/database.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'matchit-secret-development-2025';
+const JWT_SECRET = process.env.JWT_SECRET; // Removido o valor padrão hardcoded
+console.log('🔑 JWT_SECRET (middleware):', JWT_SECRET); // Adicionado para depuração
 
 /**
- * Middleware de autenticação corrigido
+ * Middleware de autenticação obrigatória
  */
 export const authenticateToken = async (req, res, next) => {
     try {
@@ -29,7 +30,7 @@ export const authenticateToken = async (req, res, next) => {
             });
         }
         
-        const token = authHeader.substring(7).trim();
+        const token = authHeader.substring(7); // Remove "Bearer "
         
         // Para desenvolvimento, aceitar token "test-token"
         if (process.env.NODE_ENV === 'development' && token === 'test-token') {
@@ -48,6 +49,8 @@ export const authenticateToken = async (req, res, next) => {
         try {
             decoded = jwt.verify(token, JWT_SECRET);
         } catch (jwtError) {
+            console.error('❌ Erro JWT:', jwtError.message);
+            
             if (jwtError.name === 'TokenExpiredError') {
                 return res.status(401).json({
                     success: false,
@@ -69,24 +72,10 @@ export const authenticateToken = async (req, res, next) => {
             }
         }
         
-        // CORREÇÃO: Aceitar tanto 'id' quanto 'userId' no payload
-        const userId = decoded.userId || decoded.id;
-        
-        if (!userId) {
-            console.log('❌ Payload do token:', JSON.stringify(decoded));
-            return res.status(401).json({
-                success: false,
-                error: 'Token inválido - nem userId nem id encontrado',
-                code: 'MISSING_USER_IDENTIFIER'
-            });
-        }
-        
-        console.log('✅ Token validado, userId extraído:', userId);
-        
         // Buscar usuário no banco de dados
         const userResult = await pool.query(
             'SELECT id, name, email, is_active FROM users WHERE id = $1',
-            [userId]
+            [decoded.id] // Alterado para decoded.id
         );
         
         if (userResult.rows.length === 0) {
@@ -132,20 +121,23 @@ export const authenticateToken = async (req, res, next) => {
 };
 
 /**
- * Middleware de autenticação opcional
+ * Middleware de autenticação opcional (não bloqueia se não houver token)
  */
 export const optionalAuth = async (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;
         
+        // Se não há token, continuar sem autenticação
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
             req.user = null;
             return next();
         }
         
+        // Se há token, tentar autenticar
         await authenticateToken(req, res, next);
         
     } catch (error) {
+        // Em caso de erro, continuar sem autenticação
         req.user = null;
         next();
     }

@@ -1,3 +1,28 @@
+# scripts/corrigir-useauth-completo.sh - Substituição completa do useAuth problemático
+#!/bin/bash
+
+echo "🚨 CORREÇÃO COMPLETA - useAuth.ts"
+echo "=================================="
+echo "Problema identificado: Código incompleto + falta import React"
+echo ""
+
+# Backup do arquivo atual
+if [ -f "src/hooks/useAuth.ts" ]; then
+    echo "📁 Criando backup..."
+    cp "src/hooks/useAuth.ts" "src/hooks/useAuth.ts.BROKEN-$(date +%H%M%S)"
+    echo "✅ Backup: useAuth.ts.BROKEN-$(date +%H%M%S)"
+fi
+
+# Remover arquivo .ts se existir
+if [ -f "src/hooks/useAuth.ts" ]; then
+    echo "🗑️  Removendo useAuth.ts problemático..."
+    rm "src/hooks/useAuth.ts"
+fi
+
+# Criar versão limpa e funcional como .tsx
+echo "✨ Criando useAuth.tsx limpo e funcional..."
+
+cat > "src/hooks/useAuth.tsx" << 'EOF'
 import React, { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react';
 
 export interface User {
@@ -178,3 +203,42 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
+EOF
+
+echo "✅ useAuth.tsx criado com sucesso!"
+
+# Verificar se main.tsx está configurado com AuthProvider
+echo ""
+echo "🔍 Verificando configuração do AuthProvider..."
+
+if [ -f "src/main.tsx" ]; then
+    if grep -q "AuthProvider" "src/main.tsx"; then
+        echo "✅ AuthProvider já configurado em main.tsx"
+    else
+        echo "⚠️  AuthProvider NÃO encontrado em main.tsx"
+        echo "   Você precisará adicionar:"
+        echo "   import { AuthProvider } from './hooks/useAuth';"
+        echo "   <AuthProvider><App /></AuthProvider>"
+    fi
+else
+    echo "⚠️  main.tsx não encontrado"
+fi
+
+echo ""
+echo "=================================="
+echo "✅ CORREÇÃO CONCLUÍDA!"
+echo "=================================="
+echo ""
+echo "O que foi feito:"
+echo "  ✅ useAuth.ts problemático removido"
+echo "  ✅ useAuth.tsx limpo criado"
+echo "  ✅ Import React adicionado"
+echo "  ✅ Código incompleto corrigido"
+echo "  ✅ Extensão .tsx para JSX"
+echo ""
+echo "Agora teste:"
+echo "  npm run dev"
+echo ""
+echo "Se der erro de AuthProvider, configure main.tsx:"
+echo "  Envolver <App /> com <AuthProvider>"
+echo "=================================="

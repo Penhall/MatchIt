@@ -41,26 +41,22 @@ router.get('/categories', async (req, res) => {
  * GET /api/tournament/images
  * Listar imagens disponíveis (rota pública)
  */
-/**
- * GET /api/tournament/images
- * Listar imagens disponíveis (versão corrigida)
- */
-router.get("/images", async (req, res) => {
+router.get('/images', async (req, res) => {
   try {
     const { category, limit = 10 } = req.query;
     
-    console.log("🖼️ Buscando imagens de torneio, categoria:", category);
+    console.log('🖼️ Buscando imagens de torneio:', category);
     
-    let query = "SELECT id, category, image_url, alt_text, upload_date FROM tournament_images";
+    let query = 'SELECT * FROM tournament_images WHERE approved = true';
     let params = [];
     
     if (category) {
-      query += " WHERE category = $1";
+      query += ' AND category = $1';
       params.push(category);
     }
     
-    query += " ORDER BY upload_date DESC LIMIT $" + (params.length + 1);
-    params.push(parseInt(limit));
+    query += ' ORDER BY upload_date DESC LIMIT $' + (params.length + 1);
+    params.push(limit);
     
     const result = await pool.query(query, params);
 
@@ -68,14 +64,14 @@ router.get("/images", async (req, res) => {
       success: true,
       images: result.rows,
       total: result.rows.length,
-      category: category || "all"
+      category: category || 'all'
     });
 
   } catch (error) {
-    console.error("❌ Erro ao buscar imagens:", error);
+    console.error('❌ Erro ao buscar imagens:', error);
     res.status(500).json({
       success: false,
-      error: "Erro ao buscar imagens"
+      error: 'Erro ao buscar imagens'
     });
   }
 });
