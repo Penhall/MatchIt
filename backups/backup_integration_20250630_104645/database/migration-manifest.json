@@ -1,0 +1,272 @@
+{
+  "generated_at": "2025-06-25T03:31:48.066Z",
+  "total_migrations": 14,
+  "structure": {
+    "migrations": {
+      "core": "Migrações essenciais do sistema",
+      "features": "Migrações de funcionalidades",
+      "data": "Seeds e dados iniciais",
+      "indexes": "Criação de índices",
+      "cleanup": "Limpeza e otimizações"
+    },
+    "archive": {
+      "old": "Migrações antigas/obsoletas",
+      "duplicates": "Arquivos duplicados",
+      "broken": "Migrações com problemas"
+    }
+  },
+  "migrations": [
+    {
+      "id": "4fa1695c",
+      "original_path": "database\\migrations\\002_emotional_profile_schema_fixed.sql",
+      "new_path": "database\\migrations\\indexes\\002_emotional_profile_schema_fixed.sql",
+      "category": "migrations",
+      "subcategory": "indexes",
+      "priority": "critical",
+      "analysis": {
+        "hasCreateTable": true,
+        "hasAlterTable": true,
+        "hasDropTable": false,
+        "hasInsert": true,
+        "hasIndex": true,
+        "hasFunction": false,
+        "lineCount": 333
+      },
+      "organized_at": "2025-06-25T03:31:48.066Z"
+    },
+    {
+      "id": "172aa185",
+      "original_path": "database\\migrations\\006_add_algorithm_weights.sql",
+      "new_path": "database\\migrations\\indexes\\006_add_algorithm_weights.sql",
+      "category": "migrations",
+      "subcategory": "indexes",
+      "priority": "critical",
+      "analysis": {
+        "hasCreateTable": true,
+        "hasAlterTable": false,
+        "hasDropTable": false,
+        "hasInsert": false,
+        "hasIndex": true,
+        "hasFunction": false,
+        "lineCount": 39
+      },
+      "organized_at": "2025-06-25T03:31:48.066Z"
+    },
+    {
+      "id": "d647d1a9",
+      "original_path": "database\\migrations\\007b_create_learning_sessions.sql",
+      "new_path": "database\\migrations\\indexes\\20250625_007b_create_learning_sessions.sql",
+      "category": "migrations",
+      "subcategory": "indexes",
+      "priority": "critical",
+      "analysis": {
+        "hasCreateTable": true,
+        "hasAlterTable": false,
+        "hasDropTable": false,
+        "hasInsert": false,
+        "hasIndex": true,
+        "hasFunction": false,
+        "lineCount": 24
+      },
+      "organized_at": "2025-06-25T03:31:48.066Z"
+    },
+    {
+      "id": "4a03fc9d",
+      "original_path": "database\\migrations\\007_add_style_data_column.sql",
+      "new_path": "database\\features\\features\\007_add_style_data_column.sql",
+      "category": "features",
+      "subcategory": "features",
+      "priority": "high",
+      "analysis": {
+        "hasCreateTable": false,
+        "hasAlterTable": true,
+        "hasDropTable": false,
+        "hasInsert": false,
+        "hasIndex": false,
+        "hasFunction": false,
+        "lineCount": 15
+      },
+      "organized_at": "2025-06-25T03:31:48.066Z"
+    },
+    {
+      "id": "46de3c32",
+      "original_path": "database\\migrations\\008_add_emotional_profile_tables.sql",
+      "new_path": "database\\migrations\\indexes\\008_add_emotional_profile_tables.sql",
+      "category": "migrations",
+      "subcategory": "indexes",
+      "priority": "critical",
+      "analysis": {
+        "hasCreateTable": true,
+        "hasAlterTable": false,
+        "hasDropTable": false,
+        "hasInsert": false,
+        "hasIndex": true,
+        "hasFunction": false,
+        "lineCount": 31
+      },
+      "organized_at": "2025-06-25T03:31:48.066Z"
+    },
+    {
+      "id": "3355fbe3",
+      "original_path": "database\\migrations\\009_seed_initial_data.sql",
+      "new_path": "database\\migrations\\data\\009_seed_initial_data.sql",
+      "category": "migrations",
+      "subcategory": "data",
+      "priority": "critical",
+      "analysis": {
+        "hasCreateTable": false,
+        "hasAlterTable": false,
+        "hasDropTable": false,
+        "hasInsert": true,
+        "hasIndex": false,
+        "hasFunction": false,
+        "lineCount": 95
+      },
+      "organized_at": "2025-06-25T03:31:48.066Z"
+    },
+    {
+      "id": "1b917a6e",
+      "original_path": "database\\migrations\\010_create_emotional_profile_view.sql",
+      "new_path": "database\\migrations\\indexes\\010_create_emotional_profile_view.sql",
+      "category": "migrations",
+      "subcategory": "indexes",
+      "priority": "medium",
+      "analysis": {
+        "hasCreateTable": false,
+        "hasAlterTable": false,
+        "hasDropTable": false,
+        "hasInsert": false,
+        "hasIndex": true,
+        "hasFunction": false,
+        "lineCount": 85
+      },
+      "organized_at": "2025-06-25T03:31:48.066Z"
+    },
+    {
+      "id": "df5a2b94",
+      "original_path": "database\\migrations\\010_create_user_emotional_profile_view.sql",
+      "new_path": "database\\migrations\\core\\010_create_user_emotional_profile_view.sql",
+      "category": "migrations",
+      "subcategory": "core",
+      "priority": "critical",
+      "analysis": {
+        "hasCreateTable": false,
+        "hasAlterTable": false,
+        "hasDropTable": false,
+        "hasInsert": false,
+        "hasIndex": false,
+        "hasFunction": false,
+        "lineCount": 52
+      },
+      "organized_at": "2025-06-25T03:31:48.066Z"
+    },
+    {
+      "id": "2b11c2a4",
+      "original_path": "scripts\\analyze-migrations.js",
+      "new_path": "database\\migrations\\data\\20250625_analyze-migrations.js",
+      "category": "migrations",
+      "subcategory": "data",
+      "priority": "critical",
+      "analysis": {
+        "hasCreateTable": true,
+        "hasAlterTable": true,
+        "hasDropTable": true,
+        "hasInsert": true,
+        "hasIndex": true,
+        "hasFunction": true,
+        "lineCount": 420
+      },
+      "organized_at": "2025-06-25T03:31:48.066Z"
+    },
+    {
+      "id": "b847ac71",
+      "original_path": "scripts\\organize-migrations.js",
+      "new_path": "database\\migrations\\core\\20250625_organize-migrations.js",
+      "category": "migrations",
+      "subcategory": "core",
+      "priority": "critical",
+      "analysis": {
+        "hasCreateTable": true,
+        "hasAlterTable": true,
+        "hasDropTable": true,
+        "hasInsert": true,
+        "hasIndex": true,
+        "hasFunction": true,
+        "lineCount": 444
+      },
+      "organized_at": "2025-06-25T03:31:48.066Z"
+    },
+    {
+      "id": "0ae3cfc4",
+      "original_path": "scripts\\run-migrations.js",
+      "new_path": "database\\migrations\\core\\20250625_run-migrations.js",
+      "category": "migrations",
+      "subcategory": "core",
+      "priority": "critical",
+      "analysis": {
+        "hasCreateTable": true,
+        "hasAlterTable": false,
+        "hasDropTable": false,
+        "hasInsert": true,
+        "hasIndex": true,
+        "hasFunction": false,
+        "lineCount": 492
+      },
+      "organized_at": "2025-06-25T03:31:48.066Z"
+    },
+    {
+      "id": "74bca391",
+      "original_path": "server\\migrations\\003_analytics_schema.sql",
+      "new_path": "database\\migrations\\indexes\\003_analytics_schema.sql",
+      "category": "migrations",
+      "subcategory": "indexes",
+      "priority": "critical",
+      "analysis": {
+        "hasCreateTable": true,
+        "hasAlterTable": false,
+        "hasDropTable": false,
+        "hasInsert": true,
+        "hasIndex": true,
+        "hasFunction": false,
+        "lineCount": 451
+      },
+      "organized_at": "2025-06-25T03:31:48.066Z"
+    },
+    {
+      "id": "80516896",
+      "original_path": "server\\migrations\\add_emotional_profile_20250624.sql",
+      "new_path": "database\\migrations\\indexes\\20250625_add_emotional_profile_20250624.sql",
+      "category": "migrations",
+      "subcategory": "indexes",
+      "priority": "critical",
+      "analysis": {
+        "hasCreateTable": false,
+        "hasAlterTable": true,
+        "hasDropTable": false,
+        "hasInsert": false,
+        "hasIndex": true,
+        "hasFunction": false,
+        "lineCount": 298
+      },
+      "organized_at": "2025-06-25T03:31:48.066Z"
+    },
+    {
+      "id": "f14a3e92",
+      "original_path": "server\\migrations\\add_feedback_tracking_20250624.sql",
+      "new_path": "database\\migrations\\indexes\\20250625_add_feedback_tracking_20250624.sql",
+      "category": "migrations",
+      "subcategory": "indexes",
+      "priority": "critical",
+      "analysis": {
+        "hasCreateTable": true,
+        "hasAlterTable": false,
+        "hasDropTable": false,
+        "hasInsert": true,
+        "hasIndex": true,
+        "hasFunction": false,
+        "lineCount": 231
+      },
+      "organized_at": "2025-06-25T03:31:48.066Z"
+    }
+  ]
+}

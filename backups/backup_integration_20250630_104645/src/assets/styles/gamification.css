@@ -1,0 +1,418 @@
+/* =====================================================
+   ANIMAÇÕES CUSTOMIZADAS PARA STYLE ADJUSTMENT
+   ===================================================== */
+
+/* Animações de entrada para notificações */
+@keyframes slideInDown {
+  from {
+    transform: translate3d(0, -100%, 0);
+    opacity: 0;
+    visibility: visible;
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutUp {
+  from {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+  to {
+    transform: translate3d(0, -100%, 0);
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+.animate-slideInDown {
+  animation: slideInDown 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+.animate-slideOutUp {
+  animation: slideOutUp 0.3s cubic-bezier(0.55, 0.055, 0.675, 0.19) both;
+}
+
+/* Animação de escala com bounce */
+@keyframes scaleBoounce {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-scaleBounce {
+  animation: scaleBoounce 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55) both;
+}
+
+/* Animação de pulso neon */
+@keyframes pulseNeon {
+  0%, 100% {
+    box-shadow: 0 0 5px currentColor, 0 0 10px currentColor, 0 0 15px currentColor;
+  }
+  50% {
+    box-shadow: 0 0 10px currentColor, 0 0 20px currentColor, 0 0 30px currentColor;
+  }
+}
+
+.animate-pulseNeon {
+  animation: pulseNeon 2s infinite ease-in-out;
+}
+
+/* Animação de floating para elementos */
+@keyframes floating {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-floating {
+  animation: floating 3s ease-in-out infinite;
+}
+
+/* Animação de shake para feedback */
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-2px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(2px);
+  }
+}
+
+.animate-shake {
+  animation: shake 0.5s linear;
+}
+
+/* Animação de glow crescente */
+@keyframes glowExpand {
+  0% {
+    box-shadow: 0 0 5px rgba(0, 240, 255, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(0, 240, 255, 0.8), 0 0 30px rgba(0, 240, 255, 0.6);
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(0, 240, 255, 0.5);
+  }
+}
+
+.animate-glowExpand {
+  animation: glowExpand 1.5s ease-in-out infinite;
+}
+
+/* Animação de typewriter para texto */
+@keyframes typewriter {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+@keyframes blinkCursor {
+  from, to {
+    border-color: transparent;
+  }
+  50% {
+    border-color: #00f0ff;
+  }
+}
+
+.animate-typewriter {
+  overflow: hidden;
+  border-right: 2px solid transparent;
+  white-space: nowrap;
+  animation: 
+    typewriter 2s steps(40) 1s both,
+    blinkCursor 1s infinite;
+}
+
+/* Animações para partículas */
+@keyframes particleFloat {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-200px) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.animate-particleFloat {
+  animation: particleFloat 3s linear infinite;
+}
+
+/* Animação de progress bar com glow */
+@keyframes progressGlow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-progressGlow {
+  background: linear-gradient(
+    45deg, 
+    #00f0ff, 
+    #00ff9d, 
+    #ff7b00, 
+    #00f0ff
+  );
+  background-size: 400% 400%;
+  animation: progressGlow 2s ease infinite;
+}
+
+/* Hover effects melhorados */
+.style-option-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.style-option-hover::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0, 240, 255, 0.2),
+    transparent
+  );
+  transition: left 0.5s;
+}
+
+.style-option-hover:hover::before {
+  left: 100%;
+}
+
+/* Animação de números incrementando */
+@keyframes countUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-countUp {
+  animation: countUp 0.6s ease-out both;
+}
+
+/* Efeito de ripple para cliques */
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+.ripple-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple-effect::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(0, 240, 255, 0.6);
+  transform: scale(0);
+  animation: ripple 0.6s linear;
+  pointer-events: none;
+}
+
+/* Estados específicos para gamificação */
+.streak-active {
+  position: relative;
+}
+
+.streak-active::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, #ff7b00, #ff0080, #ff7b00);
+  border-radius: inherit;
+  z-index: -1;
+  animation: progressGlow 1.5s ease infinite;
+}
+
+/* Achievement unlock animation */
+@keyframes achievementUnlock {
+  0% {
+    transform: scale(0) rotate(-180deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+.animate-achievementUnlock {
+  animation: achievementUnlock 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) both;
+}
+
+/* Level up effect */
+@keyframes levelUp {
+  0% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  25% {
+    transform: scale(1.1);
+    filter: brightness(1.5);
+  }
+  50% {
+    transform: scale(1.05);
+    filter: brightness(1.3);
+  }
+  75% {
+    transform: scale(1.1);
+    filter: brightness(1.5);
+  }
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
+.animate-levelUp {
+  animation: levelUp 1s ease-in-out;
+}
+
+/* Sparkle animation para achievements */
+@keyframes sparkle {
+  0%, 100% {
+    transform: scale(0) rotate(0deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1) rotate(180deg);
+    opacity: 1;
+  }
+}
+
+.animate-sparkle {
+  animation: sparkle 1.2s ease-in-out infinite;
+}
+
+/* Delay variants para animações em cascata */
+.animate-delay-100 { animation-delay: 100ms; }
+.animate-delay-200 { animation-delay: 200ms; }
+.animate-delay-300 { animation-delay: 300ms; }
+.animate-delay-400 { animation-delay: 400ms; }
+.animate-delay-500 { animation-delay: 500ms; }
+
+/* Utility classes para performance */
+.gpu-accelerated {
+  transform: translateZ(0);
+  will-change: transform, opacity;
+}
+
+.no-select {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Responsive animations - reduzir movimento em dispositivos com preferência */
+@media (prefers-reduced-motion: reduce) {
+  .animate-slideInDown,
+  .animate-slideOutUp,
+  .animate-scaleBounce,
+  .animate-pulseNeon,
+  .animate-floating,
+  .animate-shake,
+  .animate-glowExpand,
+  .animate-particleFloat,
+  .animate-progressGlow,
+  .animate-countUp,
+  .animate-achievementUnlock,
+  .animate-levelUp,
+  .animate-sparkle {
+    animation: none !important;
+  }
+  
+  .style-option-hover::before {
+    display: none;
+  }
+}
+
+/* Dark mode optimizations */
+@media (prefers-color-scheme: dark) {
+  .animate-typewriter {
+    border-color: #00f0ff;
+  }
+}
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+  .animate-slideInDown,
+  .animate-slideOutUp {
+    animation-duration: 0.3s;
+  }
+  
+  .animate-scaleBounce {
+    animation-duration: 0.4s;
+  }
+  
+  .animate-floating {
+    animation-duration: 2s;
+    transform: translateY(-5px);
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .animate-pulseNeon,
+  .animate-glowExpand {
+    animation: none;
+    box-shadow: none;
+    border: 2px solid currentColor;
+  }
+}

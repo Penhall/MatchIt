@@ -1,0 +1,43 @@
+# Dockerfile para ambiente de desenvolvimento
+FROM node:18-alpine
+
+# Instalar dependências do sistema
+RUN apk add --no-cache \
+    curl \
+    bash \
+    git \
+    && rm -rf /var/cache/apk/*
+
+WORKDIR /app
+
+# Copiar arquivos de dependências
+COPY package*.json ./
+
+# Instalar todas as dependências (incluindo devDependencies)
+RUN npm install
+
+# Copiar código fonte
+COPY . .
+
+# Criar usuário para desenvolvimento (sintaxe compatível com Alpine)
+RUN addgroup -g 1001 nodejs && \
+    adduser -u 1001 -G nodejs -D nodejs
+
+# Definir permissões
+RUN chown -R nodejs:nodejs /app
+USER nodejs
+
+# Variáveis de ambiente para desenvolvimento
+ENV NODE_ENV=development
+ENV DB_HOST=postgres
+ENV DB_PORT=5432
+ENV DB_USER=matchit
+ENV DB_PASSWORD=matchit123
+ENV DB_NAME=matchit_db
+ENV PORT=3000
+
+# Expor portas para Vite (5173) e backend (3000)
+EXPOSE 5173 3000
+
+# Comando padrão para desenvolvimento
+CMD ["npm", "run", "dev"]
