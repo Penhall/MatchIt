@@ -203,7 +203,7 @@ export class WeightAdjustmentAlgorithm {
   }
 
   private determineInteractionOutcome(interaction: UserInteraction): 'positive' | 'negative' | 'neutral' {
-    switch (interaction.interactionType) {
+    switch (interaction.type) {
       case InteractionType.SWIPE_RIGHT:
       case InteractionType.SUPER_LIKE:
         return 'positive';
@@ -487,13 +487,28 @@ export class WeightAdjustmentAlgorithm {
     // Mapear dimensões para valores do perfil emocional
     const mapping: Record<string, keyof EmotionalProfile> = {
       'emotional_stability': 'emotional_stability',
+      'communication_style': 'communication_style',
+      'life_goals': 'life_goals',
+      'conflict_resolution': 'conflict_resolution',
+      'intimacy_preferences': 'intimacy_preferences',
       'social_energy': 'social_energy',
       'adventure_seeking': 'adventure_seeking',
-      // ... adicionar todos os mapeamentos
+      'independence_level': 'independence_level',
+      'humor_style': 'humor_style',
+      'values_alignment': 'values_alignment',
+      'decision_making': 'decision_making',
+      'stress_response': 'stress_response',
+      'affection_expression': 'affection_expression',
+      'future_planning': 'future_planning',
+      'creativity_level': 'creativity_level',
+      'family_orientation': 'family_orientation'
     };
     
     const profileKey = mapping[dimension];
-    return profileKey ? profile[profileKey] : null;
+    if (profileKey && profileKey in profile) {
+        return profile[profileKey];
+    }
+    return null;
   }
 
   private async getRelevantInteractions(userId: string): Promise<UserInteraction[]> {

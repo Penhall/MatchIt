@@ -1,47 +1,44 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import path from 'path';
 
 export default defineConfig({
-  base: '/',
   plugins: [react()],
+  
   resolve: {
-    alias: {
-      '@': './src',
-      '@context': './src/context',
-      '@components': './src/components',
-      '@services': './src/services',
-      '@types': './src/types',
-      '@utils': './src/utils',
-      '@assets': './src/assets',
-      '@db': './src/db'
-    }
+    alias: [
+      // Corrigir o problema de redirecionamento, garantindo que apenas 'react-native' seja redirecionado
+      { find: /^react-native$/, replacement: 'react-native-web' },
+      
+      // Manter os outros aliases
+      { find: '@', replacement: path.resolve(__dirname, './src') },
+      { find: '@components', replacement: path.resolve(__dirname, './src/components') },
+      { find: '@context', replacement: path.resolve(__dirname, './src/context') },
+      { find: '@services', replacement: path.resolve(__dirname, './src/services') },
+      { find: '@hooks', replacement: path.resolve(__dirname, './src/hooks') },
+      { find: '@screens', replacement: path.resolve(__dirname, './src/screens') },
+      { find: '@utils', replacement: path.resolve(__dirname, './src/utils') },
+      { find: '@types', replacement: path.resolve(__dirname, './src/types') },
+    ]
   },
+  
   server: {
     port: 5173,
+    host: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'http://localhost:3000',
         changeOrigin: true,
         secure: false
       }
     }
   },
-  build: {
-    outDir: 'dist',
-    assetsDir: 'assets',
-    emptyOutDir: true,
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          router: ['react-router-dom'],
-          i18n: ['react-i18next', 'i18next']
-        }
-      },
-      external: []
-    }
+  
+  define: {
+    global: 'globalThis',
   },
+  
   optimizeDeps: {
-    include: ['react', 'react-dom', 'react-router-dom']
+    include: ['react', 'react-dom', 'react-router-dom', 'axios']
   }
 });
