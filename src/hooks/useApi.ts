@@ -36,7 +36,7 @@ export const useApi = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
   const getHeaders = useCallback((customHeaders?: Record<string, string>): Record<string, string> => {
     const token = localStorage.getItem('matchit_token');
@@ -200,7 +200,7 @@ export const useApi = () => {
 };
 
 // Classe de erro personalizada
-class ApiError extends Error {
+export class ApiError extends Error {
   public status: number;
   public code?: string;
   public details?: any;

@@ -1,4 +1,4 @@
-// server/routes/tournament.js - Rotas básicas de torneio para MatchIt
+// server/routes/tournament.js - Rotas de torneio corrigidas para MatchIt
 import express from 'express';
 import { pool } from '../config/database.js';
 import { authenticateToken } from '../middleware/auth.js';
@@ -39,43 +39,63 @@ router.get('/categories', async (req, res) => {
 
 /**
  * GET /api/tournament/images
- * Listar imagens disponíveis (rota pública)
+ * Listar imagens disponíveis (rota pública) - VERSÃO CORRIGIDA
  */
-/**
- * GET /api/tournament/images
- * Listar imagens disponíveis (versão corrigida)
- */
-router.get("/images", async (req, res) => {
+router.get('/images', async (req, res) => {
   try {
     const { category, limit = 10 } = req.query;
     
-    console.log("🖼️ Buscando imagens de torneio, categoria:", category);
+    console.log('🖼️ Buscando imagens de torneio, categoria:', category || 'todas');
     
-    let query = "SELECT id, category, image_url, alt_text, upload_date FROM tournament_images";
+    // Query corrigida com todas as colunas que existem
+    let query = `
+      SELECT 
+        id, 
+        category, 
+        image_url, 
+        alt_text, 
+        title,
+        description,
+        upload_date,
+        approved
+      FROM tournament_images 
+      WHERE approved = true
+    `;
+    
     let params = [];
     
-    if (category) {
-      query += " WHERE category = $1";
+    // Filtro por categoria se fornecido
+    if (category && category !== 'all') {
+      query += ' AND category = $1';
       params.push(category);
     }
     
-    query += " ORDER BY upload_date DESC LIMIT $" + (params.length + 1);
+    // Ordenação e limite
+    query += ` ORDER BY upload_date DESC LIMIT $${params.length + 1}`;
     params.push(parseInt(limit));
     
+    console.log('🖼️ Query executada:', query);
+    console.log('🖼️ Parâmetros:', params);
+    
     const result = await pool.query(query, params);
+    
+    console.log('✅ Imagens encontradas:', result.rows.length);
 
     res.json({
       success: true,
       images: result.rows,
       total: result.rows.length,
-      category: category || "all"
+      category: category || 'all'
     });
 
   } catch (error) {
-    console.error("❌ Erro ao buscar imagens:", error);
+    console.error('❌ Erro ao buscar imagens:', error);
+    console.error('   Detalhes:', error.message);
+    
     res.status(500).json({
       success: false,
-      error: "Erro ao buscar imagens"
+      error: 'Erro ao buscar imagens',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });
@@ -97,20 +117,33 @@ router.post('/start', authenticateToken, async (req, res) => {
 
     console.log('🏆 Iniciando torneio:', req.user.email, category);
 
-    // Criar sessão de torneio básica
-    const sessionId = `tournament_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    // Buscar imagens da categoria para o torneio
+    const imagesResult = await pool.query(
+      'SELECT id, image_url, alt_text FROM tournament_images WHERE category = $1 AND approved = true ORDER BY RANDOM() LIMIT $2',
+      [category, tournamentSize]
+    );
+
+    if (imagesResult.rows.length < 4) {
+      return res.status(400).json({
+        success: false,
+        error: 'Não há imagens suficientes para um torneio nesta categoria'
+      });
+    }
+
+    // Criar sessão de torneio
+    const sessionId = `tournament_${req.user.id}_${category}_${Date.now()}`;
+    
+    const images = imagesResult.rows;
+    const totalRounds = Math.ceil(Math.log2(images.length));
 
     res.json({
       success: true,
-      message: 'Torneio iniciado com sucesso',
-      tournament: {
-        sessionId: sessionId,
-        category: category,
-        size: tournamentSize,
-        userId: req.user.userId,
-        status: 'active',
-        created_at: new Date().toISOString()
-      }
+      sessionId: sessionId,
+      category: category,
+      images: images,
+      totalRounds: totalRounds,
+      currentRound: 1,
+      message: 'Torneio iniciado com sucesso!'
     });
 
   } catch (error) {
@@ -124,30 +157,28 @@ router.post('/start', authenticateToken, async (req, res) => {
 
 /**
  * POST /api/tournament/choice
- * Registrar escolha em torneio (requer autenticação)
+ * Registrar escolha do usuário no torneio (requer autenticação)
  */
 router.post('/choice', authenticateToken, async (req, res) => {
   try {
-    const { sessionId, imageA, imageB, choice } = req.body;
+    const { sessionId, selectedImageId, eliminatedImageId, round } = req.body;
 
-    if (!sessionId || !imageA || !imageB || !choice) {
+    if (!sessionId || !selectedImageId || !eliminatedImageId) {
       return res.status(400).json({
         success: false,
-        error: 'SessionId, imageA, imageB e choice são obrigatórios'
+        error: 'Dados incompletos para registrar escolha'
       });
     }
 
-    console.log('🏆 Registrando escolha:', req.user.email, choice);
+    console.log('✅ Registrando escolha:', req.user.email, selectedImageId);
 
+    // Por enquanto, retornar sucesso básico
     res.json({
       success: true,
       message: 'Escolha registrada com sucesso',
-      choice: {
-        sessionId: sessionId,
-        userId: req.user.userId,
-        selected: choice,
-        timestamp: new Date().toISOString()
-      }
+      sessionId: sessionId,
+      selectedImageId: selectedImageId,
+      nextRound: round + 1
     });
 
   } catch (error) {

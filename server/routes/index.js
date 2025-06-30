@@ -15,6 +15,7 @@ import chatRoutes from './chat.js';
 
 // Importar nova rota de style preferences
 import stylePreferencesRoutes from './stylePreferences.js';
+import styleAdjustmentRoutes from './styleAdjustment.js'; // MODIFICADO: Importar novas rotas
 
 // Importar rota de recomendação se disponível
 let recommendationRoutes = null;
@@ -27,17 +28,13 @@ if (config.features.enableRecommendations) {
   }
 }
 
-// Importar rotas de admin e styleAdjustment dinamicamente
+// Importar rotas de admin dinamicamente
 let adminRoutes = null;
-let styleAdjustmentRoutes = null;
 try {
   const adminModule = await import('./admin.js');
   adminRoutes = adminModule.default;
-  
-  const styleModule = await import('./styleAdjustment.js');
-  styleAdjustmentRoutes = styleModule.default;
 } catch (error) {
-  console.error('⚠️ Falha ao carregar rotas administrativas ou de ajuste de estilo:', error.message);
+  console.error('⚠️ Falha ao carregar rotas administrativas:', error.message);
 }
 
 const router = Router();
@@ -67,12 +64,10 @@ if (adminRoutes) {
   router.use('/admin', adminRoutes);
 }
 
-// Rotas de Ajuste de Estilo
-if (styleAdjustmentRoutes) {
-  router.use('/style-adjustment', styleAdjustmentRoutes);
-}
+// MODIFICADO: Usar as novas rotas de ajuste de estilo
+router.use('/style', styleAdjustmentRoutes);
 
-// ⭐ NOVA ROTA: Style Preferences direto em /api/style-preferences
+// Rota de Style Preferences (pode ser mantida ou removida se redundante)
 router.use('/style-preferences', stylePreferencesRoutes);
 
 // Rotas de perfil
@@ -161,7 +156,8 @@ if (config.nodeEnv === 'development') {
   console.log('  ✅ /api/health, /api/info, /api/ping');
   console.log('  ✅ /api/auth/register, /api/auth/login');
   console.log('  ✅ /api/profile, /api/profile/style-choices');
-  console.log('  ✅ /api/style-preferences (NEW!)');
+  console.log('  ✅ /api/style (NEW!)');
+  console.log('  ✅ /api/style-preferences');
   console.log('  ✅ /api/matches, /api/matches/potential');
   console.log('  ✅ /api/matches/:matchId/messages');
   console.log('  ✅ /api/products, /api/products/recommended');

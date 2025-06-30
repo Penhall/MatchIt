@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react';
 
 export interface User {
-  id: number;
+  id: string; // MODIFICADO: de number para string para suportar UUID
   name: string;
   email: string;
   displayName: string;
@@ -61,7 +61,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setIsLoggingIn(true);
       setError(null);
 
-      // Simulação de login (substituir por API real)
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -69,31 +68,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
 
       if (!response.ok) {
-        throw new Error('Credenciais inválidas');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Credenciais inválidas');
       }
 
       const data = await response.json();
       
-      const mockUser: User = {
-        id: 1,
-        name: data.name || 'Demo User',
-        email: email,
-        displayName: data.displayName || 'Demo User',
-        city: 'São Paulo',
-        gender: 'other',
-        avatarUrl: 'https://via.placeholder.com/150',
-        bio: 'Exploring digital aesthetics. Seeking connections beyond the surface.',
-        isVip: true,
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        lastLoginAt: new Date().toISOString()
-      };
+      // MODIFICADO: Usar o usuário real da API em vez de um mock
+      const realUser: User = data.user;
 
-      localStorage.setItem('matchit_token', data.token || 'demo-token');
-      localStorage.setItem('matchit_user', JSON.stringify(mockUser));
+      localStorage.setItem('matchit_token', data.token);
+      localStorage.setItem('matchit_user', JSON.stringify(realUser));
       localStorage.setItem('matchit_auth', 'true');
       
-      setUser(mockUser);
+      setUser(realUser);
       setIsAuthenticated(true);
       
     } catch (err: any) {
@@ -116,7 +104,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
 
       if (!response.ok) {
-        throw new Error('Erro no registro');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erro no registro');
       }
 
       await login(email, password);

@@ -1,18 +1,17 @@
-// src/App.tsx - FASE 5: Login + Profile + Settings + StyleAdjustment + MatchArea
+// src/App.tsx - FASE 2: Login + Profile
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import LoginScreen from './screens/LoginScreen';
 import ProfileScreen from './screens/ProfileScreen';
-import SettingsScreen from './screens/SettingsScreen';
-import StyleAdjustmentScreen from './screens/StyleAdjustmentScreen';
-import MatchAreaScreen from './screens/MatchAreaScreen';
 import { useAuth } from './hooks/useAuth';
 import { APP_ROUTES } from './constants';
-import { View, Text } from './lib/react-native-web';
 
-// ⚠️  TELAS AINDA DESABILITADAS (FASE 6+)
+// ⚠️  TELAS AINDA DESABILITADAS (FASE 3+)
+// import StyleAdjustmentScreen from './screens/StyleAdjustmentScreen';
+// import MatchAreaScreen from './screens/MatchAreaScreen';
 // import ChatScreen from './screens/ChatScreen';
 // import VendorScreen from './screens/VendorScreen';
+// import SettingsScreen from './screens/SettingsScreen';
 // import BottomNavbar from './components/navigation/BottomNavbar';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -27,30 +26,9 @@ const App: React.FC = () => {
   const { isAuthenticated } = useAuth();
 
   return (
-    <View style={{ 
-      flex: 1, 
-      justifyContent: 'center', 
-      alignItems: 'center', 
-      minHeight: '100vh', 
-      backgroundColor: '#1a1a2e', 
-      padding: 2 
-    }}>
-      <View style={{ 
-        width: '100%', 
-        maxWidth: 420, 
-        height: 850, 
-        backgroundColor: 'black', 
-        borderRadius: 36, 
-        shadowColor: '#00f7ff', 
-        shadowOpacity: 0.3,
-        shadowRadius: 20,
-        overflow: 'hidden', 
-        borderWidth: 2, 
-        borderColor: 'rgba(0, 247, 255, 0.3)', 
-        flexDirection: 'column', 
-        position: 'relative' 
-      }}>
-        <View style={{ flexGrow: 1, overflowY: 'auto' }}>
+    <div className="flex justify-center items-center min-h-screen bg-dark-bg p-2 sm:p-4">
+      <div className="w-full max-w-[420px] h-[850px] bg-black rounded-[36px] shadow-2xl shadow-neon-blue/30 overflow-hidden border-2 border-neon-blue/30 flex flex-col relative holographic-overlay">
+        <main className="flex-grow overflow-y-auto">
           <Routes>
             {/* ✅ FASE 1: LOGIN */}
             <Route path="/login" element={<LoginScreen />} />
@@ -61,30 +39,24 @@ const App: React.FC = () => {
               element={<ProtectedRoute><ProfileScreen /></ProtectedRoute>} 
             />
             
-            {/* ✅ FASE 3: SETTINGS */}
-            <Route path="/settings" element={<ProtectedRoute><SettingsScreen /></ProtectedRoute>} />
-            
-            {/* ✅ FASE 4: STYLE ADJUSTMENT */}
-            <Route path="/style-adjustment" element={<ProtectedRoute><StyleAdjustmentScreen /></ProtectedRoute>} />
-            
-            {/* ✅ FASE 5: MATCH AREA */}
-            <Route path="/match-area" element={<ProtectedRoute><MatchAreaScreen /></ProtectedRoute>} />
-            
-            {/* ⚠️  ROTAS AINDA DESABILITADAS (FASE 6+) */}
+            {/* ⚠️  ROTAS AINDA DESABILITADAS (FASE 3+) */}
             {/* 
+            <Route path="/style-adjustment" element={<ProtectedRoute><StyleAdjustmentScreen /></ProtectedRoute>} />
+            <Route path="/match-area" element={<ProtectedRoute><MatchAreaScreen /></ProtectedRoute>} />
             <Route path="/chat/:chatId" element={<ProtectedRoute><ChatScreen /></ProtectedRoute>} />
             <Route path="/vendor" element={<ProtectedRoute><VendorScreen /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><SettingsScreen /></ProtectedRoute>} />
             */}
             
             {/* Rota padrão */}
             <Route path="*" element={<Navigate to={isAuthenticated ? "/profile" : "/login"} replace />} />
           </Routes>
-        </View>
+        </main>
         
         {/* ⚠️  NAVEGAÇÃO AINDA DESABILITADA (FASE 8) */}
         {/* {isAuthenticated && <BottomNavbar />} */}
-      </View>
-    </View>
+      </div>
+    </div>
   );
 };
 
