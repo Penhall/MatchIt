@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react';
+// src/hooks/useAuth.tsx - Hook de autenticação corrigido para React Web
+import React, { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react';
 
 export interface User {
   id: number;
@@ -38,45 +39,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   });
 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return localStorage.getItem('matchit_auth') === 'true' && !!localStorage.getItem('matchit_token');
+    return localStorage.getItem('matchit_auth') === 'true' && user !== null;
   });
 
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Salvar estado no localStorage
-  useEffect(() => {
-    localStorage.setItem('matchit_auth', String(isAuthenticated));
-    if (user) {
-      localStorage.setItem('matchit_user', JSON.stringify(user));
-    } else {
-      localStorage.removeItem('matchit_user');
-    }
-  }, [isAuthenticated, user]);
-
-  // Verificar token na inicialização
   useEffect(() => {
     const token = localStorage.getItem('matchit_token');
-    const savedUser = localStorage.getItem('matchit_user');
+    const auth = localStorage.getItem('matchit_auth');
     
-    if (token && savedUser && !user) {
-      try {
-        setUser(JSON.parse(savedUser));
-        setIsAuthenticated(true);
-      } catch (err) {
-        console.error('Erro ao restaurar usuário:', err);
-        logout();
-      }
+    if (auth === 'true' && token && user) {
+      setIsAuthenticated(true);
+    } else {
+      setIsAuthenticated(false);
     }
-  }, []);
+  }, [user]);
 
   const login = useCallback(async (email: string, password: string): Promise<void> => {
     try {
       setIsLoggingIn(true);
       setError(null);
 
-      // Simular chamada de API (substituir por API real)
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -89,16 +74,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       const data = await response.json();
       
-      // Simular usuário para desenvolvimento
       const mockUser: User = {
         id: 1,
-        name: 'Alex Ryder',
+        name: data.name || 'Demo User',
         email: email,
-        displayName: 'Alex Ryder',
-        city: 'Neo Kyoto',
-        gender: 'male',
-        avatarUrl: 'https://picsum.photos/seed/alexryder/200/200',
-        bio: 'Explorer of digital frontiers and analog dreams. Seeking connections beyond the surface.',
+        displayName: data.displayName || 'Demo User',
+        city: 'São Paulo',
+        gender: 'other',
+        avatarUrl: 'https://via.placeholder.com/150',
+        bio: 'Exploring digital aesthetics. Seeking connections beyond the surface.',
         isVip: true,
         isActive: true,
         createdAt: new Date().toISOString(),
@@ -106,6 +90,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       };
 
       localStorage.setItem('matchit_token', data.token || 'demo-token');
+      localStorage.setItem('matchit_user', JSON.stringify(mockUser));
+      localStorage.setItem('matchit_auth', 'true');
+      
       setUser(mockUser);
       setIsAuthenticated(true);
       
@@ -122,7 +109,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setIsRegistering(true);
       setError(null);
 
-      // Simular registro (substituir por API real)
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -133,7 +119,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         throw new Error('Erro no registro');
       }
 
-      // Após registro bem-sucedido, fazer login automaticamente
       await login(email, password);
       
     } catch (err: any) {

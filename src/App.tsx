@@ -3,7 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import LoginScreen from './screens/LoginScreen';
 import ProfileScreen from './screens/ProfileScreen';
-import StyleAdjustmentScreen from './screens/StyleAdjustmentScreen';
+import StyleAdjustmentScreen from './screens/StyleAdjustmentScreen-old';
 import MatchAreaScreen from './screens/MatchAreaScreen';
 import ChatScreen from './screens/ChatScreen';
 import VendorScreen from './screens/VendorScreen';

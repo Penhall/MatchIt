@@ -11,7 +11,7 @@ import MetricsCalculator from '../services/analytics/metrics-calculator.js';
 import ReportGenerator from '../services/analytics/report-generator.js';
 import AnomalyDetector from '../services/analytics/anomaly-detector.js';
 import ScheduledJobs from '../services/analytics/scheduled-jobs.js';
-import { analyticsConfig, validateConfig } from '../config/analytics-config.js';
+import { analyticsConfig, validateConfig } from '../config/analytics-config.js.js';
 import analyticsRoutes from '../routes/analytics/index.js';
 
 const __filename = fileURLToPath(import.meta.url);

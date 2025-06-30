@@ -7,7 +7,7 @@ import AnalyticsEngine from './analytics-engine.js';
 import MetricsCalculator from './metrics-calculator.js';
 import ReportGenerator from './report-generator.js';
 import AnomalyDetector from './anomaly-detector.js';
-import { analyticsConfig } from '../../config/analytics-config.js';
+import { analyticsConfig } from '../../config/analytics-config.js.js';
 import { pool } from '../../config/database.js'; // Importar pool diretamente
 
 /**
