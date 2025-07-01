@@ -1,186 +1,170 @@
 #!/bin/bash
+# test-auth-debug.sh - Script para debugar problemas de autenticação
 
-# =========================================================================
-# TESTE DE AUTENTICAÇÃO - DEBUG
-# =========================================================================
-# Este script testa o fluxo de autenticação e imprime o token e user_id
-# para depuração.
-# =========================================================================
+set -e
 
 # Cores para output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-CYAN='\033[0;36m'
 NC='\033[0m'
 
-# Configurações de teste
-API_BASE_URL="http://localhost:3000/api"
-TEST_EMAIL="debug.test.$(date +%s)@matchit.com"
-TEST_PASSWORD="Test123456"
-TEST_NAME="Debug User"
-TOKEN=""
-USER_ID=""
+BASE_URL="http://localhost:3000"
 
-print_header() {
-    echo ""
-    echo -e "${CYAN}═══════════════════════════════════════════════════════════════════${NC}"
-    echo -e "${CYAN} $1${NC}"
-    echo -e "${CYAN}═══════════════════════════════════════════════════════════════════${NC}"
-    echo ""
-}
+echo -e "${BLUE}════════════════════════════════════════════════════════════════════${NC}"
+echo -e "${BLUE} 🔍 DEBUG DE AUTENTICAÇÃO - DIAGNÓSTICO COMPLETO${NC}"
+echo -e "${BLUE}════════════════════════════════════════════════════════════════════${NC}"
+echo ""
 
-print_section() {
-    echo ""
-    echo -e "${BLUE}▶ $1${NC}"
-    echo -e "${BLUE}$(printf '─%.0s' {1..50})${NC}"
-}
-
-print_test() {
-    echo -e "${BLUE}   🧪 $1${NC}"
-}
-
-print_success() {
-    echo -e "${GREEN}   ✅ $1${NC}"
-}
-
-print_failure() {
-    echo -e "${RED}   ❌ $1${NC}"
-}
-
-print_info() {
-    echo -e "${YELLOW}ℹ️  $1${NC}"
-}
-
-# Função para fazer requisições HTTP e retornar o corpo da resposta
-make_http_request_debug() {
-    local method="$1"
-    local endpoint="$2"
-    local data="$3"
-    local token="$4"
-    local description="$5"
-    local expected_status="${6:-200}"
+# Função para testar endpoint com debug
+test_endpoint_debug() {
+    local method=$1
+    local endpoint=$2
+    local description=$3
+    local data=$4
+    local auth_header=$5
     
-    print_test "$description"
+    echo -e "${YELLOW}🔍 $description${NC}"
+    echo -e "   ${BLUE}$method $endpoint${NC}"
     
-    local curl_cmd="curl -s -w '\nHTTP_CODE:%{http_code}'"
-    curl_cmd="$curl_cmd -X $method"
-    curl_cmd="$curl_cmd -H 'Content-Type: application/json'"
-    curl_cmd="$curl_cmd --connect-timeout 10"
-    curl_cmd="$curl_cmd --max-time 30"
+    # Construir comando curl com verbose
+    local curl_cmd="curl -v -s -w '\nHTTP_STATUS:%{http_code}\nTIME_TOTAL:%{time_total}' -X $method"
     
-    if [ -n "$token" ]; then
-        curl_cmd="$curl_cmd -H 'Authorization: Bearer $token'"
+    if [[ -n "$auth_header" ]]; then
+        curl_cmd="$curl_cmd -H 'Authorization: Bearer $auth_header'"
+        echo -e "   🔑 Token: ${auth_header:0:20}..."
+    else
+        echo -e "   🚫 Sem token"
     fi
     
-    if [ -n "$data" ]; then
+    curl_cmd="$curl_cmd -H 'Content-Type: application/json'"
+    
+    if [[ -n "$data" ]]; then
         curl_cmd="$curl_cmd -d '$data'"
     fi
     
-    local response
-    response=$(eval $curl_cmd "$API_BASE_URL$endpoint" 2>/dev/null)
-    local exit_code=$?
+    curl_cmd="$curl_cmd $BASE_URL$endpoint 2>&1"
     
-    local http_code=$(echo "$response" | grep "HTTP_CODE:" | cut -d: -f2)
-    local response_body=$(echo "$response" | sed '/HTTP_CODE:/d')
+    echo -e "   📡 Executando requisição..."
+    local response=$(eval $curl_cmd)
     
-    if [ $exit_code -ne 0 ]; then
-        print_failure "$description - Conexão falhou"
-        echo ""
-        return 1
-    fi
+    # Extrair informações da resposta
+    local status_code=$(echo "$response" | grep 'HTTP_STATUS:' | cut -d: -f2)
+    local time_total=$(echo "$response" | grep 'TIME_TOTAL:' | cut -d: -f2)
     
-    if [[ "$http_code" =~ ^${expected_status}$ ]] || [[ "$http_code" =~ ^2[0-9]{2}$ && "$expected_status" == "200" ]]; then
-        print_success "$description (HTTP $http_code)"
+    # Extrair headers da resposta verbose
+    local auth_header_sent=$(echo "$response" | grep '> Authorization:' || echo "")
+    local content_type_received=$(echo "$response" | grep '< content-type:' || echo "")
+    
+    echo -e "   📊 Resultado:"
+    echo -e "      Status: $status_code"
+    echo -e "      Tempo: ${time_total}s"
+    
+    if [[ -n "$auth_header_sent" ]]; then
+        echo -e "      ✅ Header Authorization enviado"
     else
-        print_failure "$description - HTTP $http_code (esperado: $expected_status)"
+        echo -e "      ❌ Header Authorization NÃO enviado"
     fi
     
-    print_info "Response Body: $response_body"
-    echo "$response_body" # Retorna o corpo da resposta
+    # Extrair corpo da resposta (remover informações de debug)
+    local body=$(echo "$response" | sed '/^>/d; /^</d; /^*/d; /^{.*}/d; /HTTP_STATUS:/d; /TIME_TOTAL:/d' | grep -E '^\{.*\}$' | head -1)
+    
+    if [[ "$status_code" == "200" || "$status_code" == "201" ]]; then
+        echo -e "   ✅ ${GREEN}Sucesso${NC}"
+        echo -e "   📄 Resposta: $(echo "$body" | jq -c . 2>/dev/null || echo "$body" | head -c 150)..."
+    elif [[ "$status_code" == "401" ]]; then
+        echo -e "   🔒 ${RED}401 - Não autorizado${NC}"
+        echo -e "   📄 Erro: $(echo "$body" | jq -r '.error // .message' 2>/dev/null || echo "$body")"
+    elif [[ "$status_code" == "403" ]]; then
+        echo -e "   🚫 ${RED}403 - Acesso negado${NC}"
+        echo -e "   📄 Erro: $(echo "$body" | jq -r '.error // .message' 2>/dev/null || echo "$body")"
+    else
+        echo -e "   ⚠️ ${YELLOW}Status inesperado: $status_code${NC}"
+        echo -e "   📄 Resposta: $body"
+    fi
+    
+    echo ""
     return 0
 }
 
-# =========================================================================
-# TESTES DE AUTENTICAÇÃO
-# =========================================================================
-
-test_authentication_debug() {
-    print_section "TESTE DE AUTENTICAÇÃO - DEBUG"
-    
-    # 1. Registro de usuário
-    local register_data="{\"email\":\"$TEST_EMAIL\",\"password\":\"$TEST_PASSWORD\",\"name\":\"$TEST_NAME\"}"
-    local register_response_json
-    register_response_json=$(make_http_request_debug "POST" "/auth/register" "$register_data" "" "Registro de usuário" "201")
-    
-    if [ $? -eq 0 ] && [ -n "$register_response_json" ]; then
-        if command -v jq &> /dev/null; then
-            export TOKEN=$(echo "$register_response_json" | jq -r '.token')
-            export USER_ID=$(echo "$register_response_json" | jq -r '.user.id')
-        else
-            export TOKEN=$(echo "$register_response_json" | grep -o '"token":"[^"]*' | cut -d'"' -f4)
-            export USER_ID=$(echo "$register_response_json" | grep -o '"id":"[^"]*' | cut -d'"' -f4)
-        fi
-        print_info "TOKEN após registro: ${TOKEN:0:20}..."
-        print_info "USER_ID após registro: $USER_ID"
-    else
-        print_failure "Falha no registro ou resposta vazia."
-        print_info "Tentando login com usuário existente (test@matchit.com)"
-        local login_data="{\"email\":\"test@matchit.com\",\"password\":\"123456\"}"
-        local login_response_json
-        login_response_json=$(make_http_request_debug "POST" "/auth/login" "$login_data" "" "Login com usuário existente")
-        if [ $? -eq 0 ] && [ -n "$login_response_json" ]; then
-            if command -v jq &> /dev/null; then
-                export TOKEN=$(echo "$login_response_json" | jq -r '.token')
-                export USER_ID=$(echo "$login_response_json" | jq -r '.user.id')
-            else
-                export TOKEN=$(echo "$login_response_json" | grep -o '"token":"[^"]*' | cut -d'"' -f4)
-                export USER_ID=$(echo "$login_response_json" | grep -o '"id":"[^"]*' | cut -d'"' -f4)
-            fi
-            print_info "TOKEN após login existente: ${TOKEN:0:20}..."
-            print_info "USER_ID após login existente: $USER_ID"
-        else
-            print_failure "Falha no login com usuário existente."
-        fi
-    fi
-    
-    # 2. Testar endpoint /auth/me com o token obtido
-    if [ -n "$TOKEN" ]; then
-        make_http_request_debug "GET" "/auth/me" "" "$TOKEN" "Verificação de token (auth/me)" "200"
-    else
-        print_warning "TOKEN não disponível para testar /auth/me."
-    fi
-}
-
-# =========================================================================
-# FUNÇÃO PRINCIPAL
-# =========================================================================
-
-main() {
-    print_header "🧪 MATCHIT - TESTE DE AUTENTICAÇÃO (DEBUG)"
-    echo -e "${BLUE}🎯 Testando fluxo de autenticação e depurando token/user_id${NC}"
-    echo -e "${BLUE}📅 $(date)${NC}"
-    echo ""
-    
-    read -p "❓ Executar teste de depuração de autenticação? (y/N) " -n 1 -r
-    echo ""
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Teste cancelado."
-        exit 0
-    fi
-    
-    echo -e "${BLUE}🚀 Iniciando testes de depuração...${NC}"
-    
-    test_authentication_debug
-    
-    echo ""
-    echo -e "${CYAN}═══════════════════════════════════════════════════════════════════${NC}"
-    echo -e "${CYAN}🏁 TESTE DE AUTENTICAÇÃO (DEBUG) FINALIZADO - $(date)${NC}"
-    echo -e "${CYAN}═══════════════════════════════════════════════════════════════════${NC}"
-}
-
-# Executar se script foi chamado diretamente
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    main "$@"
+# Verificar se servidor está rodando
+echo -e "${YELLOW}🏥 Verificando servidor...${NC}"
+if ! curl -s "$BASE_URL/api/health" > /dev/null; then
+    echo -e "${RED}❌ Servidor não está respondendo em $BASE_URL${NC}"
+    exit 1
 fi
+echo -e "${GREEN}✅ Servidor está rodando!${NC}"
+echo ""
+
+# Passo 1: Registrar usuário de teste
+echo -e "${BLUE}📝 PASSO 1: Registrando usuário de teste...${NC}"
+test_email="debug_$(date +%s)@test.com"
+test_data="{\"email\":\"$test_email\",\"password\":\"123456\",\"name\":\"Debug User\"}"
+
+test_endpoint_debug "POST" "/api/auth/register" "Registro de usuário" "$test_data" ""
+
+# Passo 2: Fazer login e obter token
+echo -e "${BLUE}🔐 PASSO 2: Fazendo login...${NC}"
+login_data="{\"email\":\"$test_email\",\"password\":\"123456\"}"
+
+login_response=$(curl -s -X POST \
+    -H 'Content-Type: application/json' \
+    -d "$login_data" \
+    "$BASE_URL/api/auth/login")
+
+echo "📄 Resposta do login:"
+echo "$login_response" | jq . 2>/dev/null || echo "$login_response"
+
+# Extrair token
+TOKEN=$(echo "$login_response" | jq -r '.token // .data.token // empty' 2>/dev/null)
+
+if [[ -n "$TOKEN" && "$TOKEN" != "null" ]]; then
+    echo -e "${GREEN}✅ Token obtido: ${TOKEN:0:30}...${NC}"
+else
+    echo -e "${RED}❌ Falha ao obter token do login${NC}"
+    exit 1
+fi
+echo ""
+
+# Passo 3: Testar endpoint /me
+echo -e "${BLUE}👤 PASSO 3: Testando endpoint /me...${NC}"
+test_endpoint_debug "GET" "/api/auth/me" "Verificar usuário logado" "" "$TOKEN"
+
+# Passo 4: Testar endpoints que estavam com 403
+echo -e "${BLUE}🎨 PASSO 4: Testando endpoints de estilo...${NC}"
+
+test_endpoint_debug "GET" "/api/style/categories" "Categorias de estilo" "" "$TOKEN"
+test_endpoint_debug "GET" "/api/style-preferences" "Preferências de estilo" "" "$TOKEN"
+test_endpoint_debug "GET" "/api/style/completion-stats/1" "Estatísticas (ID fixo)" "" "$TOKEN"
+
+# Passo 5: Testar com usuário ID do token
+if [[ -n "$TOKEN" ]]; then
+    echo -e "${BLUE}🔍 PASSO 5: Extraindo user ID do token...${NC}"
+    
+    # Decodificar JWT (parte do payload)
+    payload=$(echo "$TOKEN" | cut -d. -f2)
+    # Adicionar padding se necessário
+    while [ $((${#payload} % 4)) -ne 0 ]; do
+        payload="${payload}="
+    done
+    
+    decoded=$(echo "$payload" | base64 -d 2>/dev/null | jq . 2>/dev/null || echo "{}")
+    user_id=$(echo "$decoded" | jq -r '.userId // .id // "1"' 2>/dev/null)
+    
+    echo -e "   User ID do token: $user_id"
+    
+    test_endpoint_debug "GET" "/api/style/completion-stats/$user_id" "Estatísticas (user ID correto)" "" "$TOKEN"
+fi
+
+echo ""
+echo -e "${BLUE}════════════════════════════════════════════════════════════════════${NC}"
+echo -e "${BLUE} 📊 RESUMO DO DEBUG${NC}"
+echo -e "${BLUE}════════════════════════════════════════════════════════════════════${NC}"
+echo ""
+echo -e "${YELLOW}🎯 Se algum teste falhou:${NC}"
+echo -e "   1. Verifique os logs do servidor para mais detalhes"
+echo -e "   2. Confirme se o middleware de autenticação foi atualizado"
+echo -e "   3. Verifique se o banco de dados tem o usuário criado"
+echo -e "   4. Confirme se a tabela 'users' tem o campo 'is_active'"
+echo ""

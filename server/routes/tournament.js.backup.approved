@@ -1,0 +1,158 @@
+// server/routes/tournament.js - Rotas básicas de torneio para MatchIt
+import express from 'express';
+import { pool } from '../config/database.js';
+import { authenticateToken } from '../middleware/auth.js';
+
+const router = express.Router();
+
+/**
+ * GET /api/tournament/categories
+ * Listar categorias disponíveis (rota pública)
+ */
+router.get('/categories', async (req, res) => {
+  try {
+    console.log('🏆 Buscando categorias de torneio');
+    
+    // Categorias básicas do MatchIt
+    const categories = [
+      { id: 'cores', name: 'Cores', description: 'Escolha suas cores favoritas' },
+      { id: 'estilos', name: 'Estilos', description: 'Defina seu estilo pessoal' },
+      { id: 'acessorios', name: 'Acessórios', description: 'Selecione acessórios que combinam com você' },
+      { id: 'calcados', name: 'Calçados', description: 'Encontre o calçado ideal' },
+      { id: 'texturas', name: 'Texturas', description: 'Explore diferentes texturas' }
+    ];
+
+    res.json({
+      success: true,
+      categories: categories,
+      total: categories.length
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao buscar categorias:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao buscar categorias de torneio'
+    });
+  }
+});
+
+/**
+ * GET /api/tournament/images
+ * Listar imagens disponíveis (rota pública)
+ */
+router.get('/images', async (req, res) => {
+  try {
+    const { category, limit = 10 } = req.query;
+    
+    console.log('🖼️ Buscando imagens de torneio:', category);
+    
+    let query = 'SELECT * FROM tournament_images WHERE approved = true';
+    let params = [];
+    
+    if (category) {
+      query += ' AND category = $1';
+      params.push(category);
+    }
+    
+    query += ' ORDER BY upload_date DESC LIMIT $' + (params.length + 1);
+    params.push(limit);
+    
+    const result = await pool.query(query, params);
+
+    res.json({
+      success: true,
+      images: result.rows,
+      total: result.rows.length,
+      category: category || 'all'
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao buscar imagens:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao buscar imagens'
+    });
+  }
+});
+
+/**
+ * POST /api/tournament/start
+ * Iniciar novo torneio (requer autenticação)
+ */
+router.post('/start', authenticateToken, async (req, res) => {
+  try {
+    const { category, tournamentSize = 8 } = req.body;
+
+    if (!category) {
+      return res.status(400).json({
+        success: false,
+        error: 'Categoria é obrigatória'
+      });
+    }
+
+    console.log('🏆 Iniciando torneio:', req.user.email, category);
+
+    // Criar sessão de torneio básica
+    const sessionId = `tournament_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    res.json({
+      success: true,
+      message: 'Torneio iniciado com sucesso',
+      tournament: {
+        sessionId: sessionId,
+        category: category,
+        size: tournamentSize,
+        userId: req.user.userId,
+        status: 'active',
+        created_at: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao iniciar torneio:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao iniciar torneio'
+    });
+  }
+});
+
+/**
+ * POST /api/tournament/choice
+ * Registrar escolha em torneio (requer autenticação)
+ */
+router.post('/choice', authenticateToken, async (req, res) => {
+  try {
+    const { sessionId, imageA, imageB, choice } = req.body;
+
+    if (!sessionId || !imageA || !imageB || !choice) {
+      return res.status(400).json({
+        success: false,
+        error: 'SessionId, imageA, imageB e choice são obrigatórios'
+      });
+    }
+
+    console.log('🏆 Registrando escolha:', req.user.email, choice);
+
+    res.json({
+      success: true,
+      message: 'Escolha registrada com sucesso',
+      choice: {
+        sessionId: sessionId,
+        userId: req.user.userId,
+        selected: choice,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao registrar escolha:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao registrar escolha'
+    });
+  }
+});
+
+export default router;

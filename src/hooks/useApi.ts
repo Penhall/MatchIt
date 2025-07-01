@@ -1,3 +1,4 @@
+// src/hooks/useApi.ts - Hook corrigido com debug de autenticação
 import { useCallback, useState } from 'react';
 import { useAuth } from './useAuth';
 
@@ -17,11 +18,16 @@ export interface ApiResponse<T = any> {
   };
 }
 
-export interface ApiError {
-  message: string;
-  status: number;
-  code?: string;
-  details?: any;
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+    public code?: string,
+    public details?: any
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
 }
 
 export interface RequestConfig {
@@ -32,30 +38,50 @@ export interface RequestConfig {
 }
 
 export const useApi = () => {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
   const getHeaders = useCallback((customHeaders?: Record<string, string>): Record<string, string> => {
+    // 🔍 DEBUG: Verificar como está obtendo o token
     const token = localStorage.getItem('matchit_token');
+    
+    console.log('🔍 [useApi] Debug de autenticação:');
+    console.log('   Token no localStorage:', token ? `${token.substring(0, 20)}...` : 'null');
+    console.log('   Usuário logado:', user ? user.email : 'null');
+    
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...customHeaders
     };
 
     if (token) {
+      // 🔧 CORREÇÃO: Garantir formato correto do header
       headers.Authorization = `Bearer ${token}`;
+      console.log('   Authorization header:', headers.Authorization.substring(0, 30) + '...');
+    } else {
+      console.log('   ❌ Nenhum token encontrado - requisição sem autenticação');
     }
 
     return headers;
-  }, []);
+  }, [user]);
 
   const handleResponse = useCallback(async (response: Response): Promise<any> => {
+    console.log(`🔍 [useApi] Response: ${response.status} ${response.statusText}`);
+    
+    // 🔧 CORREÇÃO: Melhor handling de erro 401
     if (response.status === 401) {
+      console.log('❌ [useApi] 401 Unauthorized - fazendo logout');
       logout();
       throw new ApiError('Sessão expirada. Faça login novamente.', 401, 'UNAUTHORIZED');
+    }
+
+    // 🔧 CORREÇÃO: Melhor handling de erro 403
+    if (response.status === 403) {
+      console.log('❌ [useApi] 403 Forbidden - acesso negado');
+      throw new ApiError('Acesso negado', 403, 'FORBIDDEN');
     }
 
     const contentType = response.headers.get('content-type');
@@ -63,12 +89,15 @@ export const useApi = () => {
 
     if (contentType && contentType.includes('application/json')) {
       data = await response.json();
+      console.log('🔍 [useApi] Response data:', data);
     } else {
       data = await response.text();
+      console.log('🔍 [useApi] Response text:', data.substring(0, 100));
     }
 
     if (!response.ok) {
       const errorMessage = data.message || data.error || `HTTP ${response.status}`;
+      console.log('❌ [useApi] Erro na resposta:', errorMessage);
       throw new ApiError(errorMessage, response.status, data.code);
     }
 
@@ -88,6 +117,9 @@ export const useApi = () => {
       const url = `${API_BASE_URL}${endpoint}`;
       const headers = getHeaders(config?.headers);
 
+      console.log(`🚀 [useApi] ${method} ${url}`);
+      console.log('🔍 [useApi] Headers:', headers);
+
       const requestConfig: RequestInit = {
         method,
         headers,
@@ -96,120 +128,98 @@ export const useApi = () => {
 
       if (body && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
         requestConfig.body = typeof body === 'string' ? body : JSON.stringify(body);
+        console.log('🔍 [useApi] Body:', requestConfig.body);
       }
 
-      let lastError: any;
-      const maxRetries = config?.retries || 0;
-
-      for (let attempt = 0; attempt <= maxRetries; attempt++) {
-        try {
-          const response = await fetch(url, requestConfig);
-          return await handleResponse(response);
-        } catch (err: any) {
-          lastError = err;
-          
-          if (attempt < maxRetries && err.name !== 'AbortError') {
-            await new Promise(resolve => setTimeout(resolve, config?.retryDelay || 1000));
-            continue;
-          }
-          
-          throw err;
-        }
-      }
-
-      throw lastError;
-    } catch (err: any) {
-      const apiError = err instanceof ApiError ? err : new ApiError(
-        err.message || 'Erro de conexão',
-        err.status || 500,
-        err.code
-      );
+      const response = await fetch(url, requestConfig);
+      const result = await handleResponse(response);
       
-      setError(apiError);
-      throw apiError;
+      console.log('✅ [useApi] Sucesso:', result);
+      return result;
+      
+    } catch (err) {
+      console.error('💥 [useApi] Erro:', err);
+      
+      if (err instanceof ApiError) {
+        setError(err);
+        throw err;
+      } else {
+        const apiError = new ApiError(
+          err instanceof Error ? err.message : 'Erro desconhecido',
+          0,
+          'NETWORK_ERROR'
+        );
+        setError(apiError);
+        throw apiError;
+      }
     } finally {
       setLoading(false);
     }
   }, [API_BASE_URL, getHeaders, handleResponse]);
 
-  // Métodos HTTP
-  const get = useCallback((endpoint: string, config?: RequestConfig) => 
-    makeRequest('GET', endpoint, undefined, config), [makeRequest]);
+  // 🔧 CORREÇÃO: Métodos de conveniência com melhor error handling
+  const api = {
+    get: useCallback((endpoint: string, config?: RequestConfig) => {
+      return makeRequest('GET', endpoint, undefined, config);
+    }, [makeRequest]),
 
-  const post = useCallback((endpoint: string, data?: any, config?: RequestConfig) => 
-    makeRequest('POST', endpoint, data, config), [makeRequest]);
+    post: useCallback((endpoint: string, data?: any, config?: RequestConfig) => {
+      return makeRequest('POST', endpoint, data, config);
+    }, [makeRequest]),
 
-  const put = useCallback((endpoint: string, data?: any, config?: RequestConfig) => 
-    makeRequest('PUT', endpoint, data, config), [makeRequest]);
+    put: useCallback((endpoint: string, data?: any, config?: RequestConfig) => {
+      return makeRequest('PUT', endpoint, data, config);
+    }, [makeRequest]),
 
-  const patch = useCallback((endpoint: string, data?: any, config?: RequestConfig) => 
-    makeRequest('PATCH', endpoint, data, config), [makeRequest]);
+    patch: useCallback((endpoint: string, data?: any, config?: RequestConfig) => {
+      return makeRequest('PATCH', endpoint, data, config);
+    }, [makeRequest]),
 
-  const del = useCallback((endpoint: string, config?: RequestConfig) => 
-    makeRequest('DELETE', endpoint, undefined, config), [makeRequest]);
+    delete: useCallback((endpoint: string, config?: RequestConfig) => {
+      return makeRequest('DELETE', endpoint, undefined, config);
+    }, [makeRequest])
+  };
 
-  // Upload de arquivos
-  const upload = useCallback(async (endpoint: string, file: File, onProgress?: (progress: number) => void): Promise<any> => {
-    try {
-      setLoading(true);
-      setError(null);
+  // 🔧 CORREÇÃO: Método para verificar se está autenticado
+  const isAuthenticated = useCallback(() => {
+    const token = localStorage.getItem('matchit_token');
+    const hasUser = !!user;
+    
+    console.log('🔍 [useApi] Check autenticação:');
+    console.log('   Token existe:', !!token);
+    console.log('   User existe:', hasUser);
+    
+    return !!token && hasUser;
+  }, [user]);
 
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const token = localStorage.getItem('matchit_token');
-      const headers: Record<string, string> = {};
-      
-      if (token) {
-        headers.Authorization = `Bearer ${token}`;
-      }
-
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        method: 'POST',
-        headers,
-        body: formData
-      });
-
-      return await handleResponse(response);
-    } catch (err: any) {
-      const apiError = new ApiError(err.message || 'Erro no upload', err.status || 500);
-      setError(apiError);
-      throw apiError;
-    } finally {
-      setLoading(false);
-    }
-  }, [API_BASE_URL, handleResponse]);
+  // 🔧 CORREÇÃO: Método para debug de autenticação
+  const debugAuth = useCallback(() => {
+    const token = localStorage.getItem('matchit_token');
+    const authData = localStorage.getItem('matchit_auth');
+    const userData = localStorage.getItem('matchit_user');
+    
+    console.log('🔍 [useApi] Debug completo:');
+    console.log('   localStorage.matchit_token:', token ? 'exists' : 'null');
+    console.log('   localStorage.matchit_auth:', authData);
+    console.log('   localStorage.matchit_user:', userData ? 'exists' : 'null');
+    console.log('   useAuth.user:', user);
+    console.log('   useAuth.isAuthenticated:', !!user);
+    
+    return {
+      hasToken: !!token,
+      hasUser: !!user,
+      authData,
+      tokenPreview: token ? token.substring(0, 20) + '...' : null
+    };
+  }, [user]);
 
   return {
-    // Estados
+    api,
     loading,
     error,
-    
-    // Métodos HTTP
-    get,
-    post,
-    put,
-    patch,
-    delete: del,
-    upload,
-    
-    // Utilitários
-    clearError: () => setError(null),
-    isLoading: loading
+    setError,
+    makeRequest,
+    isAuthenticated,
+    debugAuth
   };
 };
-
-// Classe de erro personalizada
-export class ApiError extends Error {
-  public status: number;
-  public code?: string;
-  public details?: any;
-
-  constructor(message: string, status: number, code?: string, details?: any) {
-    super(message);
-    this.name = 'ApiError';
-    this.status = status;
-    this.code = code;
-    this.details = details;
-  }
-}

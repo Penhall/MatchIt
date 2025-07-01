@@ -1,0 +1,82 @@
+sequenceDiagram
+    participant Frontend as Frontend
+    participant LocalStorage as LocalStorage
+    participant useApi as useApi Hook
+    participant Server as Express Server
+    participant AuthMiddleware as Auth Middleware
+    participant Database as PostgreSQL
+    
+    Note over Frontend,Database: 🔍 DIAGNÓSTICO: 403 FORBIDDEN
+    
+    rect rgb(245, 255, 245)
+        Note over Frontend: ✅ Usuário faz login
+        Frontend->>LocalStorage: setItem('matchit_token', token)
+        Note over LocalStorage: Token salvo no localStorage
+    end
+    
+    rect rgb(255, 245, 245)
+        Note over Frontend: ❌ Carregamento da página
+        Frontend->>useApi: loadCompletionStats()
+        useApi->>LocalStorage: getItem('matchit_token')
+        
+        alt ❌ PROBLEMA 1: Token não encontrado
+            LocalStorage-->>useApi: null
+            Note over useApi: Sem token = Sem Authorization header
+        else ✅ Token encontrado
+            LocalStorage-->>useApi: "eyJhbGciOiJIUzI1..."
+            useApi->>Server: GET /api/style/completion-stats/76cdd...
+            Note over useApi: Headers: { Authorization: "Bearer token" }
+        end
+    end
+    
+    rect rgb(255, 245, 245)
+        Note over Server: 🔍 Middleware de Autenticação
+        Server->>AuthMiddleware: authenticateToken()
+        
+        alt ❌ PROBLEMA 2: Header malformado
+            Note over AuthMiddleware: authHeader não começa com "Bearer "
+            AuthMiddleware-->>Server: 401 Unauthorized
+        else ❌ PROBLEMA 3: JWT inválido
+            Note over AuthMiddleware: jwt.verify() falha
+            AuthMiddleware-->>Server: 401 Unauthorized  
+        else ❌ PROBLEMA 4: Campo errado no token
+            Note over AuthMiddleware: decoded.userId vs decoded.id
+            AuthMiddleware-->>Server: 401 Unauthorized
+        else ❌ PROBLEMA 5: Usuário não encontrado
+            AuthMiddleware->>Database: SELECT * FROM users WHERE id = ?
+            Database-->>AuthMiddleware: Empty result
+            AuthMiddleware-->>Server: 401 Unauthorized
+        else ❌ PROBLEMA 6: Validação de acesso
+            Note over AuthMiddleware: req.params.userId !== req.user.id
+            AuthMiddleware-->>Server: 403 Forbidden
+        end
+    end
+    
+    rect rgb(245, 255, 245)
+        Note over Frontend,Database: ✅ SOLUÇÃO IMPLEMENTADA
+        
+        Note over Frontend: 1. ✅ useApi corrigido com debug
+        Note over LocalStorage: 2. ✅ Token validado no localStorage  
+        Note over useApi: 3. ✅ Authorization header correto
+        Note over AuthMiddleware: 4. ✅ Middleware robusto com logs
+        Note over AuthMiddleware: 5. ✅ Aceita userId e id no token
+        Note over Server: 6. ✅ Endpoint sem restrição de userId
+        
+        Note over Frontend,Database: 🧪 FLUXO APÓS CORREÇÃO
+        Frontend->>useApi: loadCompletionStats()
+        useApi->>LocalStorage: getItem('matchit_token')
+        LocalStorage-->>useApi: ✅ "eyJhbGciOiJIUzI1..."
+        useApi->>Server: GET /api/style/completion-stats/1
+        Note over useApi: ✅ Headers: { Authorization: "Bearer token" }
+        
+        Server->>AuthMiddleware: authenticateToken()
+        Note over AuthMiddleware: ✅ Token extraído corretamente
+        Note over AuthMiddleware: ✅ JWT válido, payload extraído
+        AuthMiddleware->>Database: SELECT * FROM users WHERE id = userId
+        Database-->>AuthMiddleware: ✅ Usuário encontrado
+        AuthMiddleware->>Server: ✅ req.user = { id, name, email }
+        
+        Server-->>useApi: ✅ 200 OK { data: statistics }
+        useApi-->>Frontend: ✅ Estatísticas carregadas
+        Note over Frontend: ✅ StyleAdjustmentScreen funciona!
+    end

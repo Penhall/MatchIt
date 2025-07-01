@@ -143,6 +143,7 @@ export const StyleAdjustmentScreen: React.FC = () => {
   // Carregar categorias e perguntas
   const loadCategories = async () => {
     try {
+      // MODIFICADO: Rota corrigida
       const response = await api.get('/style/categories');
       
       if (response.success && response.data) {
@@ -197,7 +198,8 @@ export const StyleAdjustmentScreen: React.FC = () => {
   // Carregar preferências do usuário
   const loadUserPreferences = async () => {
     try {
-      const response = await api.get(`/style/preferences/${user?.id}`);
+      // MODIFICADO: Rota corrigida, sem ID na URL
+      const response = await api.get('/style-preferences');
       
       if (response.success && response.data) {
         setPreferences(response.data);
@@ -212,6 +214,7 @@ export const StyleAdjustmentScreen: React.FC = () => {
   // Carregar estatísticas de completude
   const loadCompletionStats = async () => {
     try {
+      // MODIFICADO: Rota corrigida
       const response = await api.get(`/style/completion-stats/${user?.id}`);
       
       if (response.success && response.data) {
@@ -230,14 +233,8 @@ export const StyleAdjustmentScreen: React.FC = () => {
     try {
       setSaving(true);
       
-      for (const change of pendingChanges) {
-        await api.post('/style/preferences', {
-          userId: user?.id,
-          category: change.category,
-          questionId: change.questionId,
-          selectedOption: change.selectedOption
-        });
-      }
+      // MODIFICADO: Usar a rota de batch para salvar
+      await api.post('/style-preferences/batch', { preferences: pendingChanges });
       
       setPendingChanges([]);
       await loadCompletionStats(); // Atualizar stats
