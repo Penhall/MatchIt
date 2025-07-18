@@ -1,0 +1,86 @@
+# Dockerfile.backend - Backend Node.js MatchIt (ES Modules)
+FROM node:20-bullseye-slim AS base
+
+# Instalar dependências do sistema necessárias
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+# Modificado o diretório de trabalho
+# Definir diretório de trabalho
+WORKDIR /app/backend
+
+# Configurar usuário não-root para segurança
+RUN groupadd --gid 1001 nodejs && \
+    useradd --uid 1001 --gid nodejs --shell /bin/bash --create-home nodejs
+
+# === STAGE 1: Dependencies ===
+FROM base AS deps
+
+# Copiar arquivos de dependências
+# Modificado para copiar do pacote backend
+COPY packages/backend/package*.json ./
+
+# Instalar dependências (produção + dev para build)
+RUN npm ci --include=dev && npm cache clean --force
+
+# === STAGE 2: Build ===
+FROM base AS build
+# Modificado para copiar do pacote backend
+# Copiar dependências da stage anterior
+COPY --from=deps /app/node_modules ./node_modules
+
+# Copiar código fonte
+COPY ../. .
+
+# Remover arquivos desnecessários
+RUN rm -rf .git \
+    #docs \ # Removido para não excluir a pasta docs
+    tests \
+    *.md \
+    .env.example \
+    .gitignore
+
+# === STAGE 3: Production ===
+FROM base AS production
+
+# Definir ambiente de produção
+# Modificado para remover a definição do NODE_ENV
+ENV PORT=3000 
+
+# Instalar apenas dependências de produção
+# Modificado para copiar do pacote backend
+COPY packages/backend/package*.json ./
+RUN npm ci --only=production && npm cache clean --force
+
+# Copiar aplicação construída
+# Modificado para ajustar a cópia dos arquivos
+COPY --from=build --chown=nodejs:nodejs /app/scripts ./scripts
+COPY --from=build --chown=nodejs:nodejs /app/.env* ./
+
+# Criar diretórios necessários
+RUN mkdir -p logs uploads && \
+    chown -R nodejs:nodejs /app
+
+# Trocar para usuário não-root
+USER nodejs
+
+# Variáveis de ambiente padrão - movido para o docker-compose
+ENV DB_HOST=postgres
+ENV DB_PORT=5432
+ENV DB_USER=matchit
+ENV DB_PASSWORD=matchit123
+ENV DB_NAME=matchit_db
+ENV JWT_SECRET=matchit_secret_key_production_2024
+ENV REDIS_URL=redis://redis:6379
+
+# Expor porta
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+  CMD curl -f http://localhost:3000/api/health || exit 1
+
+# Comando de inicialização
+CMD ["node", "src/app.js"] # Ajustado o caminho
