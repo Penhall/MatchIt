@@ -40,14 +40,31 @@ echo "🐳 Movendo infraestrutura..."
 [ -f "nginx.conf" ] && mv nginx.conf infraestrutura/
 [ -f ".dockerignore" ] && mv .dockerignore infraestrutura/
 
-# 5. Manter arquivos raiz importantes
-echo "📝 Mantendo arquivos raiz..."
-[ -f "package.json" ] && git mv package.json backend/
-[ -f "package-lock.json" ] && git mv package-lock.json backend/
-[ -f ".env" ] && git mv .env backend/
-[ -f ".env.local" ] && mv .env.local backend/
-[ -f ".env.example" ] && git mv .env.example backend/
-[ -f ".env.docker" ] && git mv .env.docker backend/
+# 5. Organizar arquivos restantes
+echo "📝 Organizando arquivos restantes..."
+# Configurações do frontend
+[ -f "tsconfig.json" ] && mv tsconfig.json frontend.User/
+[ -f "tsconfig.node.json" ] && mv tsconfig.node.json frontend.User/
+[ -f "tsconfig.test.json" ] && mv tsconfig.test.json frontend.User/
+[ -f "tailwind.config.js" ] && mv tailwind.config.js frontend.User/
+[ -f "babel.config.js" ] && mv babel.config.js frontend.User/
+
+# Configurações do backend
+[ -f "jest.setup.js" ] && mv jest.setup.js backend/
+[ -f "index.ts" ] && mv index.ts backend/
+
+# Documentação
+[ -f "README.md" ] && mv README.md docs/
+[ -f "README1" ] && mv README1 docs/
+[ -f "MIGRATION_GUIDE.md" ] && mv MIGRATION_GUIDE.md docs/
+[ -f "DOCKER_SETUP_REPORT.md" ] && mv DOCKER_SETUP_REPORT.md docs/
+
+# Arquivos específicos (analisar uso)
+[ -f "register.json" ] && mv register.json backend/config/
+[ -f "metadata.json" ] && mv metadata.json backend/config/
+
+# Package auxiliar
+[ -f "package1" ] && mv package1 backend/
 
 echo "✅ Reestruturação completa!"
 echo "⚠️ Atenção: Agora você precisa:"

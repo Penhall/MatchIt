@@ -2,7 +2,7 @@
 # Para obter mais informações sobre como escolher uma versão do nódulo aqui: https://github.com/nodejs/Release
 FROM node:18-alpine AS builder
 
-WORKDIR /app/backend
+WORKDIR /app/backend/backend
 
 COPY package*.json ./
 COPY index.html ./

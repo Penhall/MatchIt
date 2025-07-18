@@ -1,9 +1,0 @@
-{
-  "email": "test@matchit.com",
-  "password": "Test1234", 
-  "name": "Test User",
-  "displayName": "tester",
-  "city": "Sao Paulo",
-  "gender": "male",
-  "age": 30
-}

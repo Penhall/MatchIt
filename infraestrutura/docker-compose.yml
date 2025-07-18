@@ -45,7 +45,7 @@ services:
   # ===== BACKEND API =====
   backend:
     build:
-      context: ./backend
+      context: ./backend/backend
       dockerfile: ../infraestrutura/Dockerfile.backend.backend
       target: production
     restart: unless-stopped
@@ -83,7 +83,7 @@ services:
   # ===== FRONTEND VITE (para desenvolvimento) =====
   frontend-dev:
     build:
-      context: ./backend
+      context: ./backend/backend
       dockerfile: ../infraestrutura/Dockerfile.backend.frontend
       target: development
     restart: unless-stopped
