@@ -1,29 +1,22 @@
 {
-  "name": "matchit-app",
-  "version": "1.1.0",
+  "name": "matchit-monorepo",
+  "private": true,
+  "version": "2.0.0",
   "description": "Sistema de torneios por imagens para app de namoro",
   "type": "module",
   "main": "server/app.js",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "start": "node server/app.js",
-    "dev": "vite",
-    "dev:frontend": "vite",
-    "migrate": "psql -d matchit_db -f database/migrations/003_complete_tournament_schema.sql",
-    "seed": "psql -d matchit_db -f database/seeds/002_tournament_sample_data.sql",
-    "setup": "npm run migrate && npm run seed",
-    "test": "echo 'Testes serão implementados na Fase 2'",
-    "lint": "echo 'Linting será configurado na Fase 2'",
-    "server": "cross-env PORT=3000 node server/app.js",
+    "dev:user": "pnpm --filter frontend-user dev",
+    "dev:backend": "pnpm --filter backend dev",
     "backend": "node server/app.js",
-    "health": "curl http://localhost:3000/api/health",
-    "build": "vite build",
-    "preview": "vite preview",
-    "frontend": "vite"
+    "start": "node server/app.js",
+    "test": "echo 'Testes serão implementados na Fase 3'",
+    "lint": "echo 'Linting será configurado na Fase 3'"
   },
   "dependencies": {
-    "@react-native-community/slider": "^4.5.7",
-    "@types/react-native": "^0.72.8",
-    "axios": "^1.10.0",
     "bcrypt": "^5.1.0",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
@@ -31,18 +24,10 @@
     "express-rate-limit": "^6.7.0",
     "express-validator": "^7.2.1",
     "helmet": "^7.0.0",
-    "i18next": "^25.2.1",
-    "i18next-browser-languagedetector": "^8.2.0",
     "jq": "^1.7.2",
     "jsonwebtoken": "^9.0.0",
     "multer": "^1.4.5-lts.1",
     "pg": "^8.16.3",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "react-i18next": "^15.5.3",
-    "react-native-chart-kit": "^6.12.0",
-    "react-native-web": "^0.20.0",
-    "react-router-dom": "^7.6.3",
     "sharp": "^0.32.1",
     "uuid": "^9.0.1",
     "winston": "^3.8.2",
@@ -50,14 +35,8 @@
   },
   "devDependencies": {
     "@types/node": "^24.0.7",
-    "@types/react": "^19.1.8",
-    "@types/react-dom": "^19.1.6",
-    "@types/react-router-dom": "^5.3.3",
-    "@vitejs/plugin-react": "^4.6.0",
     "cross-env": "^7.0.3",
-    "nodemon": "^2.0.22",
-    "typescript": "^5.8.3",
-    "vite": "^7.0.0"
+    "nodemon": "^2.0.22"
   },
   "keywords": [
     "matchit",
@@ -69,6 +48,6 @@
   "author": "MatchIt Team",
   "license": "MIT",
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=18.0.0"
   }
 }

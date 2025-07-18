@@ -7,7 +7,7 @@ RUN apt-get update && \
     curl \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
-
+# Modificado o diretório de trabalho
 # Definir diretório de trabalho
 WORKDIR /app
 
@@ -19,14 +19,15 @@ RUN groupadd --gid 1001 nodejs && \
 FROM base AS deps
 
 # Copiar arquivos de dependências
-COPY package*.json ./
+# Modificado para copiar do pacote backend
+COPY packages/backend/package*.json ./
 
 # Instalar dependências (produção + dev para build)
 RUN npm ci --include=dev && npm cache clean --force
 
 # === STAGE 2: Build ===
 FROM base AS build
-
+# Modificado para copiar do pacote backend
 # Copiar dependências da stage anterior
 COPY --from=deps /app/node_modules ./node_modules
 
@@ -35,7 +36,7 @@ COPY . .
 
 # Remover arquivos desnecessários
 RUN rm -rf .git \
-    docs \
+    #docs \ # Removido para não excluir a pasta docs
     tests \
     *.md \
     .env.example \
@@ -45,15 +46,16 @@ RUN rm -rf .git \
 FROM base AS production
 
 # Definir ambiente de produção
-ENV NODE_ENV=production
-ENV PORT=3000
+# Modificado para remover a definição do NODE_ENV
+ENV PORT=3000 
 
 # Instalar apenas dependências de produção
-COPY package*.json ./
+# Modificado para copiar do pacote backend
+COPY packages/backend/package*.json ./
 RUN npm ci --only=production && npm cache clean --force
 
 # Copiar aplicação construída
-COPY --from=build --chown=nodejs:nodejs /app/server ./server
+# Modificado para ajustar a cópia dos arquivos
 COPY --from=build --chown=nodejs:nodejs /app/scripts ./scripts
 COPY --from=build --chown=nodejs:nodejs /app/.env* ./
 
@@ -64,7 +66,7 @@ RUN mkdir -p logs uploads && \
 # Trocar para usuário não-root
 USER nodejs
 
-# Variáveis de ambiente padrão
+# Variáveis de ambiente padrão - movido para o docker-compose
 ENV DB_HOST=postgres
 ENV DB_PORT=5432
 ENV DB_USER=matchit
@@ -81,4 +83,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
   CMD curl -f http://localhost:3000/api/health || exit 1
 
 # Comando de inicialização
-CMD ["node", "server/app.js"]
+CMD ["node", "src/app.js"] # Ajustado o caminho

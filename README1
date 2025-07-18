@@ -1,0 +1,7 @@
+# MatchIt - Frontend Admin (Streamlit)
+
+Este diretório está reservado para a implementação do painel administrativo utilizando Streamlit.
+
+## Plano
+
+A lógica utilizada no frontend de usuário atual servirá como base para criar os serviços e componentes visuais necessários no painel de administração. A implementação será feita em uma fase futura do projeto.

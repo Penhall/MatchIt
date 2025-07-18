@@ -747,13 +747,13 @@ router.get('/results/:sessionId', authMiddleware, async (req, res) => {
 // ========================================================================
 
 /**
- * POST /api/tournament/admin/images
+ * POST /api/admin/tournament/images
  * Upload de imagens para torneios (admin only)
  */
-router.post('/admin/images', authMiddleware, upload.array('images', 10), async (req, res) => {
+router.post('/images', upload.array('images', 10), async (req, res) => {
     try {
         // Verificar se é admin (implementar verificação de role)
-        if (!req.user.isAdmin) {
+        if (!req.user?.isAdmin) {
             return res.status(403).json({
                 success: false,
                 message: 'Acesso negado. Apenas administradores.'
@@ -814,12 +814,12 @@ router.post('/admin/images', authMiddleware, upload.array('images', 10), async (
 });
 
 /**
- * GET /api/tournament/admin/images
+ * GET /api/admin/tournament/images
  * Listar todas as imagens para administração
  */
-router.get('/admin/images', authMiddleware, async (req, res) => {
+router.get('/images', async (req, res) => {
     try {
-        if (!req.user.isAdmin) {
+        if (!req.user?.isAdmin) {
             return res.status(403).json({
                 success: false,
                 message: 'Acesso negado'
@@ -866,6 +866,12 @@ router.get('/admin/images', authMiddleware, async (req, res) => {
     }
 });
 
+/**
+ * PUT /api/admin/tournament/images/:id/approve
+ * Aprovar uma imagem
+ */
+// ... (outras rotas de admin aqui)
+
 export default router;
 EOF
 
@@ -894,6 +900,7 @@ import { fileURLToPath } from 'url';
 // Importar rotas
 import profileRoutes from './routes/profile.js';
 import tournamentRoutes from './routes/tournament.js';
+import adminTournamentRoutes from './routes/admin/tournament.js'; // Rota de admin
 
 // Configuração de diretórios
 const __filename = fileURLToPath(import.meta.url);
@@ -977,7 +984,10 @@ app.get('/api/info', (req, res) => {
 
 // Rotas principais
 app.use('/api/profile', profileRoutes);
-app.use('/api/tournament', tournamentRoutes);
+app.use('/api/user/tournament', tournamentRoutes); // Rotas de usuário
+
+// Rotas de Admin (com middleware de proteção)
+app.use('/api/admin/tournament', authMiddleware, adminOnly, adminTournamentRoutes);
 
 // ========================================================================
 // MIDDLEWARE DE ERRO

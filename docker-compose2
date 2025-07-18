@@ -1,0 +1,366 @@
+# docker-compose-fixed.yml - Configuração Docker corrigida para acesso ao frontend
+
+version: '3.8'
+
+services:
+  # ===== BASE DE DADOS =====
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: matchit_db
+      POSTGRES_USER: matchit
+      POSTGRES_PASSWORD: matchit123
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/Banco de dados/init_db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - matchit-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U matchit -d matchit_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===== REDIS CACHE =====
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - matchit-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # ===== BACKEND API =====
+  backend:
+    build:
+    context: ../../
+    dockerfile: ./packages/backend/Dockerfile # Ajustado para a nova localização
+      target: production
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: matchit_db
+      DB_USER: matchit
+      DB_PASSWORD: matchit123
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-matchit_secret_key_production_2024}
+      JWT_EXPIRES_IN: 7d
+      # CORS PERMISSIVO PARA DESENVOLVIMENTO
+      CORS_ORIGINS: "http://localhost:3000,http://localhost:5173,http://localhost:8081,http://127.0.0.1:3000,http://127.0.0.1:5173,http://127.0.0.1:8081,http://frontend:5173"
+    ports:
+      - "3000:3000"  # Backend acessível externamente na porta 3000
+    networks:
+      - matchit-network
+    volumes:
+    - ../../logs:/app/logs
+    - ../../uploads:/app/uploads
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+# Modificado para refletir a nova estrutura de diretórios
+  # ===== FRONTEND VITE (para desenvolvimento) =====
+  frontend-dev:
+    build:
+    context: ../../
+    dockerfile: ./infra/docker/Dockerfile.frontend
+      target: development
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      VITE_API_URL: http://localhost:3000/api
+      VITE_BACKEND_URL: http://backend:3000
+      NODE_ENV: development
+    ports:
+      - "5173:5173"  # Frontend acessível externamente na porta 5173
+    networks:
+      - matchit-network
+    volumes:
+    - ../../packages/frontend-user:/app
+    # Otimização: não mapear node_modules para usar o do container
+    - /app/node_modules 
+    command: npm run dev -- --host 0.0.0.0
+    profiles:
+      - dev
+    
+  # ===== NGINX PROXY (para produção) =====
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+  - ./nginx-fixed.conf:/etc/nginx/conf.d/default.conf:ro # Este arquivo agora está em infra/docker
+  - ../../ssl:/etc/nginx/ssl:ro
+    networks:
+      - matchit-network
+    profiles:
+      - prod
+
+# ===== VOLUMES =====
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+# ===== NETWORKS =====
+networks:
+  matchit-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+---
+# Arquivo separado: nginx-fixed.conf
+
+server {
+    listen 80;
+    server_name localhost;
+    
+    # Headers CORS permissivos
+    add_header Access-Control-Allow-Origin "*" always;
+    add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS" always;
+    add_header Access-Control-Allow-Headers "Content-Type, Authorization, Accept, Origin, X-Requested-With" always;
+    add_header Access-Control-Allow-Credentials "true" always;
+
+    # Configuração para SPA (se houver frontend builded)
+    location / {
+        root /usr/share/nginx/html;
+        index index.html;
+        try_files $uri $uri/ /index.html;
+        
+        # Cache para SPA
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+        add_header Pragma "no-cache";
+        add_header Expires "0";
+    }
+
+    # Proxy para API
+    location /api {
+        proxy_pass http://backend:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        
+        # Timeouts generosos
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+        
+        # CORS para API
+        add_header Access-Control-Allow-Origin "*" always;
+        add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS" always;
+        add_header Access-Control-Allow-Headers "Content-Type, Authorization, Accept, Origin, X-Requested-With" always;
+        add_header Access-Control-Allow-Credentials "true" always;
+        
+        # Handle preflight requests
+        if ($request_method = 'OPTIONS') {
+            add_header Access-Control-Allow-Origin "*";
+            add_header Access-Control-Max-Age 1728000;
+            add_header Content-Type "text/plain charset=UTF-8";
+            add_header Content-Length 0;
+            return 204;
+        }
+    }
+
+    # Proxy para uploads
+    location /uploads {
+        proxy_pass http://backend:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+
+---
+# Arquivo separado: Dockerfile.frontend
+
+# Dockerfile.frontend - Frontend container para desenvolvimento e produção
+FROM node:20-alpine AS base
+
+WORKDIR /app
+
+# Dependências
+COPY package*.json ./
+RUN npm ci
+
+# ===== DEVELOPMENT STAGE =====
+FROM base AS development
+
+# Copiar código fonte
+COPY . .
+
+# Expor porta Vite
+EXPOSE 5173
+
+# Instalar Vite globalmente se necessário
+RUN npm install -g vite
+
+# Comando de desenvolvimento
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
+
+# ===== BUILD STAGE =====
+FROM base AS build
+
+# Copiar código fonte
+COPY . .
+
+# Build para produção
+RUN npm run build
+
+# ===== PRODUCTION STAGE =====
+FROM nginx:alpine AS production
+
+# Copiar arquivos buildados
+COPY --from=build /app/dist /usr/share/nginx/html
+
+# Copiar configuração nginx customizada
+COPY nginx-fixed.conf /etc/nginx/conf.d/default.conf
+
+# Expor porta
+EXPOSE 80
+
+# Comando
+CMD ["nginx", "-g", "daemon off;"]
+
+---
+# Scripts auxiliares
+
+# docker-dev-fixed.sh
+#!/bin/bash
+echo "🚀 Iniciando MatchIt - Modo Desenvolvimento (Frontend + Backend)"
+echo ""
+echo "📋 Serviços que serão iniciados:"
+echo "   • PostgreSQL (porta 5432)"
+echo "   • Redis (porta 6379)" 
+echo "   • Backend API (porta 3000)"
+echo "   • Frontend Vite (porta 5173)"
+echo ""
+
+# Parar containers existentes
+docker compose down
+
+# Iniciar em modo desenvolvimento
+docker compose --profile dev up --build -d
+
+echo ""
+echo "⏳ Aguardando serviços ficarem prontos..."
+sleep 10
+
+echo ""
+echo "📊 Status dos serviços:"
+docker compose ps
+
+echo ""
+echo "🌐 URLs de acesso:"
+echo "   Frontend: http://localhost:5173"
+echo "   Backend:  http://localhost:3000/api/health"
+echo "   Database: localhost:5432 (user: matchit, password: matchit123)"
+echo ""
+echo "📝 Para acompanhar logs:"
+echo "   docker compose logs -f backend"
+echo "   docker compose logs -f frontend-dev"
+echo ""
+echo "🔄 Para parar:"
+echo "   docker compose down"
+
+---
+# docker-prod-fixed.sh
+#!/bin/bash
+echo "🚀 Iniciando MatchIt - Modo Produção (Nginx + Backend)"
+echo ""
+echo "📋 Serviços que serão iniciados:"
+echo "   • PostgreSQL (porta 5432)"
+echo "   • Redis (porta 6379)"
+echo "   • Backend API (porta 3000)"
+echo "   • Nginx Proxy (porta 80)"
+echo ""
+
+# Parar containers existentes
+docker compose down
+
+# Iniciar em modo produção
+docker compose --profile prod up --build -d
+
+echo ""
+echo "⏳ Aguardando serviços ficarem prontos..."
+sleep 15
+
+echo ""
+echo "📊 Status dos serviços:"
+docker compose ps
+
+echo ""
+echo "🌐 URLs de acesso:"
+echo "   Frontend: http://localhost (via Nginx)"
+echo "   API:      http://localhost/api/health"
+echo "   Backend:  http://localhost:3000/api/health (direto)"
+echo ""
+echo "📝 Para acompanhar logs:"
+echo "   docker compose logs -f backend"
+echo "   docker compose logs -f nginx"
+echo ""
+echo "🔄 Para parar:"
+echo "   docker compose down"
+
+---
+# docker-test.sh
+#!/bin/bash
+echo "🧪 Testando conectividade Docker..."
+echo ""
+
+# Testar backend
+echo "🔍 Testando backend..."
+curl -s http://localhost:3000/api/health && echo "✅ Backend OK" || echo "❌ Backend ERROR"
+
+# Testar frontend (se estiver rodando)
+echo "🔍 Testando frontend..."
+curl -s http://localhost:5173 >/dev/null && echo "✅ Frontend OK" || echo "⚠️  Frontend não está rodando ou não acessível"
+
+# Testar nginx (se estiver rodando)
+echo "🔍 Testando Nginx..."
+curl -s http://localhost >/dev/null && echo "✅ Nginx OK" || echo "⚠️  Nginx não está rodando"
+
+echo ""
+echo "📋 Containers ativos:"
+docker compose ps
+
+echo ""
+echo "📊 Portas em uso:"
+docker compose port backend 3000 2>/dev/null || echo "Backend não está rodando"
+docker compose port frontend-dev 5173 2>/dev/null || echo "Frontend-dev não está rodando"
+docker compose port nginx 80 2>/dev/null || echo "Nginx não está rodando"
