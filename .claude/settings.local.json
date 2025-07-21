@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run test:frontend:*)",
+      "Bash(npx vitest run:*)",
+      "Bash(npm run test:unit:*)",
+      "Bash(npm run:*)",
+      "Bash(cat:*)",
+      "Bash(mocha tests:*)",
+      "Bash(npx mocha:*)",
+      "Bash(docker:*)",
+      "Bash(node:*)",
+      "Bash(touch:*)",
+      "Bash(mkdir:*)",
+      "Bash(chmod:*)",
+      "Bash(mv:*)",
+      "Bash(cd:*)",
+      "Bash(rm:*)",
+      "Bash(npm cache clean:*)",
+      "Bash(pkill:*)",
+      "Bash(timeout 5 npm run dev)",
+      "Bash(curl:*)",
+      "Bash(timeout 3 npm run dev)",
+      "Bash(timeout 3 npm start)",
+      "Bash(ss:*)",
+      "Bash(npm start:*)",
+      "Bash(timeout 3 npm run serve)"
+    ],
+    "deny": []
+  }
+}

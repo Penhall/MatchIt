@@ -1,14 +1,20 @@
-FROM node:18-alpine
+# Dockerfile.frontend.dev - Frontend Development Mode
+FROM node:20-alpine AS development
 
-WORKDIR /app/backend/backend
+# Definir diretório de trabalho
+WORKDIR /app
 
-COPY package.json ./
-COPY package-lock.json ./
+# Instalar dependências globais
+RUN npm install -g vite
 
-RUN npm install --omit=dev && npm cache clean --force
+# Copiar arquivos de dependências
+COPY frontend.User/package*.json ./
 
-COPY ../. .
+# Instalar dependências
+RUN npm ci && npm cache clean --force
 
+# Expor porta Vite
 EXPOSE 5173
 
-CMD ["npm", "run", "dev"]
+# Comando de desenvolvimento
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]

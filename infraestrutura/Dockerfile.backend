@@ -7,9 +7,9 @@ RUN apt-get update && \
     curl \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
-# Modificado o diretório de trabalho
+
 # Definir diretório de trabalho
-WORKDIR /app/backend/backend
+WORKDIR /app
 
 # Configurar usuário não-root para segurança
 RUN groupadd --gid 1001 nodejs && \
@@ -19,25 +19,22 @@ RUN groupadd --gid 1001 nodejs && \
 FROM base AS deps
 
 # Copiar arquivos de dependências
-# Modificado para copiar do pacote backend
-COPY packages/backend/package*.json ./
+COPY backend/package*.json ./
 
 # Instalar dependências (produção + dev para build)
 RUN npm ci --include=dev && npm cache clean --force
 
 # === STAGE 2: Build ===
 FROM base AS build
-# Modificado para copiar do pacote backend
+
 # Copiar dependências da stage anterior
 COPY --from=deps /app/node_modules ./node_modules
 
-# Copiar código fonte
-COPY ../. .
+# Copiar código fonte do backend
+COPY backend/ ./
 
 # Remover arquivos desnecessários
-RUN rm -rf .git \
-    #docs \ # Removido para não excluir a pasta docs
-    tests \
+RUN rm -rf tests \
     *.md \
     .env.example \
     .gitignore
@@ -46,18 +43,15 @@ RUN rm -rf .git \
 FROM base AS production
 
 # Definir ambiente de produção
-# Modificado para remover a definição do NODE_ENV
+ENV NODE_ENV=production
 ENV PORT=3000 
 
 # Instalar apenas dependências de produção
-# Modificado para copiar do pacote backend
-COPY packages/backend/package*.json ./
+COPY backend/package*.json ./
 RUN npm ci --only=production && npm cache clean --force
 
 # Copiar aplicação construída
-# Modificado para ajustar a cópia dos arquivos
-COPY --from=build --chown=nodejs:nodejs /app/scripts ./scripts
-COPY --from=build --chown=nodejs:nodejs /app/.env* ./
+COPY --from=build --chown=nodejs:nodejs /app/ ./
 
 # Criar diretórios necessários
 RUN mkdir -p logs uploads && \
@@ -66,7 +60,7 @@ RUN mkdir -p logs uploads && \
 # Trocar para usuário não-root
 USER nodejs
 
-# Variáveis de ambiente padrão - movido para o docker-compose
+# Variáveis de ambiente padrão
 ENV DB_HOST=postgres
 ENV DB_PORT=5432
 ENV DB_USER=matchit
@@ -83,4 +77,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
   CMD curl -f http://localhost:3000/api/health || exit 1
 
 # Comando de inicialização
-CMD ["node", "src/app.js"] # Ajustado o caminho
+CMD ["node", "server/app.js"]

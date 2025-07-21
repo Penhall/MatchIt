@@ -1,6 +1,6 @@
 // server/routes/auth.js - Sistema de Autenticação com Middleware para MatchIt
 import express from 'express';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
 import { pool } from '../config/database.js';

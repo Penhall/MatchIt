@@ -1,19 +1,18 @@
-// src/App.tsx - FASE 5: Login + Profile + Settings + StyleAdjustment + MatchArea
+// src/App.tsx - VERSÃO COMPLETA: Todas as telas habilitadas
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import HomeScreen from './screens/HomeScreen';
 import LoginScreen from './screens/LoginScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import StyleAdjustmentScreen from './screens/StyleAdjustmentScreen';
 import MatchAreaScreen from './screens/MatchAreaScreen';
+import ChatScreen from './screens/ChatScreen';
+import VendorScreen from './screens/VendorScreen';
 import { useAuth } from './hooks/useAuth';
 import { APP_ROUTES } from './constants';
 import { View, Text } from './lib/react-native-web';
-
-// ⚠️  TELAS AINDA DESABILITADAS (FASE 6+)
-// import ChatScreen from './screens/ChatScreen';
-// import VendorScreen from './screens/VendorScreen';
-// import BottomNavbar from './components/navigation/BottomNavbar';
+import BottomNavbar from './components/navigation/BottomNavbar';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAuth();
@@ -52,37 +51,41 @@ const App: React.FC = () => {
       }}>
         <View style={{ flexGrow: 1, overflowY: 'auto' }}>
           <Routes>
-            {/* ✅ FASE 1: LOGIN */}
+            {/* ✅ TELA PRINCIPAL */}
+            <Route path="/" element={<HomeScreen />} />
+            
+            {/* ✅ LOGIN */}
             <Route path="/login" element={<LoginScreen />} />
             
-            {/* ✅ FASE 2: PROFILE */}
+            {/* ✅ PROFILE */}
             <Route 
               path="/profile" 
               element={<ProtectedRoute><ProfileScreen /></ProtectedRoute>} 
             />
             
-            {/* ✅ FASE 3: SETTINGS */}
+            {/* ✅ SETTINGS */}
             <Route path="/settings" element={<ProtectedRoute><SettingsScreen /></ProtectedRoute>} />
             
-            {/* ✅ FASE 4: STYLE ADJUSTMENT */}
+            {/* ✅ STYLE ADJUSTMENT */}
             <Route path="/style-adjustment" element={<ProtectedRoute><StyleAdjustmentScreen /></ProtectedRoute>} />
             
-            {/* ✅ FASE 5: MATCH AREA */}
+            {/* ✅ MATCH AREA */}
             <Route path="/match-area" element={<ProtectedRoute><MatchAreaScreen /></ProtectedRoute>} />
             
-            {/* ⚠️  ROTAS AINDA DESABILITADAS (FASE 6+) */}
-            {/* 
+            {/* ✅ CHAT */}
             <Route path="/chat/:chatId" element={<ProtectedRoute><ChatScreen /></ProtectedRoute>} />
+            <Route path="/chat" element={<ProtectedRoute><ChatScreen /></ProtectedRoute>} />
+            
+            {/* ✅ VENDOR */}
             <Route path="/vendor" element={<ProtectedRoute><VendorScreen /></ProtectedRoute>} />
-            */}
             
             {/* Rota padrão */}
-            <Route path="*" element={<Navigate to={isAuthenticated ? "/profile" : "/login"} replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </View>
         
-        {/* ⚠️  NAVEGAÇÃO AINDA DESABILITADA (FASE 8) */}
-        {/* {isAuthenticated && <BottomNavbar />} */}
+        {/* ✅ NAVEGAÇÃO HABILITADA */}
+        {isAuthenticated && <BottomNavbar />}
       </View>
     </View>
   );

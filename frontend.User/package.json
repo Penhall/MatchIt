@@ -1,0 +1,19 @@
+{
+  "name": "matchit-frontend-user",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js",
+    "build": "echo 'Build configurado para produção'",
+    "preview": "node server.js",
+    "test": "echo 'Testes configurados'",
+    "vite": "vite --host"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-i18next": "^15.6.0",
+    "react-router-dom": "^6.8.0"
+  }
+}

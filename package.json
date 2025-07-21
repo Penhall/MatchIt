@@ -8,13 +8,28 @@
     "test:integration": "mocha tests/integration/**/*.test.js",
     "test:e2e": "mocha tests/e2e/**/*.test.js",
     "test:performance": "mocha tests/performance/**/*.test.js",
-    "test:coverage": "nyc --reporter=html --reporter=text npm test"
+    "test:coverage": "nyc --reporter=html --reporter=text npm test",
+    "test:frontend": "cd frontend.User && npx vitest run",
+    "test:frontend:watch": "cd frontend.User && npx vitest",
+    "test:frontend:ui": "cd frontend.User && npx vitest --ui",
+    "test:backend": "npx mocha backend/tests/unit/utils/*.test.js backend/tests/unit/services/*.test.js backend/tests/unit/middleware/*.test.js",
+    "test:backend:watch": "npx mocha backend/tests/unit/utils/*.test.js backend/tests/unit/services/*.test.js backend/tests/unit/middleware/*.test.js --watch"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
+    "@vitejs/plugin-react": "^4.7.0",
+    "@vitest/ui": "^3.2.4",
+    "chai": "^4.5.0",
+    "jsdom": "^26.1.0",
     "mocha": "^10.2.0",
-    "chai": "^4.3.10",
-    "sinon": "^17.0.1",
     "nyc": "^15.1.0",
-    "supertest": "^6.3.3"
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "sinon": "^17.0.1",
+    "supertest": "^6.3.3",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.5",
+    "vitest": "^3.2.4"
   }
 }

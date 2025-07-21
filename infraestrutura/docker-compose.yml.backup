@@ -45,8 +45,8 @@ services:
   # ===== BACKEND API =====
   backend:
     build:
-    context: ../../
-    dockerfile: ./infra/docker/Dockerfile.backend
+      context: ./backend/backend
+      dockerfile: ../infraestrutura/Dockerfile.backend.backend
       target: production
     restart: unless-stopped
     depends_on:
@@ -72,8 +72,8 @@ services:
     networks:
       - matchit-network
     volumes:
-    - ../../logs:/app/logs
-    - ../../uploads:/app/uploads
+      - ./logs:/app/logs
+      - ./uploads:/app/uploads
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
       interval: 30s
@@ -83,8 +83,8 @@ services:
   # ===== FRONTEND VITE (para desenvolvimento) =====
   frontend-dev:
     build:
-    context: ../../
-    dockerfile: ./infra/docker/Dockerfile.frontend
+      context: ./backend/backend
+      dockerfile: ../infraestrutura/Dockerfile.backend.frontend
       target: development
     restart: unless-stopped
     depends_on:
@@ -99,9 +99,8 @@ services:
     networks:
       - matchit-network
     volumes:
-    - ../../packages/frontend-user:/app
-    # Otimização: não mapear node_modules para usar o do container
-    - /app/node_modules 
+      - .:/app
+      - /app/node_modules
     command: npm run dev -- --host 0.0.0.0
     profiles:
       - dev
@@ -117,8 +116,8 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-  - ./nginx-fixed.conf:/etc/nginx/conf.d/default.conf:ro # Este arquivo agora está em infra/docker
-  - ../../ssl:/etc/nginx/ssl:ro
+      - ./nginx-fixed.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
     networks:
       - matchit-network
     profiles:
