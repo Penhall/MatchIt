@@ -27,7 +27,8 @@
       "Bash(timeout 3 npm start)",
       "Bash(ss:*)",
       "Bash(npm start:*)",
-      "Bash(timeout 3 npm run serve)"
+      "Bash(timeout 3 npm run serve)",
+      "Bash(cp:*)"
     ],
     "deny": []
   }

@@ -6,91 +6,33 @@ import { useAuth } from '../hooks/useAuth';
 import { useTournament } from '../hooks/useTournament';
 import './HomeScreen.css';
 
-interface Tournament {
-  id: string;
-  name: string;
-  status: 'upcoming' | 'ongoing' | 'completed';
-  participantsCount: number;
-  startDate: string;
-  description?: string;
-}
-
 const HomeScreen: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
-  const { tournaments, loading, error, fetchTournaments } = useTournament();
-  
-  const [featuredTournaments, setFeaturedTournaments] = useState<Tournament[]>([]);
-  const [recentMatches, setRecentMatches] = useState<any[]>([]);
+  const { categories, loading, error, loadCategories } = useTournament();
 
   useEffect(() => {
-    // Carregar torneios em destaque
-    fetchTournaments();
-  }, [fetchTournaments]);
+    // Carregar categorias de torneio
+    loadCategories();
+  }, [loadCategories]);
 
-  useEffect(() => {
-    // Filtrar torneios em destaque (próximos e em andamento)
-    if (tournaments) {
-      const featured = tournaments
-        .filter(t => t.status === 'upcoming' || t.status === 'ongoing')
-        .slice(0, 3);
-      setFeaturedTournaments(featured);
-    }
-  }, [tournaments]);
-
-  const handleJoinTournament = (tournamentId: string) => {
+  const handleStartTournament = () => {
     if (!isAuthenticated) {
       navigate('/login');
       return;
     }
-    navigate(`/tournament/${tournamentId}`);
+    navigate('/tournament');
   };
 
-  const handleCreateTournament = () => {
+  const handleJoinTournament = (categoryId: string) => {
     if (!isAuthenticated) {
       navigate('/login');
       return;
     }
-    navigate('/create-tournament');
+    navigate(`/tournament/${categoryId}`);
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const getStatusLabel = (status: Tournament['status']) => {
-    switch (status) {
-      case 'upcoming':
-        return t('tournament.status.upcoming');
-      case 'ongoing':
-        return t('tournament.status.ongoing');
-      case 'completed':
-        return t('tournament.status.completed');
-      default:
-        return status;
-    }
-  };
-
-  const getStatusClass = (status: Tournament['status']) => {
-    switch (status) {
-      case 'upcoming':
-        return 'status-upcoming';
-      case 'ongoing':
-        return 'status-ongoing';
-      case 'completed':
-        return 'status-completed';
-      default:
-        return '';
-    }
-  };
 
   if (loading) {
     return (
@@ -118,16 +60,16 @@ const HomeScreen: React.FC = () => {
           <div className="hero-actions">
             <button 
               className="btn btn-primary btn-large"
-              onClick={handleCreateTournament}
+              onClick={handleStartTournament}
             >
-              {t('home.hero.createTournament', 'Criar Torneio')}
+              {t('home.hero.startTournament', 'Iniciar Torneio')}
             </button>
             
             <button 
               className="btn btn-secondary btn-large"
-              onClick={() => navigate('/tournaments')}
+              onClick={() => navigate('/tournament')}
             >
-              {t('home.hero.browseTournaments', 'Explorar Torneios')}
+              {t('home.hero.browseTournaments', 'Explorar Categorias')}
             </button>
           </div>
         </div>
@@ -156,59 +98,58 @@ const HomeScreen: React.FC = () => {
         </div>
       </section>
 
-      {/* Featured Tournaments */}
+      {/* Featured Categories */}
       <section className="featured-section">
         <div className="container">
           <h2 className="section-title">
-            {t('home.featured.title', 'Torneios em Destaque')}
+            {t('home.featured.title', 'Categorias em Destaque')}
           </h2>
           
           {error && (
             <div className="error-message">
-              <p>{t('common.error.loadTournaments', 'Erro ao carregar torneios')}</p>
-              <button onClick={fetchTournaments} className="btn btn-link">
+              <p>{t('common.error.loadCategories', 'Erro ao carregar categorias')}</p>
+              <button onClick={() => loadCategories()} className="btn btn-link">
                 {t('common.tryAgain', 'Tentar novamente')}
               </button>
             </div>
           )}
           
-          <div className="tournaments-grid">
-            {featuredTournaments.length > 0 ? (
-              featuredTournaments.map(tournament => (
-                <div key={tournament.id} className="tournament-card">
-                  <div className="tournament-header">
-                    <h3 className="tournament-name">{tournament.name}</h3>
-                    <span className={`tournament-status ${getStatusClass(tournament.status)}`}>
-                      {getStatusLabel(tournament.status)}
+          <div className="categories-grid">
+            {categories && categories.length > 0 ? (
+              categories.slice(0, 3).map(category => (
+                <div key={category.id} className="category-card">
+                  <div className="category-header">
+                    <div className="category-icon" style={{ color: category.color }}>
+                      {category.icon}
+                    </div>
+                    <h3 className="category-name">{category.displayName}</h3>
+                    <span className={`category-status ${category.available ? 'status-available' : 'status-unavailable'}`}>
+                      {category.available ? '✅ Disponível' : '🔒 Em breve'}
                     </span>
                   </div>
                   
-                  <div className="tournament-info">
-                    <p className="tournament-description">
-                      {tournament.description || t('tournament.noDescription', 'Sem descrição')}
+                  <div className="category-info">
+                    <p className="category-description">
+                      {category.description}
                     </p>
                     
-                    <div className="tournament-meta">
+                    <div className="category-meta">
                       <div className="meta-item">
-                        <span className="meta-label">{t('tournament.participants', 'Participantes')}:</span>
-                        <span className="meta-value">{tournament.participantsCount}</span>
-                      </div>
-                      
-                      <div className="meta-item">
-                        <span className="meta-label">{t('tournament.startDate', 'Início')}:</span>
-                        <span className="meta-value">{formatDate(tournament.startDate)}</span>
+                        <span className="meta-label">{t('tournament.images', 'Imagens')}:</span>
+                        <span className="meta-value">{category.imageCount}</span>
                       </div>
                     </div>
                   </div>
                   
-                  <div className="tournament-actions">
+                  <div className="category-actions">
                     <button 
                       className="btn btn-primary"
-                      onClick={() => handleJoinTournament(tournament.id)}
+                      onClick={() => category.available ? handleJoinTournament(category.id) : navigate('/tournament')}
+                      disabled={!category.available}
                     >
-                      {tournament.status === 'upcoming' 
-                        ? t('tournament.join', 'Participar')
-                        : t('tournament.view', 'Visualizar')
+                      {category.available 
+                        ? t('tournament.start', 'Iniciar')
+                        : t('tournament.comingSoon', 'Em breve')
                       }
                     </button>
                   </div>
@@ -217,13 +158,13 @@ const HomeScreen: React.FC = () => {
             ) : (
               <div className="empty-state">
                 <div className="empty-icon">🏆</div>
-                <h3>{t('home.featured.empty.title', 'Nenhum torneio em destaque')}</h3>
-                <p>{t('home.featured.empty.description', 'Seja o primeiro a criar um torneio!')}</p>
+                <h3>{t('home.featured.empty.title', 'Carregando categorias...')}</h3>
+                <p>{t('home.featured.empty.description', 'Descubra suas preferências através de torneios visuais!')}</p>
                 <button 
                   className="btn btn-primary"
-                  onClick={handleCreateTournament}
+                  onClick={handleStartTournament}
                 >
-                  {t('home.featured.empty.action', 'Criar Primeiro Torneio')}
+                  {t('home.featured.empty.action', 'Explorar Torneios')}
                 </button>
               </div>
             )}
@@ -239,22 +180,22 @@ const HomeScreen: React.FC = () => {
           </h2>
           
           <div className="quick-actions-grid">
-            <div className="quick-action-card" onClick={handleCreateTournament}>
+            <div className="quick-action-card" onClick={handleStartTournament}>
               <div className="action-icon">🏆</div>
-              <h3>{t('home.quickActions.create.title', 'Criar Torneio')}</h3>
-              <p>{t('home.quickActions.create.description', 'Configure um novo torneio em minutos')}</p>
+              <h3>{t('home.quickActions.start.title', 'Iniciar Torneio')}</h3>
+              <p>{t('home.quickActions.start.description', 'Descubra suas preferências em minutos')}</p>
             </div>
             
-            <div className="quick-action-card" onClick={() => navigate('/tournaments')}>
+            <div className="quick-action-card" onClick={() => navigate('/tournament')}>
               <div className="action-icon">🔍</div>
-              <h3>{t('home.quickActions.browse.title', 'Explorar Torneios')}</h3>
-              <p>{t('home.quickActions.browse.description', 'Encontre torneios para participar')}</p>
+              <h3>{t('home.quickActions.browse.title', 'Explorar Categorias')}</h3>
+              <p>{t('home.quickActions.browse.description', 'Veja todas as categorias disponíveis')}</p>
             </div>
             
-            <div className="quick-action-card" onClick={() => navigate('/my-tournaments')}>
-              <div className="action-icon">📊</div>
-              <h3>{t('home.quickActions.manage.title', 'Meus Torneios')}</h3>
-              <p>{t('home.quickActions.manage.description', 'Gerencie seus torneios e participações')}</p>
+            <div className="quick-action-card" onClick={() => navigate('/match-area')}>
+              <div className="action-icon">💕</div>
+              <h3>{t('home.quickActions.matches.title', 'Ver Matches')}</h3>
+              <p>{t('home.quickActions.matches.description', 'Conecte-se com pessoas compatíveis')}</p>
             </div>
             
             {isAuthenticated && (

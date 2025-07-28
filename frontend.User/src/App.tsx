@@ -9,6 +9,9 @@ import StyleAdjustmentScreen from './screens/StyleAdjustmentScreen';
 import MatchAreaScreen from './screens/MatchAreaScreen';
 import ChatScreen from './screens/ChatScreen';
 import VendorScreen from './screens/VendorScreen';
+import TournamentScreen from './screens/TournamentScreen';
+import TournamentResultScreen from './screens/TournamentResultScreen';
+import TournamentMenuScreen from './screens/TournamentMenuScreen';
 import { useAuth } from './hooks/useAuth';
 import { APP_ROUTES } from './constants';
 import { View, Text } from './lib/react-native-web';
@@ -78,6 +81,11 @@ const App: React.FC = () => {
             
             {/* ✅ VENDOR */}
             <Route path="/vendor" element={<ProtectedRoute><VendorScreen /></ProtectedRoute>} />
+            
+            {/* ✅ TOURNAMENT SYSTEM */}
+            <Route path="/tournament" element={<ProtectedRoute><TournamentMenuScreen /></ProtectedRoute>} />
+            <Route path="/tournament/:category" element={<ProtectedRoute><TournamentScreen /></ProtectedRoute>} />
+            <Route path="/tournament/result/:sessionId" element={<ProtectedRoute><TournamentResultScreen /></ProtectedRoute>} />
             
             {/* Rota padrão */}
             <Route path="*" element={<Navigate to="/" replace />} />

@@ -1,0 +1,430 @@
+"table_name","column_name","data_type","is_nullable","column_default"
+"active_emotional_profiles","id","character varying","YES",NULL
+"active_emotional_profiles","user_id","uuid","YES",NULL
+"active_emotional_profiles","version","character varying","YES",NULL
+"active_emotional_profiles","energy_level","integer","YES",NULL
+"active_emotional_profiles","social_energy","integer","YES",NULL
+"active_emotional_profiles","physical_energy","integer","YES",NULL
+"active_emotional_profiles","mental_energy","integer","YES",NULL
+"active_emotional_profiles","openness","integer","YES",NULL
+"active_emotional_profiles","vulnerability","integer","YES",NULL
+"active_emotional_profiles","emotional_expression","integer","YES",NULL
+"active_emotional_profiles","empathy_level","integer","YES",NULL
+"active_emotional_profiles","emotional_stability","integer","YES",NULL
+"active_emotional_profiles","stress_resilience","integer","YES",NULL
+"active_emotional_profiles","self_control","integer","YES",NULL
+"active_emotional_profiles","adaptability","integer","YES",NULL
+"active_emotional_profiles","extroversion","integer","YES",NULL
+"active_emotional_profiles","social_confidence","integer","YES",NULL
+"active_emotional_profiles","group_orientation","integer","YES",NULL
+"active_emotional_profiles","intimacy_comfort","integer","YES",NULL
+"active_emotional_profiles","achievement_drive","integer","YES",NULL
+"active_emotional_profiles","competitiveness","integer","YES",NULL
+"active_emotional_profiles","goal_orientation","integer","YES",NULL
+"active_emotional_profiles","risk_tolerance","integer","YES",NULL
+"active_emotional_profiles","dominant_emotions","jsonb","YES",NULL
+"active_emotional_profiles","emotional_patterns","jsonb","YES",NULL
+"active_emotional_profiles","emotional_triggers","jsonb","YES",NULL
+"active_emotional_profiles","emotional_needs","jsonb","YES",NULL
+"active_emotional_profiles","mood_history","jsonb","YES",NULL
+"active_emotional_profiles","average_mood","integer","YES",NULL
+"active_emotional_profiles","mood_stability","integer","YES",NULL
+"active_emotional_profiles","attachment_style","character varying","YES",NULL
+"active_emotional_profiles","communication_style","character varying","YES",NULL
+"active_emotional_profiles","conflict_style","character varying","YES",NULL
+"active_emotional_profiles","love_language","jsonb","YES",NULL
+"active_emotional_profiles","emotional_preferences","jsonb","YES",NULL
+"active_emotional_profiles","deal_breakers","jsonb","YES",NULL
+"active_emotional_profiles","completeness","integer","YES",NULL
+"active_emotional_profiles","confidence","integer","YES",NULL
+"active_emotional_profiles","data_quality","jsonb","YES",NULL
+"active_emotional_profiles","created_at","timestamp with time zone","YES",NULL
+"active_emotional_profiles","updated_at","timestamp with time zone","YES",NULL
+"active_emotional_profiles","last_questionnaire","timestamp with time zone","YES",NULL
+"active_emotional_profiles","next_update_due","timestamp with time zone","YES",NULL
+"active_emotional_profiles","is_active","boolean","YES",NULL
+"active_emotional_profiles","is_public","boolean","YES",NULL
+"active_emotional_profiles","privacy_level","character varying","YES",NULL
+"active_emotional_profiles","deleted_at","timestamp with time zone","YES",NULL
+"analytics_events","id","uuid","NO","gen_random_uuid()"
+"analytics_events","user_id","uuid","YES",NULL
+"analytics_events","event_type","character varying","NO",NULL
+"analytics_events","event_data","jsonb","YES",NULL
+"analytics_events","session_id","character varying","YES",NULL
+"analytics_events","created_at","timestamp with time zone","YES","now()"
+"chat_messages","id","uuid","NO","uuid_generate_v4()"
+"chat_messages","match_id","uuid","YES",NULL
+"chat_messages","sender_id","uuid","YES",NULL
+"chat_messages","message_text","text","NO",NULL
+"chat_messages","message_type","character varying","YES","'text'::character varying"
+"chat_messages","is_read","boolean","YES","false"
+"chat_messages","created_at","timestamp without time zone","YES","CURRENT_TIMESTAMP"
+"emotional_compatibilities","id","character varying","NO",NULL
+"emotional_compatibilities","user_id","uuid","NO",NULL
+"emotional_compatibilities","target_user_id","uuid","NO",NULL
+"emotional_compatibilities","overall_score","integer","NO",NULL
+"emotional_compatibilities","compatibility_data","jsonb","NO",NULL
+"emotional_compatibilities","calculated_at","timestamp with time zone","NO","now()"
+"emotional_compatibilities","expires_at","timestamp with time zone","NO","(now() + '7 days'::interval)"
+"emotional_compatibilities","version","character varying","NO","'1.0'::character varying"
+"emotional_profile_history","id","integer","NO","nextval('emotional_profile_history_id_seq'::regclass)"
+"emotional_profile_history","user_id","uuid","NO",NULL
+"emotional_profile_history","profile_data","jsonb","NO",NULL
+"emotional_profile_history","created_at","timestamp with time zone","NO","now()"
+"emotional_profile_history","reason","character varying","YES","'update'::character varying"
+"emotional_profiles","id","character varying","NO",NULL
+"emotional_profiles","user_id","uuid","NO",NULL
+"emotional_profiles","version","character varying","NO","'1.0'::character varying"
+"emotional_profiles","energy_level","integer","NO",NULL
+"emotional_profiles","social_energy","integer","NO",NULL
+"emotional_profiles","physical_energy","integer","NO",NULL
+"emotional_profiles","mental_energy","integer","NO",NULL
+"emotional_profiles","openness","integer","NO",NULL
+"emotional_profiles","vulnerability","integer","NO",NULL
+"emotional_profiles","emotional_expression","integer","NO",NULL
+"emotional_profiles","empathy_level","integer","NO",NULL
+"emotional_profiles","emotional_stability","integer","NO",NULL
+"emotional_profiles","stress_resilience","integer","NO",NULL
+"emotional_profiles","self_control","integer","NO",NULL
+"emotional_profiles","adaptability","integer","NO",NULL
+"emotional_profiles","extroversion","integer","NO",NULL
+"emotional_profiles","social_confidence","integer","NO",NULL
+"emotional_profiles","group_orientation","integer","NO",NULL
+"emotional_profiles","intimacy_comfort","integer","NO",NULL
+"emotional_profiles","achievement_drive","integer","NO",NULL
+"emotional_profiles","competitiveness","integer","NO",NULL
+"emotional_profiles","goal_orientation","integer","NO",NULL
+"emotional_profiles","risk_tolerance","integer","NO",NULL
+"emotional_profiles","dominant_emotions","jsonb","NO","'[]'::jsonb"
+"emotional_profiles","emotional_patterns","jsonb","NO","'[]'::jsonb"
+"emotional_profiles","emotional_triggers","jsonb","NO","'[]'::jsonb"
+"emotional_profiles","emotional_needs","jsonb","NO","'[]'::jsonb"
+"emotional_profiles","mood_history","jsonb","NO","'[]'::jsonb"
+"emotional_profiles","average_mood","integer","NO","50"
+"emotional_profiles","mood_stability","integer","NO","50"
+"emotional_profiles","attachment_style","character varying","NO",NULL
+"emotional_profiles","communication_style","character varying","NO",NULL
+"emotional_profiles","conflict_style","character varying","NO",NULL
+"emotional_profiles","love_language","jsonb","NO","'[]'::jsonb"
+"emotional_profiles","emotional_preferences","jsonb","NO","'{}'::jsonb"
+"emotional_profiles","deal_breakers","jsonb","NO","'[]'::jsonb"
+"emotional_profiles","completeness","integer","NO","0"
+"emotional_profiles","confidence","integer","NO","0"
+"emotional_profiles","data_quality","jsonb","NO","'{}'::jsonb"
+"emotional_profiles","created_at","timestamp with time zone","NO","now()"
+"emotional_profiles","updated_at","timestamp with time zone","NO","now()"
+"emotional_profiles","last_questionnaire","timestamp with time zone","NO","now()"
+"emotional_profiles","next_update_due","timestamp with time zone","NO","(now() + '90 days'::interval)"
+"emotional_profiles","is_active","boolean","NO","true"
+"emotional_profiles","is_public","boolean","NO","true"
+"emotional_profiles","privacy_level","character varying","NO","'matches_only'::character varying"
+"emotional_profiles","deleted_at","timestamp with time zone","YES",NULL
+"emotional_questionnaire_responses","id","integer","NO","nextval('emotional_questionnaire_responses_id_seq'::regclass)"
+"emotional_questionnaire_responses","user_id","uuid","NO",NULL
+"emotional_questionnaire_responses","session_id","character varying","NO",NULL
+"emotional_questionnaire_responses","question_id","character varying","NO",NULL
+"emotional_questionnaire_responses","question_text","text","NO",NULL
+"emotional_questionnaire_responses","response_value","text","NO",NULL
+"emotional_questionnaire_responses","response_type","character varying","NO",NULL
+"emotional_questionnaire_responses","response_time","integer","YES",NULL
+"emotional_questionnaire_responses","confidence","integer","YES",NULL
+"emotional_questionnaire_responses","order_in_session","integer","YES",NULL
+"emotional_questionnaire_responses","answered_at","timestamp with time zone","NO","now()"
+"emotional_questionnaire_responses","created_at","timestamp with time zone","NO","now()"
+"emotional_states","id","uuid","NO","gen_random_uuid()"
+"emotional_states","user_id","uuid","NO",NULL
+"emotional_states","state_name","character varying","NO",NULL
+"emotional_states","intensity","numeric","NO",NULL
+"emotional_states","recorded_at","timestamp with time zone","YES","now()"
+"emotional_states","context","character varying","YES",NULL
+"emotional_states","source","character varying","YES","'manual'::character varying"
+"emotional_states","session_id","uuid","YES",NULL
+"engagement_metrics","id","uuid","NO","gen_random_uuid()"
+"engagement_metrics","user_id","uuid","NO",NULL
+"engagement_metrics","date","date","NO",NULL
+"engagement_metrics","total_views","integer","YES","0"
+"engagement_metrics","total_likes","integer","YES","0"
+"engagement_metrics","total_dislikes","integer","YES","0"
+"engagement_metrics","total_matches","integer","YES","0"
+"engagement_metrics","avg_session_duration","interval","YES",NULL
+"engagement_metrics","created_at","timestamp with time zone","YES","now()"
+"engagement_metrics","updated_at","timestamp with time zone","YES","now()"
+"integration_full_report","categoria","text","YES",NULL
+"integration_full_report","metrica","text","YES",NULL
+"integration_full_report","valor","text","YES",NULL
+"integration_full_report","percentual","text","YES",NULL
+"learning_session_emotions","id","uuid","NO","gen_random_uuid()"
+"learning_session_emotions","learning_session_id","uuid","NO",NULL
+"learning_session_emotions","emotional_state_id","uuid","NO",NULL
+"learning_session_emotions","recorded_at","timestamp with time zone","YES","now()"
+"learning_session_emotions","relevance_score","numeric","YES","0.5"
+"learning_session_emotions","notes","text","YES",NULL
+"learning_sessions","id","uuid","NO","gen_random_uuid()"
+"learning_sessions","user_id","uuid","NO",NULL
+"learning_sessions","session_type","character varying","NO","'style_preference'::character varying"
+"learning_sessions","started_at","timestamp with time zone","YES","now()"
+"learning_sessions","completed_at","timestamp with time zone","YES",NULL
+"learning_sessions","duration_seconds","integer","YES",NULL
+"learning_sessions","data_collected","jsonb","YES","'{}'::jsonb"
+"learning_sessions","quality_score","numeric","YES","0.0"
+"learning_sessions","is_completed","boolean","YES","false"
+"learning_sessions","metadata","jsonb","YES","'{}'::jsonb"
+"matches","id","uuid","NO","uuid_generate_v4()"
+"matches","user1_id","uuid","YES",NULL
+"matches","user2_id","uuid","YES",NULL
+"matches","compatibility_score","double precision","YES",NULL
+"matches","status","character varying","YES","'pending'::character varying"
+"matches","created_at","timestamp without time zone","YES","CURRENT_TIMESTAMP"
+"matches","updated_at","timestamp without time zone","YES","CURRENT_TIMESTAMP"
+"migration_logs","id","integer","NO","nextval('migration_logs_id_seq'::regclass)"
+"migration_logs","migration_version","character varying","NO",NULL
+"migration_logs","action","character varying","NO",NULL
+"migration_logs","executed_at","timestamp without time zone","YES","now()"
+"migration_logs","execution_time_ms","integer","YES",NULL
+"migration_logs","error_message","text","YES",NULL
+"migration_logs","sql_executed","text","YES",NULL
+"mood_entries","id","character varying","NO",NULL
+"mood_entries","user_id","uuid","NO",NULL
+"mood_entries","mood","integer","NO",NULL
+"mood_entries","energy","integer","NO",NULL
+"mood_entries","stress","integer","NO",NULL
+"mood_entries","context","text","YES",NULL
+"mood_entries","activities","jsonb","YES","'[]'::jsonb"
+"mood_entries","social","boolean","YES","false"
+"mood_entries","weather","character varying","YES",NULL
+"mood_entries","sleep","numeric","YES",NULL
+"mood_entries","exercise","boolean","YES","false"
+"mood_entries","timestamp","timestamp with time zone","NO","now()"
+"mood_entries","source","character varying","NO","'manual'::character varying"
+"mood_entries","confidence","integer","NO","100"
+"mood_entries","created_at","timestamp with time zone","NO","now()"
+"products","id","uuid","NO","uuid_generate_v4()"
+"products","name","character varying","NO",NULL
+"products","brand_name","character varying","YES",NULL
+"products","brand_logo_url","text","YES",NULL
+"products","image_url","text","YES",NULL
+"products","price_display","character varying","YES",NULL
+"products","price_numeric","numeric","YES",NULL
+"products","currency","character varying","YES","'USD'::character varying"
+"products","category","character varying","YES",NULL
+"products","description","text","YES",NULL
+"products","affiliate_url","text","YES",NULL
+"products","is_active","boolean","YES","true"
+"products","created_at","timestamp without time zone","YES","CURRENT_TIMESTAMP"
+"schema_migrations","id","integer","NO","nextval('schema_migrations_id_seq'::regclass)"
+"schema_migrations","version","character varying","NO",NULL
+"schema_migrations","name","character varying","NO",NULL
+"schema_migrations","executed_at","timestamp with time zone","YES","now()"
+"schema_migrations","execution_time_ms","integer","YES",NULL
+"schema_migrations","status","character varying","YES","'completed'::character varying"
+"style_choices","id","uuid","NO","uuid_generate_v4()"
+"style_choices","user_id","uuid","YES",NULL
+"style_choices","category","character varying","NO",NULL
+"style_choices","question_id","character varying","NO",NULL
+"style_choices","selected_option","character varying","NO",NULL
+"style_choices","created_at","timestamp without time zone","YES","CURRENT_TIMESTAMP"
+"style_choices","updated_at","timestamp with time zone","YES","now()"
+"style_preferences","id","integer","NO","nextval('style_preferences_id_seq'::regclass)"
+"style_preferences","user_id","uuid","NO",NULL
+"style_preferences","category","character varying","NO",NULL
+"style_preferences","question_id","character varying","NO",NULL
+"style_preferences","selected_option","character varying","NO",NULL
+"style_preferences","created_at","timestamp without time zone","YES","now()"
+"style_preferences","updated_at","timestamp without time zone","YES","now()"
+"style_recommendations","id","uuid","NO","gen_random_uuid()"
+"style_recommendations","user_id","uuid","NO",NULL
+"style_recommendations","recommendation_data","jsonb","NO","'{}'::jsonb"
+"style_recommendations","generated_at","timestamp with time zone","YES","now()"
+"style_recommendations","last_updated","timestamp with time zone","YES","now()"
+"style_recommendations","is_active","boolean","YES","true"
+"style_recommendations","confidence_score","numeric","YES","0.0"
+"style_recommendations","source_algorithm","character varying","YES","'basic'::character varying"
+"system_config","key","character varying","NO",NULL
+"system_config","value","text","NO",NULL
+"system_config","description","text","YES",NULL
+"system_config","created_at","timestamp with time zone","NO","now()"
+"system_config","updated_at","timestamp with time zone","NO","now()"
+"tournament_choices","id","uuid","NO","uuid_generate_v4()"
+"tournament_choices","session_id","uuid","YES",NULL
+"tournament_choices","round_number","integer","YES",NULL
+"tournament_choices","winner_image_id","integer","YES",NULL
+"tournament_choices","loser_image_id","integer","YES",NULL
+"tournament_choices","choice_time_ms","integer","YES",NULL
+"tournament_choices","created_at","timestamp without time zone","YES","now()"
+"tournament_images","id","integer","NO","nextval('tournament_images_id_seq'::regclass)"
+"tournament_images","category","USER-DEFINED","NO",NULL
+"tournament_images","image_url","text","NO",NULL
+"tournament_images","image_name","character varying","NO",NULL
+"tournament_images","display_order","integer","YES","0"
+"tournament_images","active","boolean","YES","true"
+"tournament_images","uploaded_at","timestamp without time zone","YES","now()"
+"tournament_images","file_size","integer","YES",NULL
+"tournament_images","image_width","integer","YES",NULL
+"tournament_images","image_height","integer","YES",NULL
+"tournament_images","tags","ARRAY","YES",NULL
+"tournament_images","approved","boolean","YES","true"
+"tournament_images","alt_text","character varying","YES",NULL
+"tournament_results","id","uuid","NO","uuid_generate_v4()"
+"tournament_results","user_id","uuid","YES",NULL
+"tournament_results","session_id","uuid","YES",NULL
+"tournament_results","category","USER-DEFINED","NO",NULL
+"tournament_results","champion_image_id","integer","YES",NULL
+"tournament_results","finalist_image_id","integer","YES",NULL
+"tournament_results","top_choices","ARRAY","YES",NULL
+"tournament_results","elimination_order","ARRAY","YES",NULL
+"tournament_results","preference_strength","numeric","YES",NULL
+"tournament_results","rounds_played","integer","YES",NULL
+"tournament_results","total_time_seconds","integer","YES",NULL
+"tournament_results","completed_at","timestamp without time zone","YES","now()"
+"tournament_sessions","id","uuid","NO","uuid_generate_v4()"
+"tournament_sessions","user_id","uuid","YES",NULL
+"tournament_sessions","category","USER-DEFINED","NO",NULL
+"tournament_sessions","status","character varying","YES","'active'::character varying"
+"tournament_sessions","current_round","integer","YES","1"
+"tournament_sessions","total_rounds","integer","YES",NULL
+"tournament_sessions","bracket_data","jsonb","YES",NULL
+"tournament_sessions","started_at","timestamp without time zone","YES","now()"
+"tournament_sessions","completed_at","timestamp without time zone","YES",NULL
+"tournament_sessions","last_activity","timestamp without time zone","YES","now()"
+"user_algorithm_weights","id","uuid","NO","gen_random_uuid()"
+"user_algorithm_weights","user_id","uuid","NO",NULL
+"user_algorithm_weights","style_compatibility_weight","numeric","YES","0.30"
+"user_algorithm_weights","location_weight","numeric","YES","0.25"
+"user_algorithm_weights","personality_weight","numeric","YES","0.20"
+"user_algorithm_weights","lifestyle_weight","numeric","YES","0.15"
+"user_algorithm_weights","activity_weight","numeric","YES","0.10"
+"user_algorithm_weights","learning_rate","numeric","YES","0.01"
+"user_algorithm_weights","created_at","timestamp with time zone","YES","now()"
+"user_algorithm_weights","updated_at","timestamp with time zone","YES","now()"
+"user_extended_profiles","id","uuid","NO","gen_random_uuid()"
+"user_extended_profiles","user_id","uuid","NO",NULL
+"user_extended_profiles","personality_openness","numeric","YES","0.5"
+"user_extended_profiles","personality_conscientiousness","numeric","YES","0.5"
+"user_extended_profiles","personality_extraversion","numeric","YES","0.5"
+"user_extended_profiles","personality_agreeableness","numeric","YES","0.5"
+"user_extended_profiles","personality_neuroticism","numeric","YES","0.5"
+"user_extended_profiles","lifestyle_activity_level","character varying","YES","'moderate'::character varying"
+"user_extended_profiles","lifestyle_social_preference","character varying","YES","'mixed'::character varying"
+"user_extended_profiles","lifestyle_adventure_seeking","numeric","YES","0.5"
+"user_extended_profiles","created_at","timestamp with time zone","YES","now()"
+"user_extended_profiles","updated_at","timestamp with time zone","YES","now()"
+"user_interactions","id","uuid","NO","gen_random_uuid()"
+"user_interactions","user_id","uuid","NO",NULL
+"user_interactions","target_user_id","uuid","NO",NULL
+"user_interactions","action","character varying","NO",NULL
+"user_interactions","interaction_context","jsonb","YES",NULL
+"user_interactions","created_at","timestamp with time zone","YES","now()"
+"user_interactions","updated_at","timestamp with time zone","YES","now()"
+"user_learning_profiles","id","uuid","NO","gen_random_uuid()"
+"user_learning_profiles","user_id","uuid","NO",NULL
+"user_learning_profiles","profile_data","jsonb","NO","'{}'::jsonb"
+"user_learning_profiles","learning_style","character varying","YES","'adaptive'::character varying"
+"user_learning_profiles","preference_stability","numeric","YES","0.5"
+"user_learning_profiles","last_learning_session","timestamp with time zone","YES",NULL
+"user_learning_profiles","total_sessions","integer","YES","0"
+"user_learning_profiles","average_session_quality","numeric","YES","0.0"
+"user_learning_profiles","created_at","timestamp with time zone","YES","now()"
+"user_learning_profiles","updated_at","timestamp with time zone","YES","now()"
+"user_mood_stats","user_id","uuid","YES",NULL
+"user_mood_stats","total_entries","bigint","YES",NULL
+"user_mood_stats","avg_mood","numeric","YES",NULL
+"user_mood_stats","mood_stability","numeric","YES",NULL
+"user_mood_stats","first_entry","timestamp with time zone","YES",NULL
+"user_mood_stats","last_entry","timestamp with time zone","YES",NULL
+"user_mood_stats","entries_last_week","bigint","YES",NULL
+"user_mood_stats","avg_mood_last_week","numeric","YES",NULL
+"user_profiles","id","uuid","NO","uuid_generate_v4()"
+"user_profiles","user_id","uuid","YES",NULL
+"user_profiles","display_name","character varying","NO",NULL
+"user_profiles","city","character varying","YES",NULL
+"user_profiles","gender","character varying","YES",NULL
+"user_profiles","avatar_url","text","YES",NULL
+"user_profiles","bio","text","YES",NULL
+"user_profiles","is_vip","boolean","YES","false"
+"user_profiles","age","integer","YES",NULL
+"user_profiles","style_completion_percentage","integer","YES","0"
+"user_profiles","created_at","timestamp without time zone","YES","CURRENT_TIMESTAMP"
+"user_profiles","updated_at","timestamp without time zone","YES","CURRENT_TIMESTAMP"
+"user_profiles","style_data","jsonb","YES",NULL
+"user_profiles","interests","ARRAY","YES",NULL
+"user_profiles","location_latitude","numeric","YES",NULL
+"user_profiles","location_longitude","numeric","YES",NULL
+"user_profiles","style_game_level","integer","YES","1"
+"user_profiles","style_game_xp","integer","YES","0"
+"user_profiles","last_style_game_played_at","timestamp with time zone","YES",NULL
+"user_sessions","id","uuid","NO","uuid_generate_v4()"
+"user_sessions","user_id","uuid","NO",NULL
+"user_sessions","token_hash","character varying","NO",NULL
+"user_sessions","expires_at","timestamp with time zone","NO",NULL
+"user_sessions","created_at","timestamp with time zone","YES","now()"
+"user_sessions","is_active","boolean","YES","true"
+"user_settings","id","uuid","NO","uuid_generate_v4()"
+"user_settings","user_id","uuid","NO",NULL
+"user_settings","notification_enabled","boolean","YES","true"
+"user_settings","privacy_level","character varying","YES","'public'::character varying"
+"user_settings","language","character varying","YES","'pt-BR'::character varying"
+"user_settings","theme","character varying","YES","'light'::character varying"
+"user_settings","settings_data","jsonb","YES","'{}'::jsonb"
+"user_settings","created_at","timestamp with time zone","YES","now()"
+"user_settings","updated_at","timestamp with time zone","YES","now()"
+"user_subscriptions","id","uuid","NO","uuid_generate_v4()"
+"user_subscriptions","user_id","uuid","YES",NULL
+"user_subscriptions","plan_type","character varying","YES",NULL
+"user_subscriptions","status","character varying","YES","'active'::character varying"
+"user_subscriptions","start_date","date","NO",NULL
+"user_subscriptions","end_date","date","NO",NULL
+"user_subscriptions","price_paid","numeric","YES",NULL
+"user_subscriptions","payment_method","character varying","YES",NULL
+"user_subscriptions","stripe_subscription_id","character varying","YES",NULL
+"user_subscriptions","created_at","timestamp without time zone","YES","CURRENT_TIMESTAMP"
+"users","id","uuid","NO","uuid_generate_v4()"
+"users","email","character varying","NO",NULL
+"users","password_hash","character varying","NO",NULL
+"users","name","character varying","NO",NULL
+"users","is_active","boolean","YES","true"
+"users","email_verified","boolean","YES","false"
+"users","created_at","timestamp without time zone","YES","CURRENT_TIMESTAMP"
+"users","updated_at","timestamp without time zone","YES","CURRENT_TIMESTAMP"
+"users","extended_profile_id","uuid","YES",NULL
+"users","recommendation_enabled","boolean","YES","true"
+"users","last_recommendation_update","timestamp with time zone","YES",NULL
+"users","password","character varying","YES",NULL
+"users","date_of_birth","date","YES",NULL
+"v_city_match_analytics","city","character varying","YES",NULL
+"v_city_match_analytics","total_matches","bigint","YES",NULL
+"v_city_match_analytics","avg_compatibility","double precision","YES",NULL
+"v_city_match_analytics","accepted_matches","bigint","YES",NULL
+"v_matches_detailed","match_id","uuid","YES",NULL
+"v_matches_detailed","compatibility_score","double precision","YES",NULL
+"v_matches_detailed","status","character varying","YES",NULL
+"v_matches_detailed","match_created_at","timestamp without time zone","YES",NULL
+"v_matches_detailed","user1_name","character varying","YES",NULL
+"v_matches_detailed","user1_avatar","text","YES",NULL
+"v_matches_detailed","user1_city","character varying","YES",NULL
+"v_matches_detailed","user2_name","character varying","YES",NULL
+"v_matches_detailed","user2_avatar","text","YES",NULL
+"v_matches_detailed","user2_city","character varying","YES",NULL
+"v_style_analytics","category","character varying","YES",NULL
+"v_style_analytics","selected_option","character varying","YES",NULL
+"v_style_analytics","user_count","bigint","YES",NULL
+"v_style_analytics","percentage","numeric","YES",NULL
+"v_users_complete","id","uuid","YES",NULL
+"v_users_complete","email","character varying","YES",NULL
+"v_users_complete","name","character varying","YES",NULL
+"v_users_complete","user_created_at","timestamp without time zone","YES",NULL
+"v_users_complete","display_name","character varying","YES",NULL
+"v_users_complete","city","character varying","YES",NULL
+"v_users_complete","gender","character varying","YES",NULL
+"v_users_complete","avatar_url","text","YES",NULL
+"v_users_complete","bio","text","YES",NULL
+"v_users_complete","is_vip","boolean","YES",NULL
+"v_users_complete","age","integer","YES",NULL
+"v_users_complete","style_completion_percentage","integer","YES",NULL
+"valid_emotional_compatibilities","id","character varying","YES",NULL
+"valid_emotional_compatibilities","user_id","uuid","YES",NULL
+"valid_emotional_compatibilities","target_user_id","uuid","YES",NULL
+"valid_emotional_compatibilities","overall_score","integer","YES",NULL
+"valid_emotional_compatibilities","compatibility_data","jsonb","YES",NULL
+"valid_emotional_compatibilities","calculated_at","timestamp with time zone","YES",NULL
+"valid_emotional_compatibilities","expires_at","timestamp with time zone","YES",NULL
+"valid_emotional_compatibilities","version","character varying","YES",NULL

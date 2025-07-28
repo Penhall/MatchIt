@@ -191,22 +191,13 @@ router.post('/start', authenticateToken, async (req, res) => {
     const images = imagesResult.rows;
     const totalRounds = Math.ceil(Math.log2(images.length));
 
-    // Criar objeto de sessão no formato esperado pelo frontend
-    const session = {
-      id: sessionId,
-      userId: req.user.id,
-      category: category,
-      status: 'active',
-      currentRound: 1,
-      totalRounds: totalRounds,
-      progressPercentage: 0,
-      startedAt: new Date().toISOString()
-    };
-
     res.json({
       success: true,
-      session: session,
+      sessionId: sessionId,
+      category: category,
       images: images,
+      totalRounds: totalRounds,
+      currentRound: 1,
       message: 'Torneio iniciado com sucesso!'
     });
 
@@ -215,81 +206,6 @@ router.post('/start', authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Erro ao iniciar torneio'
-    });
-  }
-});
-
-/**
- * GET /api/tournament/active/:category
- * Verificar se há sessão ativa para a categoria (requer autenticação)
- */
-router.get('/active/:category', authenticateToken, async (req, res) => {
-  try {
-    const { category } = req.params;
-    
-    console.log('🔍 Verificando sessão ativa:', req.user.email, category);
-    
-    // Por enquanto, retornar que não há sessão ativa
-    // No futuro, consultar banco de dados
-    res.json({
-      success: true,
-      session: null
-    });
-    
-  } catch (error) {
-    console.error('❌ Erro ao verificar sessão ativa:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Erro ao verificar sessão ativa'
-    });
-  }
-});
-
-/**
- * GET /api/tournament/current-matchup/:sessionId
- * Obter confronto atual de uma sessão (requer autenticação)
- */
-router.get('/current-matchup/:sessionId', authenticateToken, async (req, res) => {
-  try {
-    const { sessionId } = req.params;
-    
-    console.log('🏹️ Buscando confronto atual:', sessionId);
-    
-    // Por enquanto, gerar confronto mock
-    // No futuro, usar lógica do TournamentEngine
-    const mockMatchup = {
-      id: `matchup_${Date.now()}`,
-      round: 1,
-      position: 1,
-      image1: {
-        id: 1,
-        category: 'cores',
-        imageUrl: '/images/mock1.jpg',
-        title: 'Opção A',
-        description: 'Primeira opção',
-        tags: ['tag1']
-      },
-      image2: {
-        id: 2,
-        category: 'cores',
-        imageUrl: '/images/mock2.jpg',
-        title: 'Opção B',
-        description: 'Segunda opção',
-        tags: ['tag2']
-      },
-      sessionId: sessionId
-    };
-    
-    res.json({
-      success: true,
-      matchup: mockMatchup
-    });
-    
-  } catch (error) {
-    console.error('❌ Erro ao buscar confronto:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Erro ao buscar confronto'
     });
   }
 });

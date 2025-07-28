@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { APP_ROUTES } from '../../constants';
-import { UserIcon, AdjustmentsIcon, HeartIcon, ChatBubbleIcon, ShoppingBagIcon, CogIcon } from '../common/Icon';
+import { UserIcon, AdjustmentsIcon, HeartIcon, ChatBubbleIcon, ShoppingBagIcon, TrophyIcon } from '../common/Icon';
 
 interface NavItemProps {
   to: string;
@@ -11,7 +11,9 @@ interface NavItemProps {
 
 const NavItem: React.FC<NavItemProps> = ({ to, icon, label }) => {
   const location = useLocation();
-  const isActive = location.pathname === to || (to === APP_ROUTES.CHAT && location.pathname.startsWith('/chat/'));
+  const isActive = location.pathname === to || 
+    (to === APP_ROUTES.CHAT && location.pathname.startsWith('/chat/')) ||
+    (to === APP_ROUTES.TOURNAMENT && location.pathname.startsWith('/tournament'));
 
   return (
     <NavLink
@@ -32,9 +34,9 @@ const BottomNavbar: React.FC = () => {
       <NavItem to={APP_ROUTES.PROFILE} icon={<UserIcon className="w-5 h-5" />} label="Profile" />
       <NavItem to={APP_ROUTES.STYLE_ADJUSTMENT} icon={<AdjustmentsIcon className="w-5 h-5" />} label="Style" />
       <NavItem to={APP_ROUTES.MATCH_AREA} icon={<HeartIcon className="w-5 h-5" />} label="Matches" />
+      <NavItem to={APP_ROUTES.TOURNAMENT} icon={<TrophyIcon className="w-5 h-5" />} label="Torneios" />
       <NavItem to={APP_ROUTES.CHAT.replace(':chatId', 'global')} icon={<ChatBubbleIcon className="w-5 h-5" />} label="Chats" />
       <NavItem to={APP_ROUTES.VENDOR} icon={<ShoppingBagIcon className="w-5 h-5" />} label="Shop" />
-      <NavItem to={APP_ROUTES.SETTINGS} icon={<CogIcon className="w-5 h-5" />} label="Settings" />
     </nav>
   );
 };

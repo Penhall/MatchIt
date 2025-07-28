@@ -6,6 +6,7 @@ export const APP_ROUTES = {
   CHAT: '/chat/:chatId',
   VENDOR: '/vendor',
   SETTINGS: '/settings',
+  TOURNAMENT: '/tournament',
 };
 
 export const NEON_COLORS = {

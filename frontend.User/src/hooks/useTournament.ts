@@ -46,43 +46,14 @@ export const useTournament = () => {
   const loadCategories = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       const response = await api.get('/tournament/categories');
       
-      // Mock data para desenvolvimento inicial
-      const mockCategories: TournamentCategory[] = [
-        {
-          id: 'cores',
-          name: 'cores',
-          displayName: 'Cores',
-          description: 'Descubra suas cores favoritas',
-          imageCount: 16,
-          available: true,
-          color: '#FF6B6B',
-          icon: '🎨'
-        },
-        {
-          id: 'estilos',
-          name: 'estilos',
-          displayName: 'Estilos',
-          description: 'Explore diferentes estilos visuais',
-          imageCount: 16,
-          available: true,
-          color: '#4ECDC4',
-          icon: '👗'
-        },
-        {
-          id: 'ambientes',
-          name: 'ambientes',
-          displayName: 'Ambientes',
-          description: 'Escolha seus ambientes ideais',
-          imageCount: 16,
-          available: true,
-          color: '#45B7D1',
-          icon: '🏠'
-        }
-      ];
-
-      setCategories(response?.data?.categories || mockCategories);
+      if (response?.data?.success && response.data.categories) {
+        setCategories(response.data.categories);
+      } else {
+        throw new Error('Formato de resposta inválido');
+      }
     } catch (err: any) {
       console.error('Erro ao carregar categorias:', err);
       setError('Falha ao carregar categorias');
