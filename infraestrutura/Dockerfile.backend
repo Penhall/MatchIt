@@ -1,4 +1,4 @@
-# Dockerfile.backend - Backend Node.js MatchIt (ES Modules)
+# Dockerfile.backend - Backend Node.js MatchIt
 FROM node:20-bullseye-slim AS base
 
 # Instalar dependências do sistema necessárias
@@ -18,7 +18,7 @@ RUN groupadd --gid 1001 nodejs && \
 # === STAGE 1: Dependencies ===
 FROM base AS deps
 
-# Copiar arquivos de dependências
+# Copiar arquivos de dependências do backend
 COPY backend/package*.json ./
 
 # Instalar dependências (produção + dev para build)
@@ -33,10 +33,11 @@ COPY --from=deps /app/node_modules ./node_modules
 # Copiar código fonte do backend
 COPY backend/ ./
 
-# Remover arquivos desnecessários
-RUN rm -rf tests \
+# Remover arquivos desnecessários para produção
+RUN rm -rf tests/ \
     *.md \
     .env.example \
+    .env.docker \
     .gitignore
 
 # === STAGE 3: Production ===
@@ -44,7 +45,7 @@ FROM base AS production
 
 # Definir ambiente de produção
 ENV NODE_ENV=production
-ENV PORT=3000 
+ENV PORT=3000
 
 # Instalar apenas dependências de produção
 COPY backend/package*.json ./

@@ -21,10 +21,10 @@ echo ""
 
 # Parar containers existentes
 echo "🔄 Parando containers existentes..."
-docker-compose -f docker-compose-fixed.yml down
+docker-compose down
 
 echo "🔨 Construindo e iniciando containers..."
-docker-compose -f docker-compose-fixed.yml --profile prod up --build -d
+docker-compose --profile prod up --build -d
 
 echo ""
 echo "⏳ Aguardando serviços ficarem prontos..."
@@ -32,7 +32,7 @@ sleep 20
 
 echo ""
 echo "📊 Status dos serviços:"
-docker-compose -f docker-compose-fixed.yml ps
+docker-compose ps
 
 echo ""
 echo "🌐 URLs de acesso:"
@@ -41,10 +41,10 @@ echo "   API:      http://localhost:3000/api/health"
 echo "   Database: localhost:5432 (user: matchit, password: matchit123)"
 echo ""
 echo "📝 Para acompanhar logs:"
-echo "   docker-compose -f docker-compose-fixed.yml logs -f backend"
-echo "   docker-compose -f docker-compose-fixed.yml logs -f frontend"
+echo "   docker-compose logs -f backend"
+echo "   docker-compose logs -f frontend"
 echo ""
 echo "🔄 Para parar:"
-echo "   docker-compose -f docker-compose-fixed.yml down"
+echo "   docker-compose down"
 echo ""
 echo "✅ MatchIt iniciado com sucesso em modo produção\!"

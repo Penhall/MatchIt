@@ -70,8 +70,8 @@ services:
     networks:
       - matchit-network
     volumes:
-      - ./logs:/app/logs
-      - ./uploads:/app/uploads
+      - ../logs:/app/logs
+      - ../uploads:/app/uploads
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
       interval: 30s
@@ -94,17 +94,15 @@ services:
       backend:
         condition: service_healthy
     environment:
-      VITE_API_URL: http://localhost:3000/api
-      VITE_BACKEND_URL: http://backend:3000
       NODE_ENV: development
+      API_URL: http://backend:3000/api
     ports:
-      - "5173:5173"
+      - "8080:8080"
     networks:
       - matchit-network
     volumes:
       - ../frontend.User:/app
       - /app/node_modules
-    command: npm run dev -- --host 0.0.0.0
     profiles:
       - dev
 

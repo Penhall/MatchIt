@@ -40,7 +40,7 @@ cd infraestrutura
 
 | Serviço | Porta | URL | Descrição |
 |---------|-------|-----|-----------|
-| **Frontend Dev** | 5173 | http://localhost:5173 | Vite dev server |
+| **Frontend Dev** | 8080 | http://localhost:8080 | Servidor customizado |
 | **Frontend Prod** | 80 | http://localhost | Nginx static |
 | **Backend API** | 3000 | http://localhost:3000/api | Node.js Express |
 | **PostgreSQL** | 5432 | localhost:5432 | Banco principal |
@@ -80,7 +80,7 @@ infraestrutura/
 ## 🛠️ PROFILES DOCKER
 
 ### Desenvolvimento (`--profile dev`):
-- PostgreSQL + Redis + Backend + Frontend-Dev (Vite)
+- PostgreSQL + Redis + Backend + Frontend-Dev (Servidor customizado)
 - Hot reload habilitado
 - Debugging ativo
 
@@ -156,8 +156,9 @@ docker system prune -f
 ## ✅ STATUS ATUAL
 
 - **Score**: 100% (21/21 verificações OK)
-- **Status**: ✅ PRONTO PARA PRODUÇÃO
-- **Última validação**: 20/07/2025
-- **Docker**: Configurado e testado
+- **Status**: ✅ ATUALIZADO PARA NOVA ESTRUTURA
+- **Última validação**: 29/07/2025  
+- **Docker**: Configurado para estrutura modularizada
 - **Redes**: Isoladas e seguras
 - **Volumes**: Persistentes e otimizados
+- **Compatibilidade**: Backend/frontend.User estrutura nova
