@@ -287,22 +287,19 @@ def show_dashboard_content():
         
         with col1:
             if st.button("📤 Upload de Imagens", use_container_width=True):
-                st.switch_page("pages/02_🖼️_Gerenciar_Imagens.py")
+                st.info("💡 Use a sidebar para navegar para 'Gerenciar Imagens'")
         
         with col2:
             if st.button("🔍 Ver Pendentes", use_container_width=True):
-                # Redirecionar para página de imagens com filtro de pendentes
-                st.session_state.filter_approved_only = False
-                st.session_state.show_pending_only = True
-                st.switch_page("pages/02_🖼️_Gerenciar_Imagens.py")
+                st.info("💡 Use a sidebar para navegar para 'Gerenciar Imagens' e filtre por pendentes")
         
         with col3:
             if st.button("📊 Analytics Detalhado", use_container_width=True):
-                st.switch_page("pages/04_📈_Analytics.py")
+                st.info("💡 Use a sidebar para navegar para 'Analytics'")
         
         with col4:
             if st.button("⚙️ Configurações", use_container_width=True):
-                st.switch_page("pages/05_⚙️_Configurações.py")
+                st.info("💡 Use a sidebar para navegar para 'Configurações'")
         
         # Alertas e notificações
         show_alerts_section(stats)

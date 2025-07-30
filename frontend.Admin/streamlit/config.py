@@ -19,6 +19,9 @@ DB_CONFIG = {
 # String de conexão completa
 DATABASE_URL = f"postgresql://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}"
 
+# Alias para compatibilidade
+DATABASE_CONFIG = DB_CONFIG
+
 # =====================================================
 # CONFIGURAÇÕES DE UPLOAD
 # =====================================================
@@ -123,6 +126,12 @@ TOURNAMENT_CATEGORIES = {
 }
 
 # =====================================================
+# CONFIGURAÇÕES DE TORNEIO (alias para compatibilidade)
+# =====================================================
+
+TOURNAMENT_CONFIG = TOURNAMENT_CATEGORIES  # Alias para compatibilidade
+
+# =====================================================
 # CONFIGURAÇÕES DE AUTENTICAÇÃO
 # =====================================================
 
@@ -130,12 +139,12 @@ AUTH_CONFIG = {
     'session_timeout': 3600,  # 1 hora em segundos
     'admin_users': {
         'admin': {
-            'password': os.getenv('ADMIN_PASSWORD', 'matchit_admin_2024'),
+            'password': os.getenv('ADMIN_PASSWORD', 'matchit_admin_2025'),
             'role': 'super_admin',
             'permissions': ['read', 'write', 'delete', 'admin']
         },
         'moderator': {
-            'password': os.getenv('MODERATOR_PASSWORD', 'matchit_mod_2024'),
+            'password': os.getenv('MODERATOR_PASSWORD', 'matchit_mod_2025'),
             'role': 'moderator', 
             'permissions': ['read', 'write']
         }
@@ -151,6 +160,17 @@ STREAMLIT_CONFIG = {
     'page_icon': '🎯',
     'layout': 'wide',
     'initial_sidebar_state': 'expanded',
+}
+
+# =====================================================
+# CONFIGURAÇÕES DE SEGURANÇA
+# =====================================================
+
+SECURITY_CONFIG = {
+    'SESSION_TIMEOUT_MINUTES': 120,
+    'MAX_LOGIN_ATTEMPTS': 5,
+    'PASSWORD_MIN_LENGTH': 8,
+    'ALLOWED_IPS': ['127.0.0.1', '::1'],  # Localhost apenas por padrão
 }
 
 # =====================================================

@@ -104,6 +104,56 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Erro ao executar batch: {e}")
             return False
+    
+    def fetch_one(self, query: str, params: tuple = None) -> Optional[Dict]:
+        """
+        Executa query e retorna apenas o primeiro resultado
+        
+        Args:
+            query: SQL query para executar
+            params: Parâmetros para a query
+            
+        Returns:
+            Dicionário com o primeiro resultado ou None
+        """
+        results = self.execute_query(query, params, fetch=True)
+        return results[0] if results else None
+    
+    def fetch_all(self, query: str, params: tuple = None) -> List[Dict]:
+        """
+        Executa query e retorna todos os resultados
+        
+        Args:
+            query: SQL query para executar
+            params: Parâmetros para a query
+            
+        Returns:
+            Lista de dicionários com os resultados
+        """
+        return self.execute_query(query, params, fetch=True) or []
+    
+    def execute_ddl(self, query: str, params: Tuple = None) -> bool:
+        """
+        Executa comandos DDL (CREATE, ALTER, DROP, etc.)
+        
+        Args:
+            query: SQL DDL command
+            params: Parâmetros para a query
+            
+        Returns:
+            True se executado com sucesso, False caso contrário
+        """
+        try:
+            with self.get_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute(query, params)
+                    conn.commit()
+                    return True
+                    
+        except Exception as e:
+            logger.error(f"Erro ao executar DDL: {e}")
+            logger.error(f"Query: {query}")
+            return False
 
     # =====================================================
     # OPERAÇÕES ESPECÍFICAS PARA IMAGENS DE TORNEIO
@@ -123,8 +173,7 @@ class DatabaseManager:
         param_count = 0
         
         if category:
-            param_count += 1
-            conditions.append(f"category = ${param_count}")
+            conditions.append("category = %s")
             params.append(category)
         
         if active_only:
@@ -134,26 +183,78 @@ class DatabaseManager:
             conditions.append("approved = true")
             
         if search_term:
-            param_count += 1
-            conditions.append(f"(title ILIKE ${param_count} OR description ILIKE ${param_count} OR ${param_count} = ANY(tags))")
+            conditions.append("(image_name ILIKE %s OR alt_text ILIKE %s OR %s = ANY(tags))")
             search_pattern = f"%{search_term}%"
             params.extend([search_pattern, search_pattern, search_term])
-            param_count += 2
         
         where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
         
-        query = f"""
-        SELECT 
-            id, category, image_url, thumbnail_url, title, description, tags,
-            active, approved, created_by, upload_date, updated_at,
-            file_size, image_width, image_height, mime_type,
-            total_views, total_selections, win_rate,
-            approved_by, approved_at
-        FROM tournament_images 
-        {where_clause}
-        ORDER BY upload_date DESC
-        LIMIT ${param_count + 1} OFFSET ${param_count + 2}
-        """
+        # Verificar colunas disponíveis
+        try:
+            columns_query = """
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'tournament_images'
+            """
+            columns_result = self.execute_query(columns_query)
+            available_columns = [row['column_name'] for row in columns_result]
+            
+            # Mapear colunas reais para as esperadas pela interface
+            column_mapping = {
+                'id': 'id',
+                'category': 'category', 
+                'image_url': 'image_url',
+                'thumbnail_url': 'NULL as thumbnail_url',  # não existe
+                'title': 'image_name as title',  # usar image_name como title
+                'description': 'alt_text as description',  # usar alt_text como description
+                'tags': 'COALESCE(tags, ARRAY[]::text[]) as tags',
+                'active': 'COALESCE(active, true) as active',
+                'approved': 'COALESCE(approved, false) as approved',
+                'created_by': 'NULL as created_by',  # não existe
+                'upload_date': 'COALESCE(uploaded_at, NOW()) as upload_date',  # usar uploaded_at
+                'updated_at': 'uploaded_at as updated_at',  # usar uploaded_at
+                'file_size': 'file_size',
+                'image_width': 'image_width', 
+                'image_height': 'image_height',
+                'mime_type': 'NULL as mime_type',  # não existe
+                'total_views': '0 as total_views',  # não existe
+                'total_selections': '0 as total_selections',  # não existe
+                'win_rate': '0.0 as win_rate',  # não existe
+                'approved_by': 'NULL as approved_by',  # não existe
+                'approved_at': 'NULL as approved_at',  # não existe
+                'display_order': 'display_order'  # adicionar esta coluna que existe
+            }
+            
+            # Usar todas as colunas mapeadas
+            select_columns = list(column_mapping.values())
+            
+            query = f"""
+            SELECT 
+                {', '.join(select_columns)}
+            FROM tournament_images 
+            {where_clause}
+            ORDER BY uploaded_at DESC
+            LIMIT %s OFFSET %s
+            """
+            
+        except Exception as e:
+            logger.error(f"Erro ao verificar colunas: {e}")
+            # Fallback para query básica
+            query = f"""
+            SELECT 
+                id, category, image_url, 
+                NULL as thumbnail_url, image_name as title, alt_text as description, 
+                COALESCE(tags, ARRAY[]::text[]) as tags,
+                COALESCE(active, true) as active, COALESCE(approved, false) as approved, 
+                NULL as created_by, COALESCE(uploaded_at, NOW()) as upload_date, uploaded_at as updated_at,
+                file_size, image_width, image_height, NULL as mime_type,
+                0 as total_views, 0 as total_selections, 0.0 as win_rate,
+                NULL as approved_by, NULL as approved_at, display_order
+            FROM tournament_images 
+            {where_clause}
+            ORDER BY uploaded_at DESC
+            LIMIT %s OFFSET %s
+            """
         
         params.extend([limit, offset])
         
@@ -163,13 +264,17 @@ class DatabaseManager:
         """Busca uma imagem específica por ID"""
         query = """
         SELECT 
-            id, category, image_url, thumbnail_url, title, description, tags,
-            active, approved, created_by, upload_date, updated_at,
-            file_size, image_width, image_height, mime_type,
-            total_views, total_selections, win_rate,
-            approved_by, approved_at
+            id, category, image_url, 
+            NULL as thumbnail_url, image_name as title, alt_text as description, 
+            COALESCE(tags, ARRAY[]::text[]) as tags,
+            COALESCE(active, true) as active, 
+            COALESCE(approved, false) as approved, 
+            NULL as created_by, COALESCE(uploaded_at, NOW()) as upload_date, uploaded_at as updated_at,
+            file_size, image_width, image_height, NULL as mime_type,
+            0 as total_views, 0 as total_selections, 0.0 as win_rate,
+            NULL as approved_by, NULL as approved_at, display_order
         FROM tournament_images 
-        WHERE id = $1
+        WHERE id = %s
         """
         
         results = self.execute_query(query, (image_id,))
@@ -181,7 +286,7 @@ class DatabaseManager:
         INSERT INTO tournament_images 
         (category, image_url, thumbnail_url, title, description, tags, 
          active, approved, created_by, file_size, image_width, image_height, mime_type)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         RETURNING id
         """
         
@@ -227,26 +332,22 @@ class DatabaseManager:
         
         for field in updateable_fields:
             if field in updates:
-                param_count += 1
-                set_clauses.append(f"{field} = ${param_count}")
+                set_clauses.append(f"{field} = %s")
                 params.append(updates[field])
         
         if not set_clauses:
             return False
         
         # Adicionar timestamp de atualização
-        param_count += 1
-        set_clauses.append(f"updated_at = ${param_count}")
-        params.append('NOW()')
+        set_clauses.append("updated_at = NOW()")
         
         # Adicionar ID para WHERE
-        param_count += 1
         params.append(image_id)
         
         query = f"""
         UPDATE tournament_images 
         SET {', '.join(set_clauses)}
-        WHERE id = ${param_count}
+        WHERE id = %s
         """
         
         try:
@@ -261,10 +362,10 @@ class DatabaseManager:
         
         if soft_delete:
             # Soft delete - apenas marca como inativa
-            query = "UPDATE tournament_images SET active = false, updated_at = NOW() WHERE id = $1"
+            query = "UPDATE tournament_images SET active = false, updated_at = NOW() WHERE id = %s"
         else:
             # Hard delete - remove completamente
-            query = "DELETE FROM tournament_images WHERE id = $1"
+            query = "DELETE FROM tournament_images WHERE id = %s"
         
         try:
             self.execute_query(query, (image_id,), fetch=False)
@@ -275,36 +376,151 @@ class DatabaseManager:
     
     def get_category_stats(self) -> List[Dict]:
         """Busca estatísticas por categoria"""
-        query = """
-        SELECT 
-            category,
-            COUNT(*) as total_images,
-            COUNT(CASE WHEN active = true THEN 1 END) as active_images,
-            COUNT(CASE WHEN approved = true THEN 1 END) as approved_images,
-            AVG(CASE WHEN approved = true THEN win_rate ELSE NULL END) as avg_win_rate,
-            SUM(total_views) as total_views,
-            SUM(total_selections) as total_selections,
-            COUNT(CASE WHEN upload_date > NOW() - INTERVAL '7 days' THEN 1 END) as recent_uploads,
-            COUNT(CASE WHEN upload_date > NOW() - INTERVAL '30 days' THEN 1 END) as monthly_uploads
-        FROM tournament_images 
-        GROUP BY category
-        ORDER BY category
+        
+        # Primeiro verificar quais colunas existem
+        columns_query = """
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'tournament_images'
         """
         
-        return self.execute_query(query)
+        try:
+            columns_result = self.execute_query(columns_query)
+            available_columns = [row['column_name'] for row in columns_result]
+            
+            # Construir query baseada nas colunas disponíveis
+            base_query = """
+            SELECT 
+                category,
+                COUNT(*) as total_images
+            """
+            
+            # Adicionar colunas condicionalmente
+            if 'active' in available_columns:
+                base_query += ",\n            COUNT(CASE WHEN active = true THEN 1 END) as active_images"
+            else:
+                base_query += ",\n            COUNT(*) as active_images"
+                
+            if 'approved' in available_columns:
+                base_query += ",\n            COUNT(CASE WHEN approved = true THEN 1 END) as approved_images"
+            else:
+                base_query += ",\n            0 as approved_images"
+                
+            if 'win_rate' in available_columns:
+                base_query += ",\n            AVG(CASE WHEN approved = true THEN win_rate ELSE NULL END) as avg_win_rate"
+            else:
+                base_query += ",\n            0.0 as avg_win_rate"
+                
+            if 'total_views' in available_columns:
+                base_query += ",\n            COALESCE(SUM(total_views), 0) as total_views"
+            else:
+                base_query += ",\n            0 as total_views"
+                
+            if 'total_selections' in available_columns:
+                base_query += ",\n            COALESCE(SUM(total_selections), 0) as total_selections"
+            else:
+                base_query += ",\n            0 as total_selections"
+            
+            # Adicionar recent_uploads baseado na coluna de data
+            if 'uploaded_at' in available_columns:
+                base_query += ",\n            COUNT(CASE WHEN uploaded_at > NOW() - INTERVAL '7 days' THEN 1 END) as recent_uploads"
+            elif 'upload_date' in available_columns:
+                base_query += ",\n            COUNT(CASE WHEN upload_date > NOW() - INTERVAL '7 days' THEN 1 END) as recent_uploads"
+            else:
+                base_query += ",\n            0 as recent_uploads"
+            
+            base_query += """
+            FROM tournament_images 
+            GROUP BY category
+            ORDER BY category
+            """
+            
+            return self.execute_query(base_query)
+            
+        except Exception as e:
+            logger.error(f"Erro ao buscar estatísticas por categoria: {e}")
+            # Fallback para query básica
+            fallback_query = """
+            SELECT 
+                category,
+                COUNT(*) as total_images,
+                COUNT(*) as active_images,
+                0 as approved_images,
+                0.0 as avg_win_rate,
+                0 as total_views,
+                0 as total_selections,
+                0 as recent_uploads
+            FROM tournament_images 
+            GROUP BY category
+            ORDER BY category
+            """
+            return self.execute_query(fallback_query)
     
     def get_dashboard_stats(self) -> Dict:
         """Busca estatísticas gerais para o dashboard"""
-        queries = {
-            'total_images': "SELECT COUNT(*) as count FROM tournament_images",
-            'active_images': "SELECT COUNT(*) as count FROM tournament_images WHERE active = true",
-            'approved_images': "SELECT COUNT(*) as count FROM tournament_images WHERE approved = true", 
-            'pending_approval': "SELECT COUNT(*) as count FROM tournament_images WHERE approved = false AND active = true",
-            'total_views': "SELECT COALESCE(SUM(total_views), 0) as total FROM tournament_images",
-            'total_selections': "SELECT COALESCE(SUM(total_selections), 0) as total FROM tournament_images",
-            'recent_uploads': "SELECT COUNT(*) as count FROM tournament_images WHERE upload_date > NOW() - INTERVAL '7 days'",
-            'categories_count': "SELECT COUNT(DISTINCT category) as count FROM tournament_images"
-        }
+        
+        # Verificar colunas disponíveis primeiro
+        try:
+            columns_query = """
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'tournament_images'
+            """
+            columns_result = self.execute_query(columns_query)
+            available_columns = [row['column_name'] for row in columns_result]
+            
+            # Construir queries baseadas nas colunas disponíveis
+            queries = {
+                'total_images': "SELECT COUNT(*) as count FROM tournament_images",
+                'categories_count': "SELECT COUNT(DISTINCT category) as count FROM tournament_images"
+            }
+            
+            # Adicionar queries condicionalmente
+            if 'active' in available_columns:
+                queries['active_images'] = "SELECT COUNT(*) as count FROM tournament_images WHERE active = true"
+            else:
+                queries['active_images'] = "SELECT COUNT(*) as count FROM tournament_images"
+                
+            if 'approved' in available_columns:
+                queries['approved_images'] = "SELECT COUNT(*) as count FROM tournament_images WHERE approved = true"
+                if 'active' in available_columns:
+                    queries['pending_approval'] = "SELECT COUNT(*) as count FROM tournament_images WHERE approved = false AND active = true"
+                else:
+                    queries['pending_approval'] = "SELECT 0 as count"
+            else:
+                queries['approved_images'] = "SELECT 0 as count"
+                queries['pending_approval'] = "SELECT 0 as count"
+                
+            if 'total_views' in available_columns:
+                queries['total_views'] = "SELECT COALESCE(SUM(total_views), 0) as total FROM tournament_images"
+            else:
+                queries['total_views'] = "SELECT 0 as total"
+                
+            if 'total_selections' in available_columns:
+                queries['total_selections'] = "SELECT COALESCE(SUM(total_selections), 0) as total FROM tournament_images"
+            else:
+                queries['total_selections'] = "SELECT 0 as total"
+                
+            if 'uploaded_at' in available_columns:
+                queries['recent_uploads'] = "SELECT COUNT(*) as count FROM tournament_images WHERE uploaded_at > NOW() - INTERVAL '7 days'"
+            elif 'upload_date' in available_columns:
+                queries['recent_uploads'] = "SELECT COUNT(*) as count FROM tournament_images WHERE upload_date > NOW() - INTERVAL '7 days'"
+            else:
+                queries['recent_uploads'] = "SELECT 0 as count"
+                
+        except Exception as e:
+            logger.error(f"Erro ao verificar colunas: {e}")
+            # Fallback para queries básicas
+            queries = {
+                'total_images': "SELECT COUNT(*) as count FROM tournament_images",
+                'active_images': "SELECT COUNT(*) as count FROM tournament_images",
+                'approved_images': "SELECT 0 as count",
+                'pending_approval': "SELECT 0 as count",
+                'total_views': "SELECT 0 as total",
+                'total_selections': "SELECT 0 as total",
+                'recent_uploads': "SELECT 0 as count",
+                'categories_count': "SELECT COUNT(DISTINCT category) as count FROM tournament_images"
+            }
         
         stats = {}
         for key, query in queries.items():
@@ -325,14 +541,14 @@ class DatabaseManager:
         if not image_ids:
             return True
             
-        placeholders = ','.join(['$' + str(i + 1) for i in range(len(image_ids))])
+        placeholders = ','.join(['%s' for _ in range(len(image_ids))])
         params = list(image_ids)
         
-        set_clause = "approved = $" + str(len(params) + 1)
+        set_clause = "approved = %s"
         params.append(approved)
         
         if approved_by:
-            set_clause += ", approved_by = $" + str(len(params) + 1)
+            set_clause += ", approved_by = %s"
             params.append(approved_by)
             
         if approved:

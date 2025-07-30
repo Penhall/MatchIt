@@ -160,16 +160,15 @@ def show_login_form():
                 st.error("❌ Usuário ou senha incorretos")
                 return False
     
-    # Informações sobre credenciais padrão (apenas para desenvolvimento)
-    if os.getenv('ENVIRONMENT') == 'development':
-        with st.expander("ℹ️ Credenciais de Desenvolvimento"):
-            st.info("""
-            **Credenciais padrão:**
-            - **Admin**: admin / matchit_admin_2024
-            - **Moderador**: moderator / matchit_mod_2024
-            
-            ⚠️ Altere as senhas em produção!
-            """)
+    # Informações sobre credenciais padrão (sempre visível para debug)
+    with st.expander("ℹ️ Credenciais de Desenvolvimento"):
+        st.info("""
+        **Credenciais padrão:**
+        - **Admin**: admin / matchit_admin_2025
+        - **Moderador**: moderator / matchit_mod_2025
+        
+        ⚠️ Altere as senhas em produção!
+        """)
     
     return False
 

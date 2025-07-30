@@ -13,6 +13,47 @@ from config import TOURNAMENT_CATEGORIES, PAGINATION_CONFIG
 
 logger = logging.getLogger(__name__)
 
+def get_categories_enum() -> List[str]:
+    """
+    Retorna lista de categorias disponíveis
+    
+    Returns:
+        Lista de strings com categorias
+    """
+    return list(TOURNAMENT_CATEGORIES.keys())
+
+def format_number(num: int) -> str:
+    """
+    Formatar números grandes para exibição
+    
+    Args:
+        num: Número inteiro
+        
+    Returns:
+        String formatada (ex: "1.5K", "2.3M")
+    """
+    if num >= 1000000:
+        return f"{num/1000000:.1f}M"
+    elif num >= 1000:
+        return f"{num/1000:.1f}K"
+    else:
+        return str(num)
+
+def create_metric_card(title: str, value: str, delta: str = None, help_text: str = None):
+    """
+    Cria um card de métrica customizado
+    
+    Args:
+        title: Título da métrica
+        value: Valor da métrica
+        delta: Valor de variação (opcional)
+        help_text: Texto de ajuda (opcional)
+    """
+    if delta:
+        st.metric(label=title, value=value, delta=delta, help=help_text)
+    else:
+        st.metric(label=title, value=value, help=help_text)
+
 def format_file_size(size_bytes: int) -> str:
     """
     Formata tamanho de arquivo em formato legível

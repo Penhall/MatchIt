@@ -1,0 +1,51 @@
+# docker-compose.admin.yml - Configuração específica para Dashboard Administrativo
+# Para usar: docker-compose -f docker-compose.yml -f docker-compose.admin.yml up
+
+version: '3.8'
+
+services:
+  # Dashboard Administrativo apenas - usa serviços da configuração principal
+  admin-dashboard:
+    profiles:
+      - admin
+      - full
+      - dev
+    
+    # Configurações específicas para desenvolvimento
+    environment:
+      # Debug mode para desenvolvimento
+      DEBUG_MODE: ${DEBUG_MODE:-false}
+      
+      # Configurações específicas de admin
+      ADMIN_DEBUG_LOGS: ${ADMIN_DEBUG_LOGS:-true}
+      STREAMLIT_THEME_BASE: ${STREAMLIT_THEME_BASE:-light}
+      
+    # Volumes adicionais para desenvolvimento
+    volumes:
+      # Código ao vivo para desenvolvimento (descomente para desenvolvimento)
+      # - ../frontend.Admin/streamlit:/app:rw
+      
+      # Configurações específicas
+      - ../frontend.Admin/streamlit/config.py:/app/config.py:ro
+      
+    # Labels para identificação
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.admin.rule=Host(`admin.matchit.local`)"
+      - "traefik.http.routers.admin.entrypoints=web"
+      - "traefik.http.services.admin.loadbalancer.server.port=8501"
+      - "matchit.service=admin-dashboard"
+      - "matchit.component=frontend"
+
+# Configuração para desenvolvimento apenas do admin
+x-admin-dev: &admin-dev
+  build:
+    context: ..
+    dockerfile: infraestrutura/Dockerfile.admin
+    target: development  # Se criar multi-stage build
+  volumes:
+    - ../frontend.Admin/streamlit:/app:rw  # Live reload
+    - /app/logs  # Não mapear logs em dev
+  environment:
+    DEBUG_MODE: true
+    STREAMLIT_SERVER_FILE_WATCHER_TYPE: poll
